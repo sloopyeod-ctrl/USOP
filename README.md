@@ -1,4 +1,4 @@
-# USOP
+# USOP (Unified Security Operations Platform) — Operational Intelligence for Modern Security Teams.
 # USOP (Unified Security Operations Platform)
 
 **Operational Intelligence for Modern Security Teams**
