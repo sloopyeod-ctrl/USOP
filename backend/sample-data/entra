@@ -1,0 +1,21 @@
+backend/sample-data/
+
+entra/
+    users.json
+    groups.json
+
+github/
+    users.json
+    teams.json
+
+keeper/
+    users.json
+
+netbox/
+    devices.json
+
+sharepoint/
+    documents.json
+
+tenable/
+    vulnerabilities.json
