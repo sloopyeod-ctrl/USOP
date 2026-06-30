@@ -1,3 +1,21 @@
+Sprint 1 Epic 0
+Story 1
+
+Bootstrap the USOP Development Environment
+
+Acceptance Criteria
+ Backend created
+ Frontend created
+ Docker Compose boots entire environment
+ PostgreSQL running
+ Redis running
+ RabbitMQ running
+ OpenSearch running
+ FastAPI reachable
+ React reachable
+ /health endpoint working
+ /version endpoint working
+
 Epic 1 — Backend Foundation
 FastAPI application skeleton
 Configuration management
