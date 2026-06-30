@@ -13,3 +13,4 @@
 | ADR-007 | Operational Journal | Accepted |
 | ADR-008 | Continuous Evidence | Accepted |
 | ADR-009 | Engine-First Architecture | Accepted |
+| ADR-010 | Base Model Standardization | Accepted |
