@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     environment: str = "development"
     debug: bool = True
 
+    database_url: str = "sqlite:///./usop_dev.db"
+
     class Config:
         env_file = ".env"
 
