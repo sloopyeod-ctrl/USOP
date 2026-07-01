@@ -5,6 +5,7 @@ from sqlalchemy import pool
 from app.models.identity import Identity
 from app.models.identity_attribute import IdentityAttribute
 from app.models.account import Account
+from app.models.group import Group
 
 from alembic import context
 
