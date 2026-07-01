@@ -6,6 +6,7 @@ from app.models.identity import Identity
 from app.models.identity_attribute import IdentityAttribute
 from app.models.account import Account
 from app.models.group import Group
+from app.models.membership import Membership
 
 from alembic import context
 
