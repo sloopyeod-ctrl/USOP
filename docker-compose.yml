@@ -8,6 +8,24 @@ services:
       - "8000:8000"
     environment:
       - ENVIRONMENT=development
-      - DATABASE_URL=sqlite:///./usop_dev.db
+      - DATABASE_URL=postgresql+psycopg://usop:usop_password@postgres:5432/usop
     volumes:
       - ./backend/app:/app/app
+      - ./backend/migrations:/app/migrations
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:17
+    container_name: usop-postgres
+    environment:
+      POSTGRES_USER: usop
+      POSTGRES_PASSWORD: usop_password
+      POSTGRES_DB: usop
+    ports:
+      - "5432:5432"
+    volumes:
+      - usop_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  usop_postgres_data:
