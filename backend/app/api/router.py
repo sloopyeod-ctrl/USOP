@@ -7,6 +7,7 @@ from app.api.v1.identity_attributes import router as identity_attributes_router
 from app.api.v1.accounts import router as account_router
 from app.api.v1.groups import router as group_router
 from app.api.v1.memberships import router as membership_router
+from app.api.v1.roles import router as role_router
 
 router = APIRouter()
 router.include_router(identity_attributes_router)
@@ -39,3 +40,4 @@ router.include_router(identities_router)
 router.include_router(identity_attributes_router)
 router.include_router(group_router)
 router.include_router(membership_router)
+router.include_router(role_router)
