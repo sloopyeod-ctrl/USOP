@@ -4,6 +4,7 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from app.models.identity import Identity
 from app.models.identity_attribute import IdentityAttribute
+from app.models.account import Account
 
 from alembic import context
 
