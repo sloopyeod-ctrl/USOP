@@ -17,3 +17,4 @@
 | ADR-011 | Containerization Strategy | Accepted |
 | ADR-012 | Database Strategy | Accepted |
 | ADR-013 | Identity Domain Model | Accepted |
+| ADR-014 | Shared Domain Base Classes | Accepted |
