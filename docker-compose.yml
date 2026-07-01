@@ -1,1 +1,13 @@
-
+services:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: usop-api
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=sqlite:///./usop_dev.db
+    volumes:
+      - ./backend/app:/app/app
