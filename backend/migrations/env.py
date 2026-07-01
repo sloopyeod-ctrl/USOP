@@ -10,6 +10,7 @@ from app.models.membership import Membership
 from app.models.role import Role
 from app.models.role_assignment import RoleAssignment
 from app.models.permission import Permission
+from app.models.role_permission import RolePermission
 
 from alembic import context
 
