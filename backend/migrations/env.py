@@ -8,6 +8,7 @@ from app.models.account import Account
 from app.models.group import Group
 from app.models.membership import Membership
 from app.models.role import Role
+from app.models.role_assignment import RoleAssignment
 
 from alembic import context
 
