@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     debug: bool = True
 
-    database_url: str = "sqlite:///./usop_dev.db"
+    database_url: str = "postgresql+psycopg://usop:usop_password@localhost:5432/usop"
 
     class Config:
         env_file = ".env"
