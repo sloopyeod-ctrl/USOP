@@ -1,22 +1,20 @@
 from datetime import datetime
-from pydantic import BaseModel, EmailStr
+
+from pydantic import BaseModel, EmailStr, Field
 
 
 class IdentityCreate(BaseModel):
     display_name: str
-    identity_type: str = "Unknown"
-    identity_status: str = "Active"
+    identity_class: str = "Person"
+    status: str = "Active"
 
-    email: EmailStr | None = None
-    first_name: str | None = None
-    last_name: str | None = None
-    department: str | None = None
-    organization: str | None = None
-    manager_identity_id: str | None = None
-    employee_id: str | None = None
+    primary_email: EmailStr | None = None
+    primary_phone: str | None = None
+
     source_system: str | None = None
     source_identifier: str | None = None
-    notes: str | None = None
+
+    confidence_score: int = Field(default=100, ge=0, le=100)
 
 
 class IdentityRead(IdentityCreate):
