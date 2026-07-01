@@ -16,3 +16,4 @@
 | ADR-010 | Base Model Standardization | Accepted |
 | ADR-011 | Containerization Strategy | Accepted |
 | ADR-012 | Database Strategy | Accepted |
+| ADR-013 | Identity Domain Model | Accepted |
