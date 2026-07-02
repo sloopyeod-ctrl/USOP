@@ -1,12 +1,12 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import BaseModel
+from app.models.base import BaseSourceModel
 
 
-class RoleAssignment(BaseModel):
+class RoleAssignment(BaseSourceModel):
     __tablename__ = "role_assignments"
 
     role_id: Mapped[str] = mapped_column(
@@ -40,10 +40,12 @@ class RoleAssignment(BaseModel):
         default="Active",
     )
 
-    source_system: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    source_identifier: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    first_seen_at: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True,
+    )
 
-    first_seen_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-
-    confidence_score: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
+    last_seen_at: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True,
+    )
