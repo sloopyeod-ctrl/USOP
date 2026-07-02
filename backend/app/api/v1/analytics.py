@@ -14,3 +14,8 @@ router = APIRouter(
 def list_privileged_identities(db: Session = Depends(get_db)):
     analyzer = AccessAnalyzer(db)
     return analyzer.privileged_identities()
+
+@router.get("/orphaned-accounts")
+def list_orphaned_accounts(db: Session = Depends(get_db)):
+    analyzer = AccessAnalyzer(db)
+    return analyzer.orphaned_accounts()

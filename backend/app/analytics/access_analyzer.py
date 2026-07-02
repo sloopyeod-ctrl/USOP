@@ -127,3 +127,26 @@ class AccessAnalyzer:
                 )
 
         return results
+    
+    def orphaned_accounts(self) -> list[dict]:
+        accounts = (
+            self.db.query(Account)
+            .filter(
+                Account.is_active == True,
+                Account.identity_id == None,
+            )
+            .all()
+        )
+
+        return [
+            {
+                "account_id": account.id,
+                "username": account.username,
+                "display_name": account.display_name,
+                "system_name": account.system_name,
+                "account_type": account.account_type,
+                "status": account.status,
+                "reason": "No linked identity",
+            }
+            for account in accounts
+        ]
