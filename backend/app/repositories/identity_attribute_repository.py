@@ -1,26 +1,15 @@
 from sqlalchemy.orm import Session
 
 from app.models.identity_attribute import IdentityAttribute
+from app.repositories.base_repository import BaseRepository
 from app.schemas.identity_attribute import IdentityAttributeCreate
 
 
-class IdentityAttributeRepository:
+class IdentityAttributeRepository(
+    BaseRepository[IdentityAttribute, IdentityAttributeCreate]
+):
     def __init__(self, db: Session):
-        self.db = db
-
-    def create(self, attribute_data: IdentityAttributeCreate) -> IdentityAttribute:
-        attribute = IdentityAttribute(**attribute_data.model_dump())
-        self.db.add(attribute)
-        self.db.commit()
-        self.db.refresh(attribute)
-        return attribute
-
-    def list_all(self) -> list[IdentityAttribute]:
-        return (
-            self.db.query(IdentityAttribute)
-            .filter(IdentityAttribute.is_active == True)
-            .all()
-        )
+        super().__init__(db, IdentityAttribute)
 
     def list_by_identity(self, identity_id: str) -> list[IdentityAttribute]:
         return (
