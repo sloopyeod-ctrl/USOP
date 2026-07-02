@@ -1,10 +1,10 @@
-from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import BaseModel
+from app.models.base import BaseSourceModel
 
 
-class RolePermission(BaseModel):
+class RolePermission(BaseSourceModel):
     __tablename__ = "role_permissions"
 
     role_id: Mapped[str] = mapped_column(
@@ -21,10 +21,14 @@ class RolePermission(BaseModel):
         index=True,
     )
 
-    assignment_type: Mapped[str] = mapped_column(String(100), nullable=False, default="Included")
-    status: Mapped[str] = mapped_column(String(100), nullable=False, default="Active")
+    assignment_type: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        default="Included",
+    )
 
-    source_system: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    source_identifier: Mapped[str | None] = mapped_column(String(255), nullable=True)
-
-    confidence_score: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
+    status: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        default="Active",
+    )
