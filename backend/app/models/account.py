@@ -1,12 +1,12 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import BaseModel
+from app.models.base import BaseSourceModel
 
 
-class Account(BaseModel):
+class Account(BaseSourceModel):
     __tablename__ = "accounts"
 
     identity_id: Mapped[str | None] = mapped_column(
@@ -23,11 +23,8 @@ class Account(BaseModel):
     status: Mapped[str] = mapped_column(String(100), nullable=False, default="Active")
 
     system_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    source_system: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    source_identifier: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     privilege_level: Mapped[str | None] = mapped_column(String(100), nullable=True)
     authentication_method: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    confidence_score: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
