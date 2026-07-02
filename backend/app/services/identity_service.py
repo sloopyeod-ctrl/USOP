@@ -12,7 +12,7 @@ class IdentityService:
         return self.repository.create(identity_data)
 
     def list_identities(self):
-        return self.repository.list()
+        return self.repository.list_all()
 
     def get_identity(self, identity_id: str):
         return self.repository.get_by_id(identity_id)
