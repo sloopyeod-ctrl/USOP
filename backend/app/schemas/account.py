@@ -13,13 +13,19 @@ class AccountCreate(BaseModel):
     status: str = "Active"
 
     system_name: str
+
     source_system: str | None = None
     source_identifier: str | None = None
 
     privilege_level: str | None = None
+
     authentication_method: str | None = None
+    authentication_strength: str | None = None
+    authentication_provider: str | None = None
+    mfa_enabled: bool = False
 
     last_seen_at: datetime | None = None
+
     confidence_score: int = Field(default=100, ge=0, le=100)
 
 

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseSourceModel
@@ -25,6 +25,10 @@ class Account(BaseSourceModel):
     system_name: Mapped[str] = mapped_column(String(100), nullable=False)
 
     privilege_level: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
     authentication_method: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    authentication_strength: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    authentication_provider: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    mfa_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
