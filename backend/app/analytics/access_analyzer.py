@@ -6,7 +6,7 @@ from app.models.identity import Identity
 from app.models.membership import Membership
 from app.models.role import Role
 from app.models.role_assignment import RoleAssignment
-
+from datetime import UTC, datetime, timedelta
 
 class AccessAnalyzer:
     def __init__(self, db: Session):
@@ -136,7 +136,7 @@ class AccessAnalyzer:
                 Account.identity_id == None,
             )
             .all()
-        )
+        ) 
 
         return [
             {
@@ -150,3 +150,55 @@ class AccessAnalyzer:
             }
             for account in accounts
         ]
+    
+    def dormant_accounts(self, days: int = 90) -> list[dict]:
+        cutoff = datetime.now(UTC) - timedelta(days=days)
+
+        accounts = (
+            self.db.query(Account)
+            .filter(Account.is_active == True)
+            .all()
+        )
+
+        dormant = []
+
+        for account in accounts:
+            if account.last_seen_at is None:
+                dormant.append(
+                    {
+                        "account_id": account.id,
+                        "username": account.username,
+                        "display_name": account.display_name,
+                        "system_name": account.system_name,
+                        "account_type": account.account_type,
+                        "status": account.status,
+                        "last_seen_at": None,
+                        "days_inactive": None,
+                        "threshold_days": days,
+                        "reason": "Never seen",
+                    }
+                )
+                continue
+
+            last_seen = account.last_seen_at
+
+            if last_seen.tzinfo is None:
+                last_seen = last_seen.replace(tzinfo=UTC)
+
+            if last_seen < cutoff:
+                dormant.append(
+                    {
+                        "account_id": account.id,
+                        "username": account.username,
+                        "display_name": account.display_name,
+                        "system_name": account.system_name,
+                        "account_type": account.account_type,
+                        "status": account.status,
+                        "last_seen_at": account.last_seen_at,
+                        "days_inactive": (datetime.now(UTC) - last_seen).days,
+                        "threshold_days": days,
+                        "reason": f"No activity in {days}+ days",
+                    }
+                )
+
+        return dormant

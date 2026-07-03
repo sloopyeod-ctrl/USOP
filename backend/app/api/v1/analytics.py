@@ -19,3 +19,11 @@ def list_privileged_identities(db: Session = Depends(get_db)):
 def list_orphaned_accounts(db: Session = Depends(get_db)):
     analyzer = AccessAnalyzer(db)
     return analyzer.orphaned_accounts()
+
+@router.get("/dormant-accounts")
+def list_dormant_accounts(
+    days: int = 90,
+    db: Session = Depends(get_db),
+):
+    analyzer = AccessAnalyzer(db)
+    return analyzer.dormant_accounts(days)
