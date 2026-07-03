@@ -32,3 +32,8 @@ def list_dormant_accounts(
 def get_authentication_summary(db: Session = Depends(get_db)):
     analyzer = AccessAnalyzer(db)
     return analyzer.authentication_summary()
+
+@router.get("/weak-authentication-accounts")
+def list_weak_authentication_accounts(db: Session = Depends(get_db)):
+    analyzer = AccessAnalyzer(db)
+    return analyzer.weak_authentication_accounts()

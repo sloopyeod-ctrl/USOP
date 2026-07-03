@@ -234,3 +234,48 @@ class AccessAnalyzer:
                 summary["unknown_authentication"] += 1
 
         return summary
+    
+    def weak_authentication_accounts(self) -> list[dict]:
+        accounts = self.db.query(Account).filter(Account.is_active == True).all()
+        results = []
+
+        for account in accounts:
+            findings = []
+
+            method = account.authentication_method
+            strength = account.authentication_strength
+            provider = account.authentication_provider
+
+            if account.mfa_enabled is False:
+                findings.append("MFA Disabled")
+
+            if not method:
+                findings.append("Authentication Method Unknown")
+
+            if not strength:
+                findings.append("Authentication Strength Unknown")
+            elif strength.lower() == "weak":
+                findings.append("Weak Authentication Strength")
+
+            if not provider:
+                findings.append("Authentication Provider Unknown")
+
+            if findings:
+                results.append(
+                    {
+                        "account_id": account.id,
+                        "username": account.username,
+                        "display_name": account.display_name,
+                        "system_name": account.system_name,
+                        "account_type": account.account_type,
+                        "status": account.status,
+                        "privilege_level": account.privilege_level,
+                        "authentication_method": method,
+                        "authentication_strength": strength,
+                        "authentication_provider": provider,
+                        "mfa_enabled": account.mfa_enabled,
+                        "findings": findings,
+                    }
+                )
+
+        return results
