@@ -7,6 +7,7 @@ from app.models.membership import Membership
 from app.models.role import Role
 from app.models.role_assignment import RoleAssignment
 from datetime import UTC, datetime, timedelta
+from app.analytics.risk_engine import RISK_WEIGHTS, risk_level
 
 class AccessAnalyzer:
     def __init__(self, db: Session):
@@ -277,5 +278,131 @@ class AccessAnalyzer:
                         "findings": findings,
                     }
                 )
+
+        return results
+    
+    def identity_risk(self) -> list[dict]:
+        identities = self.db.query(Identity).filter(Identity.is_active == True).all()
+        results = []
+
+        weak_auth_accounts = self.weak_authentication_accounts()
+        weak_auth_account_ids = {
+            account["account_id"] for account in weak_auth_accounts
+        }
+
+        dormant_accounts = self.dormant_accounts()
+        dormant_account_ids = {
+            account["account_id"] for account in dormant_accounts
+        }
+
+        for identity in identities:
+            score = 0
+            findings = []
+
+            accounts = (
+                self.db.query(Account)
+                .filter(Account.identity_id == identity.id, Account.is_active == True)
+                .all()
+            )
+
+            for account in accounts:
+                if account.id in weak_auth_account_ids:
+                    score += RISK_WEIGHTS["weak_authentication"]
+                    findings.append(
+                        {
+                            "type": "weak_authentication",
+                            "weight": RISK_WEIGHTS["weak_authentication"],
+                            "account_id": account.id,
+                            "username": account.username,
+                        }
+                    )
+
+                if account.id in dormant_account_ids:
+                    score += RISK_WEIGHTS["dormant_account"]
+                    findings.append(
+                        {
+                            "type": "dormant_account",
+                            "weight": RISK_WEIGHTS["dormant_account"],
+                            "account_id": account.id,
+                            "username": account.username,
+                        }
+                    )
+
+                memberships = (
+                    self.db.query(Membership)
+                    .filter(
+                        Membership.account_id == account.id,
+                        Membership.is_active == True,
+                    )
+                    .all()
+                )
+
+                group_ids = [membership.group_id for membership in memberships]
+
+                if group_ids:
+                    groups = (
+                        self.db.query(Group)
+                        .filter(Group.id.in_(group_ids), Group.is_active == True)
+                        .all()
+                    )
+
+                    for group in groups:
+                        if group.privilege_level and group.privilege_level.lower() == "privileged":
+                            score += RISK_WEIGHTS["privileged_group"]
+                            findings.append(
+                                {
+                                    "type": "privileged_group",
+                                    "weight": RISK_WEIGHTS["privileged_group"],
+                                    "group_id": group.id,
+                                    "group_name": group.name,
+                                }
+                            )
+
+                role_assignments = (
+                    self.db.query(RoleAssignment)
+                    .filter(
+                        RoleAssignment.subject_type == "Account",
+                        RoleAssignment.subject_id == account.id,
+                        RoleAssignment.is_active == True,
+                    )
+                    .all()
+                )
+
+                role_ids = [assignment.role_id for assignment in role_assignments]
+
+                if role_ids:
+                    roles = (
+                        self.db.query(Role)
+                        .filter(Role.id.in_(role_ids), Role.is_active == True)
+                        .all()
+                    )
+
+                    for role in roles:
+                        if role.privilege_level and role.privilege_level.lower() in [
+                            "privileged",
+                            "admin",
+                            "administrator",
+                            "high",
+                        ]:
+                            score += RISK_WEIGHTS["privileged_role"]
+                            findings.append(
+                                {
+                                    "type": "privileged_role",
+                                    "weight": RISK_WEIGHTS["privileged_role"],
+                                    "role_id": role.id,
+                                    "role_name": role.name,
+                                }
+                            )
+
+            results.append(
+                {
+                    "identity_id": identity.id,
+                    "display_name": identity.display_name,
+                    "primary_email": identity.primary_email,
+                    "risk_score": score,
+                    "risk_level": risk_level(score),
+                    "findings": findings,
+                }
+            )
 
         return results

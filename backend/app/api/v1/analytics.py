@@ -37,3 +37,8 @@ def get_authentication_summary(db: Session = Depends(get_db)):
 def list_weak_authentication_accounts(db: Session = Depends(get_db)):
     analyzer = AccessAnalyzer(db)
     return analyzer.weak_authentication_accounts()
+
+@router.get("/identity-risk")
+def list_identity_risk(db: Session = Depends(get_db)):
+    analyzer = AccessAnalyzer(db)
+    return analyzer.identity_risk()
