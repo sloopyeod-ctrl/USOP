@@ -202,3 +202,35 @@ class AccessAnalyzer:
                 )
 
         return dormant
+    
+    def authentication_summary(self) -> dict:
+        accounts = self.db.query(Account).filter(Account.is_active == True).all()
+
+        summary = {
+            "total_accounts": len(accounts),
+            "mfa_enabled": 0,
+            "mfa_disabled": 0,
+            "methods": {},
+            "strengths": {},
+            "providers": {},
+            "unknown_authentication": 0,
+        }
+
+        for account in accounts:
+            if account.mfa_enabled:
+                summary["mfa_enabled"] += 1
+            else:
+                summary["mfa_disabled"] += 1
+
+            method = account.authentication_method or "Unknown"
+            strength = account.authentication_strength or "Unknown"
+            provider = account.authentication_provider or "Unknown"
+
+            summary["methods"][method] = summary["methods"].get(method, 0) + 1
+            summary["strengths"][strength] = summary["strengths"].get(strength, 0) + 1
+            summary["providers"][provider] = summary["providers"].get(provider, 0) + 1
+
+            if method == "Unknown" or strength == "Unknown" or provider == "Unknown":
+                summary["unknown_authentication"] += 1
+
+        return summary

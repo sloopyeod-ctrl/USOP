@@ -27,3 +27,8 @@ def list_dormant_accounts(
 ):
     analyzer = AccessAnalyzer(db)
     return analyzer.dormant_accounts(days)
+
+@router.get("/authentication-summary")
+def get_authentication_summary(db: Session = Depends(get_db)):
+    analyzer = AccessAnalyzer(db)
+    return analyzer.authentication_summary()
