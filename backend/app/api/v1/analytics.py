@@ -42,3 +42,4 @@ def list_weak_authentication_accounts(db: Session = Depends(get_db)):
 def list_identity_risk(db: Session = Depends(get_db)):
     analyzer = AccessAnalyzer(db)
     return analyzer.identity_risk()
+
