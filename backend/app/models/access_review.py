@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, ForeignKey, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseSourceModel
@@ -68,7 +68,14 @@ class AccessReview(BaseSourceModel):
         index=True,
     )
 
+    snapshot_json: Mapped[dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+    )
+
     notes: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
+
+    

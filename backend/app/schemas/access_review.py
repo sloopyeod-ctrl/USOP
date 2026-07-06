@@ -16,6 +16,7 @@ class AccessReviewCreate(BaseModel):
     reviewed_by: str | None = None
     review_due_at: datetime | None = None
     snapshot_hash: str | None = None
+    snapshot_json: dict | None = None
     notes: str | None = None
 
     source_system: str | None = None

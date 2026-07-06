@@ -11,12 +11,14 @@ from app.governance.policies import (
 from app.models.access_review import AccessReview
 from app.schemas.access_review import AccessReviewCreate
 from app.services.access_review_service import AccessReviewService
+from app.governance.snapshot_builder import SnapshotBuilder
 
 
 class ReviewEngine:
     def __init__(self, db: Session):
         self.db = db
         self.review_service = AccessReviewService(db)
+        self.snapshot_builder = SnapshotBuilder(db)
 
     def get_open_review(self, identity_id: str) -> AccessReview | None:
         return (
@@ -60,6 +62,9 @@ class ReviewEngine:
             days=DEFAULT_REVIEW_INTERVAL_DAYS
         )
 
+        snapshot = self.snapshot_builder.build(identity_id)
+        snapshot_hash = self.snapshot_builder.hash(snapshot)
+
         review = AccessReviewCreate(
             identity_id=identity_id,
             review_type=review_type,
@@ -68,6 +73,8 @@ class ReviewEngine:
             risk_level=risk_level,
             reason=reason,
             review_due_at=review_due_at,
+            snapshot_hash=snapshot_hash,
+            snapshot_json=snapshot,
             source_system="USOP",
             source_identifier=f"review:{identity_id}",
             confidence_score=100,
@@ -90,6 +97,9 @@ class ReviewEngine:
             days=DEFAULT_REVIEW_INTERVAL_DAYS
         )
         review.updated_at = datetime.now(UTC)
+        snapshot = self.snapshot_builder.build(review.identity_id)
+        review.snapshot_json = snapshot
+        review.snapshot_hash = self.snapshot_builder.hash(snapshot)
 
         self.db.commit()
         self.db.refresh(review)
