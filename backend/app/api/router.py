@@ -15,6 +15,7 @@ from app.api.v1.role_assignments import router as role_assignment_router
 from app.api.v1.role_permissions import router as role_permission_router
 from app.api.v1.roles import router as role_router
 from app.api.v1.access_reviews import router as access_review_router
+from app.api.v1.audit_events import router as audit_event_router
 
 
 router = APIRouter()
@@ -69,3 +70,4 @@ router.include_router(role_permission_router)
 
 router.include_router(analytics_router)
 router.include_router(access_review_router)
+router.include_router(audit_event_router)

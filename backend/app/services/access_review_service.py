@@ -11,12 +11,14 @@ from app.governance.policies import (
 )
 from app.repositories.access_review_repository import AccessReviewRepository
 from app.schemas.access_review import AccessReviewCreate
+from app.services.audit_service import AuditService
 
 
 class AccessReviewService:
     def __init__(self, db: Session):
         self.db = db
         self.repository = AccessReviewRepository(db)
+        self.audit_service = AuditService(db)
 
     def create(self, data: AccessReviewCreate):
         return self.repository.create(data)
@@ -39,6 +41,15 @@ class AccessReviewService:
 
         self.db.commit()
         self.db.refresh(review)
+        self.audit_service.record(
+            event_type="ReviewStarted",
+            entity_type="AccessReview",
+            entity_id=review.id,
+            actor=reviewer,
+            message=f"Access review started by {reviewer}.",
+            metadata={"identity_id": review.identity_id},
+        )
+
         return review
 
     def approve_review(self, review_id: str, reviewer: str, notes: str | None = None):
@@ -57,6 +68,19 @@ class AccessReviewService:
 
         self.db.commit()
         self.db.refresh(review)
+        self.audit_service.record(
+            event_type="ReviewApproved",
+            entity_type="AccessReview",
+            entity_id=review.id,
+            actor=reviewer,
+            message=f"Access review approved by {reviewer}.",
+            metadata={
+                "identity_id": review.identity_id,
+                "risk_score": review.risk_score,
+                "risk_level": review.risk_level,
+            },
+        )
+
         return review
 
     def reject_review(self, review_id: str, reviewer: str, notes: str | None = None):
@@ -72,6 +96,19 @@ class AccessReviewService:
 
         self.db.commit()
         self.db.refresh(review)
+        self.audit_service.record(
+            event_type="ReviewRejected",
+            entity_type="AccessReview",
+            entity_id=review.id,
+            actor=reviewer,
+            message=f"Access review rejected by {reviewer}.",
+            metadata={
+                "identity_id": review.identity_id,
+                "risk_score": review.risk_score,
+                "risk_level": review.risk_level,
+            },
+        )
+
         return review
 
     def reopen_review(self, review_id: str, reviewer: str, notes: str | None = None):
@@ -86,4 +123,13 @@ class AccessReviewService:
 
         self.db.commit()
         self.db.refresh(review)
+        self.audit_service.record(
+            event_type="ReviewReopened",
+            entity_type="AccessReview",
+            entity_id=review.id,
+            actor=reviewer,
+            message=f"Access review reopened by {reviewer}.",
+            metadata={"identity_id": review.identity_id},
+        )
+
         return review
