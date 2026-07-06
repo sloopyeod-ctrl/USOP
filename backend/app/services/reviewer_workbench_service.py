@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
@@ -80,7 +80,8 @@ class ReviewerWorkbenchService:
         critical_reviews = len([r for r in reviews if r.risk_level == "Critical"])
 
         now = datetime.now(UTC)
-
+        week_end = now + timedelta(days=7)
+        
         overdue_reviews = len(
             [
                 r
@@ -98,6 +99,29 @@ class ReviewerWorkbenchService:
             ]
         )
 
+        reviews_due_this_week = len(
+            [
+                r
+                for r in reviews
+                if (
+                    r.review_due_at
+                    and (
+                        r.review_due_at.replace(tzinfo=UTC)
+                        if r.review_due_at.tzinfo is None
+                        else r.review_due_at
+                    )
+                    >= now
+                    and (
+                        r.review_due_at.replace(tzinfo=UTC)
+                        if r.review_due_at.tzinfo is None
+                        else r.review_due_at
+                    )
+                    <= week_end
+                    and r.status not in ("Approved", "Rejected")
+                )
+            ]
+        )
+
         return {
             "total_reviews": total_reviews,
             "pending_reviews": pending_reviews,
@@ -107,6 +131,7 @@ class ReviewerWorkbenchService:
             "rejected_reviews": rejected_reviews,
             "critical_reviews": critical_reviews,
             "overdue_reviews": overdue_reviews,
+            "reviews_due_this_week": reviews_due_this_week,
             "active_campaigns": len(campaigns),
         }    
     
