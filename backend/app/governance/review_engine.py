@@ -12,6 +12,7 @@ from app.models.access_review import AccessReview
 from app.schemas.access_review import AccessReviewCreate
 from app.services.access_review_service import AccessReviewService
 from app.governance.snapshot_builder import SnapshotBuilder
+from app.governance.snapshot_comparator import SnapshotComparator
 
 
 class ReviewEngine:
@@ -19,6 +20,7 @@ class ReviewEngine:
         self.db = db
         self.review_service = AccessReviewService(db)
         self.snapshot_builder = SnapshotBuilder(db)
+        self.snapshot_comparator = SnapshotComparator()
 
     def get_open_review(self, identity_id: str) -> AccessReview | None:
         return (
@@ -89,17 +91,24 @@ class ReviewEngine:
         risk_level: str,
         reason: str,
     ) -> AccessReview:
+        snapshot = self.snapshot_builder.build(review.identity_id)
+        snapshot_hash = self.snapshot_builder.hash(snapshot)
+
+        changes = self.snapshot_comparator.compare(
+            review.snapshot_json,
+            snapshot,
+        )
+
         review.risk_score = risk_score
         review.risk_level = risk_level
-        review.reason = reason
+        review.reason = "; ".join(changes) if changes else reason
         review.status = REVIEW_STATUS_NEEDS_REVIEW
         review.review_due_at = datetime.now(UTC) + timedelta(
             days=DEFAULT_REVIEW_INTERVAL_DAYS
         )
-        review.updated_at = datetime.now(UTC)
-        snapshot = self.snapshot_builder.build(review.identity_id)
         review.snapshot_json = snapshot
-        review.snapshot_hash = self.snapshot_builder.hash(snapshot)
+        review.snapshot_hash = snapshot_hash
+        review.updated_at = datetime.now(UTC)
 
         self.db.commit()
         self.db.refresh(review)
