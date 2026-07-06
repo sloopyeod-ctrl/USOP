@@ -55,3 +55,40 @@ class ReviewerWorkbenchService:
             )
 
         return results
+
+    def dashboard(self):
+        reviews = (
+            self.db.query(AccessReview)
+            .filter(AccessReview.is_active == True)
+            .all()
+        )
+
+        campaigns = (
+            self.db.query(ReviewCampaign)
+            .filter(ReviewCampaign.is_active == True)
+            .all()
+        )
+
+        total_reviews = len(reviews)
+        pending_reviews = len([r for r in reviews if r.status == "Pending"])
+        needs_review = len([r for r in reviews if r.status == "Needs Review"])
+        in_review = len([r for r in reviews if r.status == "In Review"])
+        approved_reviews = len([r for r in reviews if r.status == "Approved"])
+        rejected_reviews = len([r for r in reviews if r.status == "Rejected"])
+        critical_reviews = len([r for r in reviews if r.risk_level == "Critical"])
+
+        overdue_reviews = 0
+
+        return {
+            "total_reviews": total_reviews,
+            "pending_reviews": pending_reviews,
+            "needs_review": needs_review,
+            "in_review": in_review,
+            "approved_reviews": approved_reviews,
+            "rejected_reviews": rejected_reviews,
+            "critical_reviews": critical_reviews,
+            "overdue_reviews": overdue_reviews,
+            "active_campaigns": len(campaigns),
+        }    
+    
+        

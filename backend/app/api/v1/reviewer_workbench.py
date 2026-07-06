@@ -17,3 +17,8 @@ def get_review_queue(
 ):
     service = ReviewerWorkbenchService(db)
     return service.review_queue(status)
+
+@router.get("/dashboard")
+def get_reviewer_dashboard(db: Session = Depends(get_db)):
+    service = ReviewerWorkbenchService(db)
+    return service.dashboard()
