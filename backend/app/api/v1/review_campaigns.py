@@ -33,3 +33,11 @@ def get_review_campaign(
 ):
     service = ReviewCampaignService(db)
     return service.get_by_id(campaign_id)
+
+@router.post("/{campaign_id}/generate", response_model=ReviewCampaignRead | None)
+def generate_campaign_reviews(
+    campaign_id: str,
+    db: Session = Depends(get_db),
+):
+    service = ReviewCampaignService(db)
+    return service.generate_reviews(campaign_id)
