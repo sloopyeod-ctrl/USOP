@@ -16,6 +16,13 @@ class AccessReview(BaseSourceModel):
         index=True,
     )
 
+    campaign_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("review_campaigns.id"),
+        nullable=True,
+        index=True,
+    )
+
     review_type: Mapped[str] = mapped_column(
         String(100),
         nullable=False,

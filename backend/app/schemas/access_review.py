@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 class AccessReviewCreate(BaseModel):
     identity_id: str
+    campaign_id: str | None = None
     review_type: str = "Automatic"
     status: str = "Pending"
 
