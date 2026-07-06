@@ -101,7 +101,11 @@ class ReviewEngine:
 
         review.risk_score = risk_score
         review.risk_level = risk_level
-        review.reason = "; ".join(changes) if changes else reason
+        review.reason = (
+            "; ".join(change["message"] for change in changes)
+            if changes
+            else reason
+        )
         review.status = REVIEW_STATUS_NEEDS_REVIEW
         review.review_due_at = datetime.now(UTC) + timedelta(
             days=DEFAULT_REVIEW_INTERVAL_DAYS
