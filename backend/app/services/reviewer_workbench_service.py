@@ -8,11 +8,17 @@ class ReviewerWorkbenchService:
     def __init__(self, db: Session):
         self.db = db
 
-    def review_queue(self):
-        reviews = (
+    def review_queue(self, status: str | None = None):
+        query = (
             self.db.query(AccessReview)
             .filter(AccessReview.is_active == True)
-            .order_by(
+        )
+
+        if status:
+            query = query.filter(AccessReview.status == status)
+
+        reviews = (
+            query.order_by(
                 AccessReview.risk_score.desc(),
                 AccessReview.review_due_at.asc(),
             )

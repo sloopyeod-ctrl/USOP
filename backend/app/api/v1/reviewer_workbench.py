@@ -11,6 +11,9 @@ router = APIRouter(
 
 
 @router.get("/")
-def get_review_queue(db: Session = Depends(get_db)):
+def get_review_queue(
+    status: str | None = None,
+    db: Session = Depends(get_db),
+):
     service = ReviewerWorkbenchService(db)
-    return service.review_queue()
+    return service.review_queue(status)
