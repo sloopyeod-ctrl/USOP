@@ -18,6 +18,7 @@ from app.api.v1.access_reviews import router as access_review_router
 from app.api.v1.audit_events import router as audit_event_router
 from app.api.v1.review_campaigns import router as review_campaign_router
 from app.api.v1.reviewer_workbench import router as reviewer_workbench_router
+from app.api.v1.executive_dashboard import router as executive_dashboard_router
 
 
 router = APIRouter()
@@ -75,3 +76,4 @@ router.include_router(access_review_router)
 router.include_router(audit_event_router)
 router.include_router(review_campaign_router)
 router.include_router(reviewer_workbench_router)
+router.include_router(executive_dashboard_router)
