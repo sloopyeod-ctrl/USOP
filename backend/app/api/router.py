@@ -20,6 +20,7 @@ from app.api.v1.review_campaigns import router as review_campaign_router
 from app.api.v1.reviewer_workbench import router as reviewer_workbench_router
 from app.api.v1.executive_dashboard import router as executive_dashboard_router
 from app.api.v1.identity_timeline import router as identity_timeline_router
+from app.api.v1.governance_policies import router as governance_policy_router
 
 
 router = APIRouter()
@@ -79,3 +80,4 @@ router.include_router(review_campaign_router)
 router.include_router(reviewer_workbench_router)
 router.include_router(executive_dashboard_router)
 router.include_router(identity_timeline_router)
+router.include_router(governance_policy_router)
