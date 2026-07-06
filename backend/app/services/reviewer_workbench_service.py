@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from sqlalchemy.orm import Session
 
 from app.models.access_review import AccessReview
@@ -77,7 +79,24 @@ class ReviewerWorkbenchService:
         rejected_reviews = len([r for r in reviews if r.status == "Rejected"])
         critical_reviews = len([r for r in reviews if r.risk_level == "Critical"])
 
-        overdue_reviews = 0
+        now = datetime.now(UTC)
+
+        overdue_reviews = len(
+            [
+                r
+                for r in reviews
+                if (
+                    r.review_due_at
+                    and (
+                        r.review_due_at.replace(tzinfo=UTC)
+                        if r.review_due_at.tzinfo is None
+                        else r.review_due_at
+                    )
+                    < now
+                    and r.status not in ("Approved", "Rejected")
+                )
+            ]
+        )
 
         return {
             "total_reviews": total_reviews,
