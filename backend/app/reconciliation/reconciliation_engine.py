@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.models.identity import Identity
 from app.models.account import Account
-
+from app.models.group import Group
 
 class ReconciliationEngine:
     def __init__(self, db: Session):
@@ -84,7 +84,33 @@ class ReconciliationEngine:
                         )
                     )
 
-                    summary["accounts_created"] += 1            
+                    summary["accounts_created"] += 1   
+
+                #
+        # Reconcile groups
+        #
+        for group in normalized.get("groups", []):
+            existing = (
+                self.db.query(Group)
+                .filter(
+                    func.lower(Group.name) == group["name"].lower()
+                )
+                .first()
+            )
+
+            if existing:
+                summary["groups_updated"] += 1
+
+            else:
+                self.db.add(
+                    Group(
+                        name=group["name"],
+                        source_system=group["source"],
+                        source_identifier=group["name"],
+                    )
+                )
+
+                summary["groups_created"] += 1                     
 
         self.db.commit()
 
