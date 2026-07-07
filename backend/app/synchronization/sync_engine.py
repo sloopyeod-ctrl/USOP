@@ -6,6 +6,7 @@ from app.synchronization.normalization import NormalizationEngine
 from app.reconciliation.reconciliation_engine import ReconciliationEngine
 from app.graph.identity_graph_service import IdentityGraphService
 from app.graph.graph_difference_engine import GraphDifferenceEngine
+from app.events.change_event_engine import ChangeEventEngine
 
 
 class SynchronizationEngine:
@@ -17,6 +18,7 @@ class SynchronizationEngine:
         self.reconciliation_engine = ReconciliationEngine(db)
         self.graph_service = IdentityGraphService(db)
         self.diff_engine = GraphDifferenceEngine(db)
+        self.change_event_engine = ChangeEventEngine(db)
 
     def run(self, connector_name: str):
         collected = self.connector_service.collect(connector_name)
@@ -48,6 +50,11 @@ class SynchronizationEngine:
             after_graph,
         )
 
+        events_generated = self.change_event_engine.generate(
+            "ed8b8386-22fe-4d95-bf82-7071163bb4d0",
+            changes,
+        )
+
         summary = {
             "identities": len(collected.get("identities", [])),
             "accounts": len(collected.get("accounts", [])),
@@ -74,4 +81,5 @@ class SynchronizationEngine:
             "normalized": normalized,
             "reconciliation": reconciliation,
             "changes": changes,
+            "events_generated": events_generated,
         }
