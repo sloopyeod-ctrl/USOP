@@ -6,6 +6,7 @@ from app.models.account import Account
 from app.models.group import Group
 from app.models.role import Role
 from app.models.membership import Membership
+from app.models.role_assignment import RoleAssignment
 
 class ReconciliationEngine:
     def __init__(self, db: Session):
@@ -23,6 +24,8 @@ class ReconciliationEngine:
             "roles_updated": 0,
             "memberships_created": 0,
             "memberships_updated": 0,
+            "role_assignments_created": 0,
+            "role_assignments_updated": 0,
         }
 
         #
@@ -194,7 +197,56 @@ class ReconciliationEngine:
                 )
 
                 summary.setdefault("memberships_created", 0)
-                summary["memberships_created"] += 1                                
+                summary["memberships_created"] += 1   
+
+                #
+        # Reconcile role assignments
+        #
+        for assignment in normalized.get("role_assignments", []):
+            account = (
+                self.db.query(Account)
+                .filter(
+                    func.lower(Account.username)
+                    == assignment["username"].lower()
+                )
+                .first()
+            )
+
+            role = (
+                self.db.query(Role)
+                .filter(
+                    func.lower(Role.name)
+                    == assignment["role_name"].lower()
+                )
+                .first()
+            )
+
+            if not account or not role:
+                continue
+
+            existing = (
+                self.db.query(RoleAssignment)
+                .filter(
+                    RoleAssignment.subject_type == "Account",
+                    RoleAssignment.subject_id == account.id,
+                    RoleAssignment.role_id == role.id,
+                )
+                .first()
+            )
+
+            if existing:
+                summary["role_assignments_updated"] += 1
+
+            else:
+                self.db.add(
+                    RoleAssignment(
+                        subject_type="Account",
+                        subject_id=account.id,
+                        role_id=role.id,
+                    )
+                )
+
+                summary["role_assignments_created"] += 1                                     
 
         self.db.commit()
 

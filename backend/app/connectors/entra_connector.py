@@ -31,6 +31,12 @@ class EntraConnector(BaseConnector):
                     "username": "mdewitt",
                     "group_name": "entra-security-admins",
                 }
+            ],
+            "role_assignments": [
+                {
+                    "username": "mdewitt",
+                    "role_name": "Global Reader",
+                }
             ]
         }
 

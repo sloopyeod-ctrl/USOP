@@ -22,6 +22,10 @@ class NormalizationEngine:
                 connector_name,
                 data.get("memberships", []),
             ),
+            "role_assignments": self.normalize_role_assignments(
+                connector_name,
+                data.get("role_assignments", []),
+            ),
         }
 
     def normalize_identities(self, connector_name, identities):
@@ -87,6 +91,20 @@ class NormalizationEngine:
                 {
                     "username": membership["username"],
                     "group_name": membership["group_name"],
+                    "source": connector_name,
+                }
+            )
+
+        return normalized
+    
+    def normalize_role_assignments(self, connector_name, assignments):
+        normalized = []
+
+        for assignment in assignments:
+            normalized.append(
+                {
+                    "username": assignment["username"],
+                    "role_name": assignment["role_name"],
                     "source": connector_name,
                 }
             )
