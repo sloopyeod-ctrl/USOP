@@ -23,6 +23,7 @@ from app.api.v1.identity_timeline import router as identity_timeline_router
 from app.api.v1.governance_policies import router as governance_policy_router
 from app.api.v1.governance_jobs import router as governance_jobs_router
 from app.api.v1.connectors import router as connectors_router
+from app.api.v1.identity_graph import router as identity_graph_router
 
 router = APIRouter()
 
@@ -84,3 +85,4 @@ router.include_router(identity_timeline_router)
 router.include_router(governance_policy_router)
 router.include_router(governance_jobs_router)
 router.include_router(connectors_router)
+router.include_router(identity_graph_router)
