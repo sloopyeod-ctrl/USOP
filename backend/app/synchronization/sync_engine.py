@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.services.audit_service import AuditService
 from app.services.connector_service import ConnectorService
 from app.synchronization.normalization import NormalizationEngine
+from app.reconciliation.reconciliation_engine import ReconciliationEngine
 
 
 class SynchronizationEngine:
@@ -11,14 +12,10 @@ class SynchronizationEngine:
         self.connector_service = ConnectorService()
         self.audit_service = AuditService(db)
         self.normalizer = NormalizationEngine()
+        self.reconciliation_engine = ReconciliationEngine(db)
 
     def run(self, connector_name: str):
         collected = self.connector_service.collect(connector_name)
-
-        normalized = self.normalizer.normalize(
-            connector_name,
-            collected,
-        )
 
         if collected is None:
             return {
@@ -26,6 +23,13 @@ class SynchronizationEngine:
                 "connector": connector_name,
                 "reason": "Connector not found",
             }
+
+        normalized = self.normalizer.normalize(
+            connector_name,
+            collected,
+        )
+
+        reconciliation = self.reconciliation_engine.reconcile(normalized)
 
         summary = {
             "identities": len(collected.get("identities", [])),
@@ -51,4 +55,5 @@ class SynchronizationEngine:
             "connector": connector_name,
             "summary": summary,
             "normalized": normalized,
+            "reconciliation": reconciliation,
         }
