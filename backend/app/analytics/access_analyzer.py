@@ -9,11 +9,13 @@ from app.models.role_assignment import RoleAssignment
 from datetime import UTC, datetime, timedelta
 from app.analytics.risk_engine import RISK_WEIGHTS, risk_level
 from app.governance.policy_engine import PolicyEngine
+from app.governance.policy_action_engine import PolicyActionEngine
 
 class AccessAnalyzer:
     def __init__(self, db: Session):
         self.db = db
         self.policy_engine = PolicyEngine(db)
+        self.policy_action_engine = PolicyActionEngine(db)
 
     def privileged_identities(self) -> list[dict]:
         identities = self.db.query(Identity).filter(Identity.is_active == True).all()
@@ -331,6 +333,11 @@ class AccessAnalyzer:
                     )
 
                 policy_findings = self.policy_engine.evaluate_account(account)
+
+                self.policy_action_engine.execute(
+                    account,
+                    policy_findings,
+                )
 
                 for policy_finding in policy_findings:
                     score += policy_finding["risk_weight"]
