@@ -14,3 +14,11 @@ router = APIRouter(
 def run_identity_risk_analysis(db: Session = Depends(get_db)):
     jobs = GovernanceJobs(db)
     return jobs.run_identity_risk_analysis()
+
+@router.post("/run-connector-sync/{connector_name}")
+def run_connector_sync(
+    connector_name: str,
+    db: Session = Depends(get_db),
+):
+    jobs = GovernanceJobs(db)
+    return jobs.run_connector_sync(connector_name)
