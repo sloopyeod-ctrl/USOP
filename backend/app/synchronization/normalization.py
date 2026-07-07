@@ -28,6 +28,20 @@ class NormalizationEngine:
             ),
         }
 
+    def clean_string(self, value):
+        if value is None:
+            return None
+
+        return str(value).strip()
+
+    def canonical_key(self, value):
+        cleaned = self.clean_string(value)
+
+        if cleaned is None:
+            return None
+
+        return cleaned.lower()
+
     def normalize_identities(self, connector_name, identities):
         normalized = []
 
@@ -46,10 +60,13 @@ class NormalizationEngine:
         normalized = []
 
         for account in accounts:
+            username = self.clean_string(account.get("username"))
+
             normalized.append(
                 {
-                    "username": account.get("username"),
-                    "system_name": account.get("system_name"),
+                    "username": username,
+                    "username_key": self.canonical_key(username),
+                    "system_name": self.clean_string(account.get("system_name")),
                     "source": connector_name,
                 }
             )
@@ -60,9 +77,12 @@ class NormalizationEngine:
         normalized = []
 
         for group in groups:
+            name = self.clean_string(group.get("name"))
+
             normalized.append(
                 {
-                    "name": group.get("name"),
+                    "name": name,
+                    "name_key": self.canonical_key(name),
                     "source": connector_name,
                 }
             )
@@ -73,10 +93,13 @@ class NormalizationEngine:
         normalized = []
 
         for role in roles:
+            name = self.clean_string(role.get("name"))
+
             normalized.append(
                 {
-                    "name": role.get("name"),
-                    "system_name": role.get("system_name", "Entra ID"),
+                    "name": name,
+                    "name_key": self.canonical_key(name),
+                    "system_name": self.clean_string(role.get("system_name", "Entra ID")),
                     "source": connector_name,
                 }
             )
