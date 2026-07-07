@@ -5,6 +5,7 @@ from app.models.identity import Identity
 from app.models.account import Account
 from app.models.group import Group
 from app.models.role import Role
+from app.models.membership import Membership
 
 class ReconciliationEngine:
     def __init__(self, db: Session):
@@ -20,6 +21,8 @@ class ReconciliationEngine:
             "groups_updated": 0,
             "roles_created": 0,
             "roles_updated": 0,
+            "memberships_created": 0,
+            "memberships_updated": 0,
         }
 
         #
@@ -140,7 +143,58 @@ class ReconciliationEngine:
                     )
                 )
 
-                summary["roles_created"] += 1                           
+                summary["roles_created"] += 1   
+
+                #
+        # Reconcile memberships
+        #
+
+        for membership in normalized.get("memberships", []):
+
+            account = (
+                self.db.query(Account)
+                .filter(
+                    func.lower(Account.username)
+                    == membership["username"].lower()
+                )
+                .first()
+            )
+
+            group = (
+                self.db.query(Group)
+                .filter(
+                    func.lower(Group.name)
+                    == membership["group_name"].lower()
+                )
+                .first()
+            )
+
+            if not account or not group:
+                continue
+
+            existing = (
+                self.db.query(Membership)
+                .filter(
+                    Membership.account_id == account.id,
+                    Membership.group_id == group.id,
+                )
+                .first()
+            )
+
+            if existing:
+                summary.setdefault("memberships_updated", 0)
+                summary["memberships_updated"] += 1
+
+            else:
+                self.db.add(
+                    Membership(
+                        account_id=account.id,
+                        group_id=group.id,
+                    )
+                )
+
+                summary.setdefault("memberships_created", 0)
+                summary["memberships_created"] += 1                                
 
         self.db.commit()
 

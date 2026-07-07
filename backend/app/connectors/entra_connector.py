@@ -26,6 +26,12 @@ class EntraConnector(BaseConnector):
                     "name": "Global Reader",
                 }
             ],
+            "memberships": [
+                {
+                    "username": "mdewitt",
+                    "group_name": "entra-security-admins",
+                }
+            ]
         }
 
     def synchronize(self):

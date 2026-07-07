@@ -18,6 +18,10 @@ class NormalizationEngine:
                 connector_name,
                 data.get("roles", []),
             ),
+            "memberships": self.normalize_memberships(
+                connector_name,
+                data.get("memberships", []),
+            ),
         }
 
     def normalize_identities(self, connector_name, identities):
@@ -69,6 +73,20 @@ class NormalizationEngine:
                 {
                     "name": role.get("name"),
                     "system_name": role.get("system_name", "Entra ID"),
+                    "source": connector_name,
+                }
+            )
+
+        return normalized
+    
+    def normalize_memberships(self, connector_name, memberships):
+        normalized = []
+
+        for membership in memberships:
+            normalized.append(
+                {
+                    "username": membership["username"],
+                    "group_name": membership["group_name"],
                     "source": connector_name,
                 }
             )
