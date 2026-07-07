@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.models.identity import Identity
 from app.models.account import Account
 from app.models.group import Group
+from app.models.role import Role
 
 class ReconciliationEngine:
     def __init__(self, db: Session):
@@ -110,7 +111,36 @@ class ReconciliationEngine:
                     )
                 )
 
-                summary["groups_created"] += 1                     
+                summary["groups_created"] += 1  
+
+                #
+        # Reconcile roles
+        #
+        for role in normalized.get("roles", []):
+           existing = (
+                self.db.query(Role)
+                .filter(
+                    func.lower(Role.name) == role["name"].lower(),
+                    Role.system_name == role["system_name"],
+                )
+                .first()
+            )
+
+           if existing:
+                summary["roles_updated"] += 1
+
+           else:
+                self.db.add(
+                    Role(
+                        name=role["name"],
+                        display_name=role["name"],
+                        system_name=role["system_name"],
+                        source_system=role["source"],
+                        source_identifier=role["name"],
+                    )
+                )
+
+                summary["roles_created"] += 1                           
 
         self.db.commit()
 

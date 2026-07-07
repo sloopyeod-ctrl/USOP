@@ -68,6 +68,7 @@ class NormalizationEngine:
             normalized.append(
                 {
                     "name": role.get("name"),
+                    "system_name": role.get("system_name", "Entra ID"),
                     "source": connector_name,
                 }
             )
