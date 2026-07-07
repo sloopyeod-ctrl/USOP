@@ -8,10 +8,12 @@ from app.models.role import Role
 from app.models.role_assignment import RoleAssignment
 from datetime import UTC, datetime, timedelta
 from app.analytics.risk_engine import RISK_WEIGHTS, risk_level
+from app.governance.policy_engine import PolicyEngine
 
 class AccessAnalyzer:
     def __init__(self, db: Session):
         self.db = db
+        self.policy_engine = PolicyEngine(db)
 
     def privileged_identities(self) -> list[dict]:
         identities = self.db.query(Identity).filter(Identity.is_active == True).all()
@@ -327,6 +329,22 @@ class AccessAnalyzer:
                             "username": account.username,
                         }
                     )
+
+                policy_findings = self.policy_engine.evaluate_account(account)
+
+                for policy_finding in policy_findings:
+                    score += policy_finding["risk_weight"]
+                    findings.append(
+                        {
+                            "type": "policy_violation",
+                            "weight": policy_finding["risk_weight"],
+                            "policy_id": policy_finding["policy_id"],
+                            "policy_name": policy_finding["policy_name"],
+                            "severity": policy_finding["severity"],
+                            "account_id": policy_finding["account_id"],
+                            "username": policy_finding["username"],
+                        }
+                    )    
 
                 memberships = (
                     self.db.query(Membership)
