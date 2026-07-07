@@ -2,6 +2,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.identity import Identity
+from app.models.account import Account
 
 
 class ReconciliationEngine:
@@ -46,6 +47,44 @@ class ReconciliationEngine:
                 )
 
                 summary["identities_created"] += 1
+
+            #
+        # Reconcile accounts
+        #
+        for account in normalized.get("accounts", []):
+            existing = (
+                self.db.query(Account)
+                .filter(
+                    func.lower(Account.username) == account["username"].lower(),
+                    Account.system_name == account["system_name"],
+                )
+                .first()
+            )
+
+            if existing:
+                existing.system_name = account["system_name"]
+                summary["accounts_updated"] += 1
+
+            else:
+                identity = (
+                    self.db.query(Identity)
+                    .filter(Identity.is_active == True)
+                    .first()
+                )
+
+                if identity:
+                    self.db.add(
+                        Account(
+                            identity_id=identity.id,
+                            username=account["username"],
+                            display_name=account["username"],
+                            system_name=account["system_name"],
+                            source_system=account["source"],
+                            source_identifier=account["username"],
+                        )
+                    )
+
+                    summary["accounts_created"] += 1            
 
         self.db.commit()
 
