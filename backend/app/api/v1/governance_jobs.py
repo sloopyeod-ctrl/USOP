@@ -22,3 +22,11 @@ def run_connector_sync(
 ):
     jobs = GovernanceJobs(db)
     return jobs.run_connector_sync(connector_name)
+
+@router.post("/run-synchronization/{connector_name}")
+def run_synchronization(
+    connector_name: str,
+    db: Session = Depends(get_db),
+):
+    jobs = GovernanceJobs(db)
+    return jobs.run_synchronization(connector_name)

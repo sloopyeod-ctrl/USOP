@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.analytics.access_analyzer import AccessAnalyzer
 from app.services.audit_service import AuditService
 from app.services.connector_service import ConnectorService
+from app.synchronization.sync_engine import SynchronizationEngine
 
 
 class GovernanceJobs:
@@ -11,6 +12,7 @@ class GovernanceJobs:
         self.access_analyzer = AccessAnalyzer(db)
         self.audit_service = AuditService(db)
         self.connector_service = ConnectorService()
+        self.sync_engine = SynchronizationEngine(db)
 
     def run_identity_risk_analysis(self):
         results = self.access_analyzer.identity_risk()
@@ -64,3 +66,6 @@ class GovernanceJobs:
             "connector": connector_name,
             "result": result,
         }
+    
+    def run_synchronization(self, connector_name: str):
+        return self.sync_engine.run(connector_name)
