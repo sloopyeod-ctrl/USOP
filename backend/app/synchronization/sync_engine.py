@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 
 from app.services.audit_service import AuditService
 from app.services.connector_service import ConnectorService
+from app.synchronization.normalization import NormalizationEngine
 
 
 class SynchronizationEngine:
@@ -9,9 +10,15 @@ class SynchronizationEngine:
         self.db = db
         self.connector_service = ConnectorService()
         self.audit_service = AuditService(db)
+        self.normalizer = NormalizationEngine()
 
     def run(self, connector_name: str):
         collected = self.connector_service.collect(connector_name)
+
+        normalized = self.normalizer.normalize(
+            connector_name,
+            collected,
+        )
 
         if collected is None:
             return {
@@ -43,5 +50,5 @@ class SynchronizationEngine:
             "status": "completed",
             "connector": connector_name,
             "summary": summary,
-            "collected": collected,
+            "normalized": normalized,
         }
