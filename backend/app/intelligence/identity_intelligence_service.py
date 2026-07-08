@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.analytics.access_analyzer import AccessAnalyzer
 from app.graph.identity_graph_service import IdentityGraphService
 from app.timeline.identity_timeline_builder import IdentityTimelineBuilder
+from app.recommendations.recommendation_engine import RecommendationEngine
 
 
 class IdentityIntelligenceService:
@@ -11,6 +12,7 @@ class IdentityIntelligenceService:
         self.graph_service = IdentityGraphService(db)
         self.access_analyzer = AccessAnalyzer(db)
         self.timeline_builder = IdentityTimelineBuilder(db)
+        self.recommendation_engine = RecommendationEngine()
 
     def get_identity_intelligence(self, identity_id: str):
         graph = self.graph_service.get_identity_graph(identity_id)
@@ -34,26 +36,9 @@ class IdentityIntelligenceService:
         recommendations = []
 
         if identity_risk:
-            for finding in identity_risk.get("findings", []):
-                if finding["type"] == "weak_authentication":
-                    recommendations.append(
-                        f"Review weak authentication for {finding.get('username')}."
-                    )
-
-                if finding["type"] == "dormant_account":
-                    recommendations.append(
-                        f"Review dormant account {finding.get('username')}."
-                    )
-
-                if finding["type"] == "privileged_group":
-                    recommendations.append(
-                        f"Validate privileged group membership: {finding.get('group_name')}."
-                    )
-
-                if finding["type"] == "policy_violation":
-                    recommendations.append(
-                        f"Remediate policy violation: {finding.get('policy_name')}."
-                    )
+            recommendations = self.recommendation_engine.generate(
+                identity_risk["findings"]
+            )
 
         return {
             "identity": graph["identity"],
