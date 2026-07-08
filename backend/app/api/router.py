@@ -26,6 +26,7 @@ from app.api.v1.connectors import router as connectors_router
 from app.api.v1.identity_graph import router as identity_graph_router
 from app.api.v1.identity_timeline_v2 import router as identity_timeline_v2_router
 from app.api.v1.identity_intelligence import router as identity_intelligence_router
+from app.api.v1.executive_exposure_dashboard import router as executive_exposure_dashboard_router
 
 router = APIRouter()
 
@@ -90,3 +91,4 @@ router.include_router(connectors_router)
 router.include_router(identity_graph_router)
 router.include_router(identity_timeline_v2_router)
 router.include_router(identity_intelligence_router)
+router.include_router(executive_exposure_dashboard_router)
