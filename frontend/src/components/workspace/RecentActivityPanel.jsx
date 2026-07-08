@@ -1,6 +1,27 @@
-import { Box, Card, CardContent, Divider, Stack, Typography } from "@mui/material";
+import { Box, Card, CardContent, Chip, Divider, Stack, Typography } from "@mui/material";
+
+function collapseEvents(events) {
+  const grouped = {};
+
+  events.forEach((event) => {
+    const key = `${event.event_type}-${event.message}`;
+
+    if (!grouped[key]) {
+      grouped[key] = {
+        ...event,
+        count: 1,
+      };
+    } else {
+      grouped[key].count += 1;
+    }
+  });
+
+  return Object.values(grouped);
+}
 
 export default function RecentActivityPanel({ events }) {
+  const collapsedEvents = collapseEvents(events);
+
   return (
     <Card>
       <CardContent>
@@ -9,13 +30,30 @@ export default function RecentActivityPanel({ events }) {
         </Typography>
 
         <Stack spacing={2}>
-          {events.map((event, index) => (
+          {collapsedEvents.map((event, index) => (
             <Box key={`${event.event_type}-${index}`}>
-              <Typography fontWeight={800}>{event.event_type}</Typography>
-              <Typography color="text.secondary">{event.message}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {new Date(event.timestamp).toLocaleString()}
-              </Typography>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Box>
+                  <Typography fontWeight={800}>{event.event_type}</Typography>
+
+                  <Typography color="text.secondary">
+                    {event.message}
+                  </Typography>
+
+                  <Typography variant="body2" color="text.secondary">
+                    Last seen: {new Date(event.timestamp).toLocaleString()}
+                  </Typography>
+                </Box>
+
+                {event.count > 1 && (
+                  <Chip
+                    label={`${event.count}x`}
+                    color="warning"
+                    size="small"
+                  />
+                )}
+              </Stack>
+
               <Divider sx={{ mt: 2 }} />
             </Box>
           ))}

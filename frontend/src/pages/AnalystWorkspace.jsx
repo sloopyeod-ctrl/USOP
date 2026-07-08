@@ -7,20 +7,18 @@ import MissionStatusCard from "../components/workspace/MissionStatusCard";
 import RiskSummaryCard from "../components/workspace/RiskSummaryCard";
 import RemediationImpactCard from "../components/workspace/RemediationImpactCard";
 import IdentityGraphPanel from "../components/workspace/IdentityGraphPanel";
+import MissionContextPanel from "../components/workspace/MissionContextPanel";
 import ImmediateActionsPanel from "../components/workspace/ImmediateActionsPanel";
 import RecentActivityPanel from "../components/workspace/RecentActivityPanel";
 
-import {
-  Alert,
-  Box,
-  CircularProgress,
-} from "@mui/material";
+import { Alert, Box, CircularProgress } from "@mui/material";
 
 export default function AnalystWorkspace() {
   const { identityId } = useParams();
 
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const [selectedNode, setSelectedNode] = useState(null);
 
   useEffect(() => {
     api
@@ -72,8 +70,25 @@ export default function AnalystWorkspace() {
         <RemediationImpactCard recommendations={topRecommendations} />
       </Box>
 
-      <Box sx={{ mb: 3 }}>
-        <IdentityGraphPanel identityId={identityId} height="58vh" />
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "1fr",
+            xl: "2fr 360px",
+          },
+          gap: 3,
+          mb: 3,
+        }}
+      >
+        <IdentityGraphPanel
+          identityId={identityId}
+          height="60vh"
+          selectedNode={selectedNode}
+          setSelectedNode={setSelectedNode}
+        />
+
+        <MissionContextPanel node={selectedNode} />
       </Box>
 
       <Box

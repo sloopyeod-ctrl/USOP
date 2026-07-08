@@ -12,12 +12,7 @@ import {
   Typography,
 } from "@mui/material";
 
-import {
-  ReactFlow,
-  Background,
-  Controls,
-  MiniMap,
-} from "@xyflow/react";
+import { ReactFlow, Background, Controls, MiniMap } from "@xyflow/react";
 
 import "@xyflow/react/dist/style.css";
 
@@ -68,11 +63,15 @@ function edgeStyle(color = "#22D3EE") {
   };
 }
 
-export default function IdentityGraphPanel({ identityId, height = "62vh" }) {
+export default function IdentityGraphPanel({
+  identityId,
+  height = "62vh",
+  selectedNode,
+  setSelectedNode,
+}) {
   const [graph, setGraph] = useState(null);
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
-  const [selectedNode, setSelectedNode] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -213,21 +212,6 @@ export default function IdentityGraphPanel({ identityId, height = "62vh" }) {
             <Background color="#1F2937" gap={18} />
           </ReactFlow>
         </Box>
-
-        {selectedNode && (
-          <Box sx={{ mt: 2 }}>
-            <Chip label={selectedNode.data.nodeType} color="primary" size="small" />
-            <Typography fontWeight={800} sx={{ mt: 1 }}>
-              {selectedNode.data.label}
-            </Typography>
-
-            {Object.entries(selectedNode.data.details).slice(0, 6).map(([key, value]) => (
-              <Typography key={key} variant="body2" color="text.secondary">
-                {key.replaceAll("_", " ")}: {String(value ?? "None")}
-              </Typography>
-            ))}
-          </Box>
-        )}
       </CardContent>
     </Card>
   );
