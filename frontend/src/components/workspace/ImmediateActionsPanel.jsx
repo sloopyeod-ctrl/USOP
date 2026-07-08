@@ -7,16 +7,49 @@ function severityColor(value) {
   return "success";
 }
 
-export default function ImmediateActionsPanel({ recommendations }) {
+function filterRecommendations(recommendations, selectedNode) {
+  if (!selectedNode) return recommendations;
+
+  const details = selectedNode.data.details || {};
+  const username = details.username;
+  const groupName = details.group_name;
+  const roleName = details.role_name;
+
+  const filtered = recommendations.filter((rec) => {
+    const text = `${rec.title} ${rec.description}`.toLowerCase();
+
+    return (
+      (username && text.includes(username.toLowerCase())) ||
+      (groupName && text.includes(groupName.toLowerCase())) ||
+      (roleName && text.includes(roleName.toLowerCase()))
+    );
+  });
+
+  return filtered.length ? filtered : recommendations;
+}
+
+export default function ImmediateActionsPanel({ recommendations, selectedNode }) {
+  const visibleRecommendations = filterRecommendations(recommendations, selectedNode);
+
   return (
     <Card>
       <CardContent>
-        <Typography variant="h5" fontWeight={800} gutterBottom>
-          Immediate Actions
-        </Typography>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+          <Typography variant="h5" fontWeight={800}>
+            Immediate Actions
+          </Typography>
+
+          {selectedNode && (
+            <Chip
+              label={`Context: ${selectedNode.data.nodeType}`}
+              color="primary"
+              size="small"
+            />
+          )}
+        </Stack>
 
         <Stack spacing={2}>
-          {recommendations.map((rec, index) => (
+          {visibleRecommendations.map((rec, index) => (
             <Box key={`${rec.title}-${index}`}>
               <Stack direction="row" spacing={1} alignItems="center">
                 <Chip label={`P${rec.priority}`} size="small" color="primary" />

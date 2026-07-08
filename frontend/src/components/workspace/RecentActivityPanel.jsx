@@ -19,15 +19,47 @@ function collapseEvents(events) {
   return Object.values(grouped);
 }
 
-export default function RecentActivityPanel({ events }) {
-  const collapsedEvents = collapseEvents(events);
+function filterEvents(events, selectedNode) {
+  if (!selectedNode) return events;
+
+  const details = selectedNode.data.details || {};
+  const username = details.username;
+  const groupName = details.group_name;
+  const roleName = details.role_name;
+
+  const filtered = events.filter((event) => {
+    const text = `${event.event_type} ${event.message} ${event.actor || ""}`.toLowerCase();
+
+    return (
+      (username && text.includes(username.toLowerCase())) ||
+      (groupName && text.includes(groupName.toLowerCase())) ||
+      (roleName && text.includes(roleName.toLowerCase()))
+    );
+  });
+
+  return filtered.length ? filtered : events;
+}
+
+export default function RecentActivityPanel({ events, selectedNode }) {
+  const filteredEvents = filterEvents(events, selectedNode);
+  const collapsedEvents = collapseEvents(filteredEvents);
 
   return (
     <Card>
       <CardContent>
-        <Typography variant="h5" fontWeight={800} gutterBottom>
-          Recent Activity
-        </Typography>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+          <Typography variant="h5" fontWeight={800}>
+            Recent Activity
+          </Typography>
+
+          {selectedNode && (
+            <Chip
+              label={`Context: ${selectedNode.data.nodeType}`}
+              color="primary"
+              size="small"
+            />
+          )}
+        </Stack>
 
         <Stack spacing={2}>
           {collapsedEvents.map((event, index) => (
@@ -46,11 +78,7 @@ export default function RecentActivityPanel({ events }) {
                 </Box>
 
                 {event.count > 1 && (
-                  <Chip
-                    label={`${event.count}x`}
-                    color="warning"
-                    size="small"
-                  />
+                  <Chip label={`${event.count}x`} color="warning" size="small" />
                 )}
               </Stack>
 

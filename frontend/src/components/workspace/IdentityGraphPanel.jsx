@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import api from "../../api/usopApi";
 
 import {
@@ -44,7 +44,7 @@ const NODE_STYLES = {
   },
 };
 
-function nodeStyle(type) {
+function baseNodeStyle(type) {
   return {
     ...NODE_STYLES[type],
     borderRadius: 14,
@@ -53,6 +53,7 @@ function nodeStyle(type) {
     width: 190,
     textAlign: "center",
     boxShadow: "0 10px 25px rgba(0,0,0,0.35)",
+    transition: "all 0.2s ease-in-out",
   };
 }
 
@@ -63,6 +64,24 @@ function edgeStyle(color = "#22D3EE") {
   };
 }
 
+function getConnectedIds(edges, selectedNodeId) {
+  if (!selectedNodeId) return new Set();
+
+  const connected = new Set([selectedNodeId]);
+
+  edges.forEach((edge) => {
+    if (edge.source === selectedNodeId) {
+      connected.add(edge.target);
+    }
+
+    if (edge.target === selectedNodeId) {
+      connected.add(edge.source);
+    }
+  });
+
+  return connected;
+}
+
 export default function IdentityGraphPanel({
   identityId,
   height = "62vh",
@@ -70,8 +89,8 @@ export default function IdentityGraphPanel({
   setSelectedNode,
 }) {
   const [graph, setGraph] = useState(null);
-  const [nodes, setNodes] = useState([]);
-  const [edges, setEdges] = useState([]);
+  const [baseNodes, setBaseNodes] = useState([]);
+  const [baseEdges, setBaseEdges] = useState([]);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -98,13 +117,15 @@ export default function IdentityGraphPanel({
         label: `👤 ${data.identity.display_name}`,
         details: data.identity,
         nodeType: "Identity",
+        styleType: "identity",
       },
       type: "input",
-      style: nodeStyle("identity"),
+      style: baseNodeStyle("identity"),
     });
 
     data.accounts.forEach((account, index) => {
       const isPrivileged = account.privilege_level === "Privileged";
+      const styleType = isPrivileged ? "privilegedAccount" : "account";
 
       graphNodes.push({
         id: account.id,
@@ -113,8 +134,9 @@ export default function IdentityGraphPanel({
           label: `${isPrivileged ? "🚨" : "💻"} ${account.username}`,
           details: account,
           nodeType: "Account",
+          styleType,
         },
-        style: nodeStyle(isPrivileged ? "privilegedAccount" : "account"),
+        style: baseNodeStyle(styleType),
       });
 
       graphEdges.push({
@@ -122,6 +144,9 @@ export default function IdentityGraphPanel({
         source: "identity",
         target: account.id,
         animated: isPrivileged,
+        data: {
+          color: isPrivileged ? "#EF4444" : "#22C55E",
+        },
         style: edgeStyle(isPrivileged ? "#EF4444" : "#22C55E"),
       });
     });
@@ -134,8 +159,9 @@ export default function IdentityGraphPanel({
           label: `👥 ${group.group_name}`,
           details: group,
           nodeType: "Group",
+          styleType: "group",
         },
-        style: nodeStyle("group"),
+        style: baseNodeStyle("group"),
       });
 
       graphEdges.push({
@@ -143,6 +169,9 @@ export default function IdentityGraphPanel({
         source: group.account_id,
         target: group.group_id,
         animated: group.privilege_level === "Privileged",
+        data: {
+          color: "#F59E0B",
+        },
         style: edgeStyle("#F59E0B"),
       });
     });
@@ -155,8 +184,9 @@ export default function IdentityGraphPanel({
           label: `🛡 ${role.role_name}`,
           details: role,
           nodeType: "Role",
+          styleType: "role",
         },
-        style: nodeStyle("role"),
+        style: baseNodeStyle("role"),
       });
 
       graphEdges.push({
@@ -164,16 +194,69 @@ export default function IdentityGraphPanel({
         source: role.account_id,
         target: role.role_id,
         animated: role.privilege_level === "Privileged",
+        data: {
+          color: "#A78BFA",
+        },
         style: edgeStyle("#A78BFA"),
       });
     });
 
-    setNodes(graphNodes);
-    setEdges(graphEdges);
+    setBaseNodes(graphNodes);
+    setBaseEdges(graphEdges);
   }
 
+  const highlightedNodes = useMemo(() => {
+    const selectedId = selectedNode?.id;
+    const connectedIds = getConnectedIds(baseEdges, selectedId);
+
+    if (!selectedId) return baseNodes;
+
+    return baseNodes.map((node) => {
+      const isSelected = node.id === selectedId;
+      const isConnected = connectedIds.has(node.id);
+
+      return {
+        ...node,
+        style: {
+          ...baseNodeStyle(node.data.styleType),
+          opacity: isConnected ? 1 : 0.25,
+          transform: isSelected ? "scale(1.08)" : "scale(1)",
+          border: isSelected
+            ? "3px solid #22D3EE"
+            : baseNodeStyle(node.data.styleType).border,
+          boxShadow: isSelected
+            ? "0 0 0 3px rgba(34,211,238,0.25), 0 0 28px rgba(34,211,238,0.85)"
+            : isConnected
+              ? "0 0 18px rgba(34,211,238,0.35)"
+              : "0 10px 25px rgba(0,0,0,0.20)",
+        },
+      };
+    });
+  }, [baseNodes, baseEdges, selectedNode]);
+
+  const highlightedEdges = useMemo(() => {
+    const selectedId = selectedNode?.id;
+
+    if (!selectedId) return baseEdges;
+
+    return baseEdges.map((edge) => {
+      const isConnected =
+        edge.source === selectedId || edge.target === selectedId;
+
+      return {
+        ...edge,
+        animated: isConnected || edge.animated,
+        style: {
+          stroke: isConnected ? "#22D3EE" : edge.data?.color || "#64748B",
+          strokeWidth: isConnected ? 4 : 1.5,
+          opacity: isConnected ? 1 : 0.2,
+        },
+      };
+    });
+  }, [baseEdges, selectedNode]);
+
   if (error) return <Alert severity="error">{error}</Alert>;
-  if (!graph || !nodes.length) return <CircularProgress />;
+  if (!graph || !baseNodes.length) return <CircularProgress />;
 
   return (
     <Card>
@@ -189,7 +272,7 @@ export default function IdentityGraphPanel({
               Identity Graph
             </Typography>
             <Typography color="text.secondary">
-              Accounts, groups, and role relationships.
+              Select a node to highlight connected relationships.
             </Typography>
           </Box>
 
@@ -203,9 +286,10 @@ export default function IdentityGraphPanel({
         <Box sx={{ height }}>
           <ReactFlow
             fitView
-            nodes={nodes}
-            edges={edges}
+            nodes={highlightedNodes}
+            edges={highlightedEdges}
             onNodeClick={(_, node) => setSelectedNode(node)}
+            onPaneClick={() => setSelectedNode(null)}
           >
             <MiniMap nodeStrokeWidth={3} zoomable pannable />
             <Controls />

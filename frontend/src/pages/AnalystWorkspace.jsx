@@ -41,8 +41,8 @@ export default function AnalystWorkspace() {
 
   const missingMfa = access.accounts.filter((account) => !account.mfa_enabled);
 
-  const latestTimeline = timeline.slice(0, 6);
-  const topRecommendations = recommendations.slice(0, 5);
+  const latestTimeline = timeline.slice(0, 10);
+  const topRecommendations = recommendations.slice(0, 8);
 
   return (
     <Box>
@@ -101,8 +101,15 @@ export default function AnalystWorkspace() {
           gap: 3,
         }}
       >
-        <ImmediateActionsPanel recommendations={topRecommendations} />
-        <RecentActivityPanel events={latestTimeline} />
+        <ImmediateActionsPanel
+          recommendations={topRecommendations}
+          selectedNode={selectedNode}
+        />
+
+        <RecentActivityPanel
+          events={latestTimeline}
+          selectedNode={selectedNode}
+        />
       </Box>
     </Box>
   );
