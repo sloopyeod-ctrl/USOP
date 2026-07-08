@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/usopApi";
+
 import KpiTile from "../components/cards/KpiTile";
+import ExposureTrendChart from "../components/charts/ExposureTrendChart";
 
 import {
   Alert,
@@ -22,16 +24,6 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import TimelineIcon from "@mui/icons-material/Timeline";
 import CloudDoneIcon from "@mui/icons-material/CloudDone";
-
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 
 function severityColor(value) {
   if (value === "Critical") return "error";
@@ -147,42 +139,7 @@ export default function ExecutiveDashboard() {
         />
       </Stack>
 
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Typography variant="h5" fontWeight={800} gutterBottom>
-            Exposure Trend
-          </Typography>
-
-          <Typography color="text.secondary" sx={{ mb: 2 }}>
-            Seven-day identity exposure trend.
-          </Typography>
-
-          <Box sx={{ height: 260 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={exposureTrend}>
-                <defs>
-                  <linearGradient id="exposureGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#22D3EE" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#22D3EE" stopOpacity={0.05} />
-                  </linearGradient>
-                </defs>
-
-                <CartesianGrid strokeDasharray="3 3" stroke="#1F2937" />
-                <XAxis dataKey="day" stroke="#9CA3AF" />
-                <YAxis stroke="#9CA3AF" domain={[0, 100]} />
-                <Tooltip />
-                <Area
-                  type="monotone"
-                  dataKey="exposure"
-                  stroke="#22D3EE"
-                  fill="url(#exposureGradient)"
-                  strokeWidth={3}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </Box>
-        </CardContent>
-      </Card>
+      <ExposureTrendChart data={exposureTrend} />
 
       <Typography variant="h5" fontWeight={800} gutterBottom>
         Most Exposed Identities
