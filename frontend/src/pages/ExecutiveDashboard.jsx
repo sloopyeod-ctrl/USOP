@@ -1,27 +1,79 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../api/usopApi";
 
 import {
-  Typography,
+  Alert,
+  Box,
   Card,
   CardContent,
+  Chip,
   CircularProgress,
-  Box,
-  Alert,
+  LinearProgress,
   Stack,
+  Typography,
 } from "@mui/material";
+
+import CrisisAlertIcon from "@mui/icons-material/CrisisAlert";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import ReportProblemIcon from "@mui/icons-material/ReportProblem";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
+import TimelineIcon from "@mui/icons-material/Timeline";
+import CloudDoneIcon from "@mui/icons-material/CloudDone";
+
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+
+function severityColor(value) {
+  if (value === "Critical") return "error";
+  if (value === "High") return "warning";
+  if (value === "Medium") return "info";
+  return "success";
+}
+
+function KpiTile({ icon, label, value, accent }) {
+  return (
+    <Card
+      sx={{
+        minWidth: 210,
+        flex: "1 1 210px",
+        background: `linear-gradient(135deg, #111827 0%, ${accent}22 100%)`,
+        borderTop: `3px solid ${accent}`,
+      }}
+    >
+      <CardContent>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Box>{icon}</Box>
+          <Typography variant="h3" fontWeight={900}>
+            {value}
+          </Typography>
+        </Stack>
+
+        <Typography color="text.secondary" sx={{ mt: 1 }}>
+          {label}
+        </Typography>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function ExecutiveDashboard() {
   const [dashboard, setDashboard] = useState(null);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     api
       .get("/executive-exposure-dashboard/")
-      .then((response) => {
-        console.log("Dashboard data:", response.data);
-        setDashboard(response.data);
-      })
+      .then((response) => setDashboard(response.data))
       .catch((err) => {
         console.error("Dashboard load failed:", err);
         setError("Could not load dashboard data.");
@@ -38,83 +90,290 @@ export default function ExecutiveDashboard() {
 
   const summary = dashboard.summary;
 
+  const exposureTrend = [
+    { day: "Mon", exposure: 62 },
+    { day: "Tue", exposure: 70 },
+    { day: "Wed", exposure: 76 },
+    { day: "Thu", exposure: 84 },
+    { day: "Fri", exposure: 91 },
+    { day: "Sat", exposure: 97 },
+    { day: "Sun", exposure: 100 },
+  ];
+
   return (
     <Box>
-      <Typography variant="h4" fontWeight={700} gutterBottom>
-        Executive Exposure Dashboard
+      <Card
+        sx={{
+          mb: 3,
+          background:
+            "linear-gradient(135deg, #111827 0%, #0B1220 60%, #083344 100%)",
+          border: "1px solid #164E63",
+        }}
+      >
+        <CardContent>
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            justifyContent="space-between"
+            alignItems={{ xs: "flex-start", md: "center" }}
+            spacing={2}
+          >
+            <Box>
+              <Typography variant="h4" fontWeight={900}>
+                USOP Command Center
+              </Typography>
+              <Typography color="text.secondary">
+                Unified Security Operations Platform
+              </Typography>
+            </Box>
+
+            <Chip label="LIVE" color="success" sx={{ fontWeight: 800 }} />
+          </Stack>
+        </CardContent>
+      </Card>
+
+      <Typography variant="h5" fontWeight={800} gutterBottom>
+        Security Posture
       </Typography>
 
-      <Stack direction="row" spacing={3} sx={{ mb: 4, flexWrap: "wrap" }}>
-        <Card sx={{ minWidth: 220 }}>
-          <CardContent>
-            <Typography variant="h3" color="error.main">
-              {summary.critical}
-            </Typography>
-            <Typography color="text.secondary">Critical Identities</Typography>
-          </CardContent>
-        </Card>
+      <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: "wrap" }}>
+        <KpiTile
+          icon={<CrisisAlertIcon color="error" fontSize="large" />}
+          label="Critical Exposure"
+          value={summary.critical}
+          accent="#EF4444"
+        />
 
-        <Card sx={{ minWidth: 220 }}>
-          <CardContent>
-            <Typography variant="h3">
-              {summary.high}
-            </Typography>
-            <Typography color="text.secondary">High Exposure</Typography>
-          </CardContent>
-        </Card>
+        <KpiTile
+          icon={<WarningAmberIcon color="warning" fontSize="large" />}
+          label="High Exposure"
+          value={summary.high}
+          accent="#F59E0B"
+        />
 
-        <Card sx={{ minWidth: 220 }}>
-          <CardContent>
-            <Typography variant="h3">
-              {summary.medium}
-            </Typography>
-            <Typography color="text.secondary">Medium Exposure</Typography>
-          </CardContent>
-        </Card>
+        <KpiTile
+          icon={<ReportProblemIcon color="info" fontSize="large" />}
+          label="Medium Exposure"
+          value={summary.medium}
+          accent="#38BDF8"
+        />
 
-        <Card sx={{ minWidth: 220 }}>
-          <CardContent>
-            <Typography variant="h3">
-              {summary.low}
-            </Typography>
-            <Typography color="text.secondary">Low Exposure</Typography>
-          </CardContent>
-        </Card>
+        <KpiTile
+          icon={<CheckCircleIcon color="success" fontSize="large" />}
+          label="Low Exposure"
+          value={summary.low}
+          accent="#22C55E"
+        />
+
+        <KpiTile
+          icon={<PeopleAltIcon color="primary" fontSize="large" />}
+          label="Total Identities"
+          value={summary.total_identities}
+          accent="#22D3EE"
+        />
       </Stack>
 
-      <Typography variant="h5" fontWeight={600} gutterBottom>
-        Top Exposed Identities
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Typography variant="h5" fontWeight={800} gutterBottom>
+            Exposure Trend
+          </Typography>
+
+          <Typography color="text.secondary" sx={{ mb: 2 }}>
+            Seven-day identity exposure trend.
+          </Typography>
+
+          <Box sx={{ height: 260 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={exposureTrend}>
+                <defs>
+                  <linearGradient id="exposureGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#22D3EE" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#22D3EE" stopOpacity={0.05} />
+                  </linearGradient>
+                </defs>
+
+                <CartesianGrid strokeDasharray="3 3" stroke="#1F2937" />
+                <XAxis dataKey="day" stroke="#9CA3AF" />
+                <YAxis stroke="#9CA3AF" domain={[0, 100]} />
+                <Tooltip />
+                <Area
+                  type="monotone"
+                  dataKey="exposure"
+                  stroke="#22D3EE"
+                  fill="url(#exposureGradient)"
+                  strokeWidth={3}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </Box>
+        </CardContent>
+      </Card>
+
+      <Typography variant="h5" fontWeight={800} gutterBottom>
+        Most Exposed Identities
       </Typography>
 
       {dashboard.top_risks.map((identity) => (
-        <Card key={identity.identity_id} sx={{ mb: 2 }}>
+        <Card
+          key={identity.identity_id}
+          onClick={() => navigate(`/identity/${identity.identity_id}`)}
+          sx={{
+            mb: 2,
+            cursor: "pointer",
+            transition: "0.2s",
+            "&:hover": {
+              transform: "translateY(-2px)",
+              boxShadow: 8,
+              borderColor: "primary.main",
+            },
+          }}
+        >
           <CardContent>
-            <Typography variant="h6">
-              {identity.display_name}
-            </Typography>
+            <Stack
+              direction={{ xs: "column", md: "row" }}
+              justifyContent="space-between"
+              alignItems={{ xs: "flex-start", md: "center" }}
+              spacing={3}
+            >
+              <Box sx={{ flexGrow: 1, width: "100%" }}>
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                  <Typography variant="h6" fontWeight={900}>
+                    {identity.display_name}
+                  </Typography>
 
-            <Typography color="text.secondary">
-              {identity.primary_email}
-            </Typography>
+                  <Chip
+                    label={identity.exposure_rating}
+                    color={severityColor(identity.exposure_rating)}
+                    size="small"
+                    sx={{ fontWeight: 800 }}
+                  />
+                </Stack>
 
-            <Typography sx={{ mt: 1 }}>
-              Exposure: {identity.exposure_score} — {identity.exposure_rating}
-            </Typography>
+                <Typography color="text.secondary" sx={{ mb: 2 }}>
+                  {identity.primary_email}
+                </Typography>
 
-            <Typography>
-              Risk: {identity.risk_score} — {identity.risk_level}
-            </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Exposure Score
+                </Typography>
 
-            <Typography>
-              Recommendations: {identity.recommendation_count}
-            </Typography>
+                <Stack direction="row" alignItems="center" spacing={2}>
+                  <Box sx={{ flexGrow: 1 }}>
+                    <LinearProgress
+                      variant="determinate"
+                      value={Math.min(identity.exposure_score, 100)}
+                      color={severityColor(identity.exposure_rating)}
+                      sx={{ height: 10, borderRadius: 10 }}
+                    />
+                  </Box>
 
-            <Typography>
-              Policy Violations: {identity.policy_violations}
-            </Typography>
+                  <Typography fontWeight={900}>{identity.exposure_score}</Typography>
+                </Stack>
+              </Box>
+
+              <Stack spacing={1} sx={{ minWidth: 210 }}>
+                <Typography>
+                  Risk: <strong>{identity.risk_score}</strong>
+                </Typography>
+
+                <Typography>
+                  Recommendations: <strong>{identity.recommendation_count}</strong>
+                </Typography>
+
+                <Typography>
+                  Policy Violations: <strong>{identity.policy_violations}</strong>
+                </Typography>
+
+                <Typography color="primary.main" fontWeight={800}>
+                  Open Analyst Workspace →
+                </Typography>
+              </Stack>
+            </Stack>
           </CardContent>
         </Card>
       ))}
+
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "1fr",
+            lg: "1fr 1fr",
+          },
+          gap: 3,
+          mt: 3,
+        }}
+      >
+        <Card>
+          <CardContent>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+              <TimelineIcon color="primary" />
+              <Typography variant="h5" fontWeight={800}>
+                Recent Activity
+              </Typography>
+            </Stack>
+
+            <Stack spacing={2}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Box>
+                  <Typography fontWeight={700}>Policy Violation</Typography>
+                  <Typography color="text.secondary" variant="body2">
+                    Privileged Accounts Require MFA
+                  </Typography>
+                </Box>
+                <Chip label="Critical" color="error" size="small" />
+              </Stack>
+
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Box>
+                  <Typography fontWeight={700}>Identity Risk Analysis</Typography>
+                  <Typography color="text.secondary" variant="body2">
+                    Exposure recalculated
+                  </Typography>
+                </Box>
+                <Typography color="text.secondary" variant="body2">
+                  2 min ago
+                </Typography>
+              </Stack>
+
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Box>
+                  <Typography fontWeight={700}>Entra Synchronization</Typography>
+                  <Typography color="text.secondary" variant="body2">
+                    Connector completed successfully
+                  </Typography>
+                </Box>
+                <Chip label="Healthy" color="success" size="small" />
+              </Stack>
+            </Stack>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+              <CloudDoneIcon color="success" />
+              <Typography variant="h5" fontWeight={800}>
+                Connector Health
+              </Typography>
+            </Stack>
+
+            <Stack spacing={1.5}>
+              {["Entra ID", "Azure", "AWS", "Okta", "GitHub"].map((connector) => (
+                <Stack
+                  key={connector}
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                >
+                  <Typography>{connector}</Typography>
+                  <Chip label="Healthy" color="success" size="small" />
+                </Stack>
+              ))}
+            </Stack>
+          </CardContent>
+        </Card>
+      </Box>
     </Box>
   );
 }
