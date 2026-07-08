@@ -1,36 +1,64 @@
 # USOP
 
-# USOP
-## Unified Security Operations Platform
+# USOP — Unified Security Operations Platform
 
-> An enterprise security platform designed to model identities, access, applications, infrastructure, and investigations as a connected security graph.
+USOP is an Identity Governance and Intelligence platform built with FastAPI, PostgreSQL, SQLAlchemy, and Alembic.
 
-![Version](https://img.shields.io/badge/version-v0.2.0-blue)
-![Python](https://img.shields.io/badge/python-3.11-blue)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)
-![Docker](https://img.shields.io/badge/Docker-Ready-blue)
-![License](https://img.shields.io/badge/license-MIT-lightgrey)
+It models identities, accounts, groups, roles, permissions, access reviews, governance policies, risk analytics, exposure scoring, recommendations, synchronization, reconciliation, and identity intelligence.
 
----
+## Current v1 Capabilities
 
-# Overview
+### Identity Governance
+- Identity inventory
+- Accounts
+- Groups
+- Roles
+- Permissions
+- Memberships
+- Role assignments
+- Access reviews
+- Review campaigns
+- Reviewer workbench
 
-USOP (Unified Security Operations Platform) is a security engineering project focused on building an enterprise-grade platform for identity governance, access analysis, security operations, and future investigation workflows.
+### Risk and Governance
+- Identity risk scoring
+- Governance policy engine
+- Policy action engine
+- Automated review creation
+- Audit event tracking
 
-Rather than treating identities, accounts, permissions, applications, and infrastructure as isolated records, USOP models them as a connected graph that enables security analysts to answer complex operational questions.
+### Synchronization Pipeline
+- Connector framework
+- Entra connector foundation
+- Synchronization engine
+- Normalization engine
+- Reconciliation engine
+- Graph change detection
+- Change event engine
 
-Examples include:
+### Identity Intelligence
+- Identity graph
+- Identity timeline
+- Exposure score engine
+- Recommendation engine
+- Executive exposure dashboard
 
-- What permissions does this identity actually have?
-- Which accounts belong to this person?
-- What privileged groups does this account belong to?
-- Which roles grant access to a specific application?
-- What resources are reachable through inherited permissions?
+## Architecture
 
-The long-term goal is to evolve USOP into a modern Security Operations Platform capable of supporting identity governance, cloud security, investigations, evidence management, and security analytics.
-
----
+```text
+Connectors
+    ↓
+Synchronization Engine
+    ↓
+Normalization Engine
+    ↓
+Reconciliation Engine
+    ↓
+Identity Graph
+    ↓
+Risk Engine / Policy Engine / Review Engine
+    ↓
+Identity Intelligence / Executive Dashboard
 
 # Why I Built USOP
 
@@ -56,156 +84,28 @@ USOP is my attempt to model security data as a unified platform rather than a co
 
 ---
 
-# Current Architecture
-
-```
-                    Identity
-                        │
-        ┌───────────────┴───────────────┐
-        │                               │
- Identity Attributes                Accounts
-                                        │
-                              Memberships
-                                        │
-                                    Groups
-
-                                        │
-
-                               Role Assignments
-                                        │
-                                     Roles
-                                        │
-                               Role Permissions
-                                        │
-                                  Permissions
-```
-
-Current graph traversal:
-
-```
-Identity
-    ↓
-Accounts
-    ↓
-Memberships
-    ↓
-Groups
-
-Accounts
-    ↓
-Role Assignments
-    ↓
-Roles
-    ↓
-Permissions
-```
-
----
-
-# Current Features
-
-## Identity Management
-
-- Identity records
-- Identity attributes
-- Identity lifecycle
-- Source tracking
-- Confidence scoring
-
-## Account Management
-
-- User accounts
-- System ownership
-- Authentication methods
-- Privilege levels
-
-## Authorization
-
-- Groups
-- Memberships
-- Roles
-- Role Assignments
-- Permissions
-- Role Permissions
 
 ## Intelligence
 
 ### Identity Access Summary
 
 ```
-GET /api/v1/identities/{id}/access-summary
+### Key Endpoints
+GET  /identities/
+GET  /accounts/
+GET  /groups/
+GET  /roles/
+GET  /access-reviews/
+GET  /review-campaigns/
+GET  /reviewer-workbench/
+GET  /executive-dashboard/
+GET  /executive-exposure-dashboard/
+GET  /identity-graph/{identity_id}
+GET  /identity-intelligence/{identity_id}
+POST /governance-jobs/run-synchronization/{connector_name}
+POST /governance-jobs/run-identity-risk-analysis
 ```
 
-Returns:
-
-- Identity
-- Accounts
-- Groups
-- Roles
-- Permissions
-
-This represents the first analytical endpoint within USOP.
-
----
-
-# Technology Stack
-
-Backend
-
-- FastAPI
-- SQLAlchemy 2.x
-- Alembic
-- PostgreSQL
-
-Infrastructure
-
-- Docker
-- Docker Compose
-
-Architecture
-
-- ADR (Architecture Decision Records)
-- Repository Pattern
-- Service Layer
-- Vertical Slice Architecture
-
-Documentation
-
-- OpenAPI / Swagger
-- ADR Documentation
-
-Development
-
-- Git
-- GitHub
-- Python 3.11
-
----
-
-# Project Structure
-
-```
-backend/
-    app/
-        api/
-        models/
-        repositories/
-        schemas/
-        services/
-
-    migrations/
-
-    scripts/
-
-docs/
-    architecture/
-        adr/
-
-docker/
-
-```
-
----
 
 # Getting Started
 
@@ -288,78 +188,52 @@ Identity Graph
 
 ---
 
-## 🚧 v0.3.0
+Example Intelligence Output
 
-Applications
+The Identity Intelligence API combines:
 
-Resources
+Identity profile
+Risk score
+Exposure score
+Access graph
+Timeline
+Recommendations
 
-Entitlements
+Example:
 
-Application Access Summary
+GET /identity-intelligence/{identity_id}
 
----
+Returns identity risk, exposure rating, access paths, recent activity, and prioritized remediation recommendations.
 
-## Planned
+Tech Stack
+Python
+FastAPI
+PostgreSQL
+SQLAlchemy
+Alembic
+Pydantic
+Uvicorn
+Project Status
 
-Azure Entra ID Connector
+USOP is currently in active v1 development.
 
-Microsoft Graph API Integration
+Completed:
 
-AWS IAM Integration
+Core identity model
+Governance workflows
+Policy and risk engines
+Synchronization and reconciliation
+Identity intelligence
+Executive exposure dashboard
 
-Risk Scoring Engine
+Planned:
 
-Security Findings
-
-Investigations
-
-Evidence Management
-
-Timeline Analysis
-
-Graph Visualization
-
-React Frontend
-
-Authentication
-
-RBAC
-
-CI/CD
-
-Unit Testing
-
-Integration Testing
-
----
-
-# Current Capabilities
-
-| Capability | Status |
-|------------|--------|
-| Identity Management | ✅ |
-| Account Inventory | ✅ |
-| Group Management | ✅ |
-| Role Management | ✅ |
-| Permission Modeling | ✅ |
-| Identity Access Summary | ✅ |
-| Application Modeling | 🚧 |
-| Resource Modeling | 🚧 |
-| Investigation Management | Planned |
-| Risk Scoring | Planned |
-| Security Analytics | Planned |
-
----
-
-# Project Status
-
-Current Release
-
-**v0.2.0 – Identity Graph**
-
-USOP currently provides a fully functional identity and authorization model with graph traversal capable of answering identity access questions across accounts, groups, roles, and permissions.
-
+AI security copilot
+Real Microsoft Graph connector
+Scheduled background jobs
+Frontend dashboard
+Workflow approvals
+Ticketing integrations
 ---
 
 # About the Author
