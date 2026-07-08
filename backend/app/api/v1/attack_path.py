@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.intelligence.attack_path_service import AttackPathService
+from app.schemas.attack_path import AttackPathResponse
 
 router = APIRouter(
     prefix="/attack-path",
@@ -10,7 +11,7 @@ router = APIRouter(
 )
 
 
-@router.get("/{identity_id}")
+@router.get("/{identity_id}", response_model=AttackPathResponse)
 def get_attack_path(identity_id: str, db: Session = Depends(get_db)):
     service = AttackPathService(db)
     result = service.get_attack_path(identity_id)
