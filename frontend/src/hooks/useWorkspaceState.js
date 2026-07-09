@@ -3,6 +3,7 @@ import { buildUsopGraph } from "../graph/GraphBuilder";
 import { diffGraphs } from "../graph/services/GraphDiffService";
 import { buildGraphIntelligence } from "../graph/services/GraphIntelligenceService";
 import { buildDecisionIntelligence } from "../intelligence/DecisionIntelligenceService";
+import { buildGraphTransition } from "../intelligence/GraphTransitionEngine";
 
 const GRAPH_MODES = {
   BASELINE: "baseline",
@@ -21,6 +22,7 @@ const initialState = {
     currentModel: null,
     projectedModel: null,
     diff: null,
+    transition: null,
     intelligence: null,
     mode: GRAPH_MODES.BASELINE,
   },
@@ -64,6 +66,7 @@ function workspaceReducer(state, action) {
           currentModel: baselineModel,
           projectedModel: null,
           diff: null,
+          transition: null,
           intelligence: null,
           mode: GRAPH_MODES.BASELINE,
         },
@@ -76,6 +79,8 @@ function workspaceReducer(state, action) {
     case "SET_PROJECTED_GRAPH": {
       const projectedModel = buildUsopGraph(action.payload);
       const diff = diffGraphs(state.graph.currentModel, projectedModel);
+      const transition = buildGraphTransition(state.graph.current, action.payload);
+
       const graphIntelligence = buildGraphIntelligence(
         diff,
         state.simulation.result
@@ -95,6 +100,7 @@ function workspaceReducer(state, action) {
           projectedModel,
           currentModel: projectedModel,
           diff,
+          transition,
           intelligence: graphIntelligence,
           mode: GRAPH_MODES.SIMULATION,
         },
@@ -155,6 +161,10 @@ function workspaceReducer(state, action) {
           ? diffGraphs(state.graph.currentModel, projectedModel)
           : null;
 
+      const transition = projectedGraph
+        ? buildGraphTransition(state.graph.current, projectedGraph)
+        : null;
+
       const graphIntelligence = buildGraphIntelligence(diff, action.payload);
 
       const decisionIntelligence = buildDecisionIntelligence({
@@ -171,6 +181,7 @@ function workspaceReducer(state, action) {
           projectedModel,
           currentModel: projectedModel || state.graph.currentModel,
           diff,
+          transition,
           intelligence: graphIntelligence,
           mode: GRAPH_MODES.SIMULATION,
         },
@@ -198,6 +209,11 @@ function workspaceReducer(state, action) {
     }
 
     case "RESET_SIMULATION": {
+      const transition =
+        state.graph.current && state.graph.baseline
+          ? buildGraphTransition(state.graph.current, state.graph.baseline)
+          : null;
+
       return {
         ...state,
         graph: {
@@ -207,6 +223,7 @@ function workspaceReducer(state, action) {
           currentModel: state.graph.baselineModel,
           projectedModel: null,
           diff: null,
+          transition,
           intelligence: null,
           mode: GRAPH_MODES.BASELINE,
         },
