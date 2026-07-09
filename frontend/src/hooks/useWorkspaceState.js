@@ -1,6 +1,7 @@
 import { useMemo, useReducer } from "react";
 import { buildUsopGraph } from "../graph/GraphBuilder";
 import { diffGraphs } from "../graph/services/GraphDiffService";
+import { buildGraphIntelligence } from "../graph/services/GraphIntelligenceService";
 
 const GRAPH_MODES = {
   BASELINE: "baseline",
@@ -19,6 +20,7 @@ const initialState = {
     currentModel: null,
     projectedModel: null,
     diff: null,
+    intelligence: null,
     mode: GRAPH_MODES.BASELINE,
   },
 
@@ -57,6 +59,7 @@ function workspaceReducer(state, action) {
           currentModel: baselineModel,
           projectedModel: null,
           diff: null,
+          intelligence: null,
           mode: GRAPH_MODES.BASELINE,
         },
       };
@@ -65,6 +68,7 @@ function workspaceReducer(state, action) {
     case "SET_PROJECTED_GRAPH": {
       const projectedModel = buildUsopGraph(action.payload);
       const diff = diffGraphs(state.graph.currentModel, projectedModel);
+      const intelligence = buildGraphIntelligence(diff, state.simulation.result);
 
       return {
         ...state,
@@ -75,6 +79,7 @@ function workspaceReducer(state, action) {
           projectedModel,
           currentModel: projectedModel,
           diff,
+          intelligence,
           mode: GRAPH_MODES.SIMULATION,
         },
       };
@@ -131,6 +136,8 @@ function workspaceReducer(state, action) {
           ? diffGraphs(state.graph.currentModel, projectedModel)
           : null;
 
+      const intelligence = buildGraphIntelligence(diff, action.payload);
+
       return {
         ...state,
         graph: {
@@ -140,6 +147,7 @@ function workspaceReducer(state, action) {
           projectedModel,
           currentModel: projectedModel || state.graph.currentModel,
           diff,
+          intelligence,
           mode: GRAPH_MODES.SIMULATION,
         },
         simulation: {
@@ -172,6 +180,7 @@ function workspaceReducer(state, action) {
           currentModel: state.graph.baselineModel,
           projectedModel: null,
           diff: null,
+          intelligence: null,
           mode: GRAPH_MODES.BASELINE,
         },
         simulation: {
