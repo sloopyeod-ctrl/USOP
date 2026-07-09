@@ -196,6 +196,7 @@ export default function AnalystWorkspace() {
           selectedPath={selectedPath}
           setSelectedPath={workspace.selectPath}
           runSimulation={runSimulation}
+          resetSimulation={workspace.resetSimulation}
           simulationResult={simulationResult}
           isSimulating={isSimulating}
         />

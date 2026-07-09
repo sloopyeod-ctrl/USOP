@@ -12,7 +12,7 @@ import {
   Typography,
 } from "@mui/material";
 
-import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import ScienceIcon from "@mui/icons-material/Science";
 
 function riskColor(level) {
@@ -27,9 +27,12 @@ export default function AttackSimulationPanel({
   selectedPath,
   setSelectedPath,
   runSimulation,
+  resetSimulation,
   simulationResult,
   isSimulating,
 }) {
+  const hasSimulationResult = Boolean(simulationResult);
+
   return (
     <Card sx={{ height: "100%" }}>
       <CardContent>
@@ -84,15 +87,27 @@ export default function AttackSimulationPanel({
               <Chip label={`Risk: ${selectedPath.total_risk}`} />
             </Stack>
 
-            <Button
-              fullWidth
-              variant="contained"
-              startIcon={<ScienceIcon />}
-              onClick={runSimulation}
-              disabled={isSimulating}
-            >
-              {isSimulating ? "Simulating..." : "Simulate MFA Fix"}
-            </Button>
+            <Stack spacing={1}>
+              <Button
+                fullWidth
+                variant="contained"
+                startIcon={<ScienceIcon />}
+                onClick={runSimulation}
+                disabled={isSimulating}
+              >
+                {isSimulating ? "Simulating..." : "Simulate MFA Fix"}
+              </Button>
+
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<RestartAltIcon />}
+                onClick={resetSimulation}
+                disabled={isSimulating || !hasSimulationResult}
+              >
+                Reset Simulation
+              </Button>
+            </Stack>
           </>
         )}
 
