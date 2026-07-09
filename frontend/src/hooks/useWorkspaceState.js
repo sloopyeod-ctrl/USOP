@@ -2,6 +2,7 @@ import { useMemo, useReducer } from "react";
 import { buildUsopGraph } from "../graph/GraphBuilder";
 import { diffGraphs } from "../graph/services/GraphDiffService";
 import { buildGraphIntelligence } from "../graph/services/GraphIntelligenceService";
+import { buildDecisionIntelligence } from "../intelligence/DecisionIntelligenceService";
 
 const GRAPH_MODES = {
   BASELINE: "baseline",
@@ -22,6 +23,10 @@ const initialState = {
     diff: null,
     intelligence: null,
     mode: GRAPH_MODES.BASELINE,
+  },
+
+  decision: {
+    intelligence: null,
   },
 
   simulation: {
@@ -62,13 +67,24 @@ function workspaceReducer(state, action) {
           intelligence: null,
           mode: GRAPH_MODES.BASELINE,
         },
+        decision: {
+          intelligence: null,
+        },
       };
     }
 
     case "SET_PROJECTED_GRAPH": {
       const projectedModel = buildUsopGraph(action.payload);
       const diff = diffGraphs(state.graph.currentModel, projectedModel);
-      const intelligence = buildGraphIntelligence(diff, state.simulation.result);
+      const graphIntelligence = buildGraphIntelligence(
+        diff,
+        state.simulation.result
+      );
+
+      const decisionIntelligence = buildDecisionIntelligence({
+        graphIntelligence,
+        simulationResult: state.simulation.result,
+      });
 
       return {
         ...state,
@@ -79,8 +95,11 @@ function workspaceReducer(state, action) {
           projectedModel,
           currentModel: projectedModel,
           diff,
-          intelligence,
+          intelligence: graphIntelligence,
           mode: GRAPH_MODES.SIMULATION,
+        },
+        decision: {
+          intelligence: decisionIntelligence,
         },
       };
     }
@@ -136,7 +155,12 @@ function workspaceReducer(state, action) {
           ? diffGraphs(state.graph.currentModel, projectedModel)
           : null;
 
-      const intelligence = buildGraphIntelligence(diff, action.payload);
+      const graphIntelligence = buildGraphIntelligence(diff, action.payload);
+
+      const decisionIntelligence = buildDecisionIntelligence({
+        graphIntelligence,
+        simulationResult: action.payload,
+      });
 
       return {
         ...state,
@@ -147,8 +171,11 @@ function workspaceReducer(state, action) {
           projectedModel,
           currentModel: projectedModel || state.graph.currentModel,
           diff,
-          intelligence,
+          intelligence: graphIntelligence,
           mode: GRAPH_MODES.SIMULATION,
+        },
+        decision: {
+          intelligence: decisionIntelligence,
         },
         simulation: {
           ...state.simulation,
@@ -182,6 +209,9 @@ function workspaceReducer(state, action) {
           diff: null,
           intelligence: null,
           mode: GRAPH_MODES.BASELINE,
+        },
+        decision: {
+          intelligence: null,
         },
         simulation: {
           running: false,
@@ -246,6 +276,7 @@ export default function useWorkspaceState() {
       state,
 
       graph: state.graph,
+      decision: state.decision,
       simulation: state.simulation,
       selection: state.selection,
       replay: state.replay,
