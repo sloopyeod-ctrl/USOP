@@ -4,260 +4,156 @@
 
 > **An intelligence-driven cybersecurity platform that unifies identity, governance, attack-path analysis, risk analytics, and security operations into a single analyst workspace.**
 
----
-
-## Vision
-
-Modern security teams operate across dozens of disconnected tools.
-
-Identity data lives in Microsoft Entra ID.
-
-Endpoint telemetry lives in Microsoft Defender.
-
-Alerts live in SIEM platforms.
-
-Vulnerability information lives in Tenable.
-
-Asset information lives in CMDBs.
-
-Ticketing systems track remediation.
-
-Analysts spend far too much time switching between consoles just to answer simple questions such as:
-
-* What is this user's actual risk?
-* How could this identity be compromised?
-* What systems are affected?
-* What should be remediated first?
-* What is the impact if I fix this issue?
-
-**USOP (Unified Security Operations Platform)** was created to solve that problem.
-
-Rather than treating security as a collection of disconnected tools, USOP models the enterprise as a connected intelligence graph, allowing analysts to investigate, simulate, prioritize, and understand security risk from a single workspace.
+![Status](https://img.shields.io/badge/Status-Active%20Development-brightgreen)
+![Version](https://img.shields.io/badge/Version-v1.0--alpha-blue)
+![Sprint](https://img.shields.io/badge/Sprint-10-orange)
+![License](https://img.shields.io/badge/License-MIT-success)
+![Python](https://img.shields.io/badge/Python-3.12-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688)
+![React](https://img.shields.io/badge/React-Frontend-61DAFB)
 
 ---
 
-# Why I Built USOP
+# What is USOP?
 
-Throughout my career I have served in military operations, federal security, cloud security, vulnerability management, identity governance, endpoint security, and enterprise cybersecurity engineering.
+Modern security teams operate across dozens of disconnected security products.
 
-One lesson became consistently clear:
+Identity lives in one platform.
 
-> **Security data exists everywhere—but security intelligence rarely does.**
+Endpoint telemetry lives in another.
 
-Organizations invest heavily in security technologies, yet analysts still spend valuable time manually correlating data across multiple systems.
+Vulnerability data lives somewhere else.
 
-USOP is my vision for a modern security operations platform that unifies identity, relationships, risk, governance, simulations, and security intelligence into one modular architecture.
+Security alerts, cloud resources, governance workflows, ticketing systems, and compliance evidence are often scattered across multiple tools.
+
+USOP was created to solve that problem.
+
+Rather than treating security as a collection of disconnected technologies, USOP models the enterprise as a connected intelligence platform that enables analysts to investigate, visualize, simulate, prioritize, and understand security risk from a single workspace.
 
 ---
 
-# Current Capabilities
+# Why USOP?
+
+Security operations should answer questions—not create more of them.
+
+USOP is designed to help security teams answer questions such as:
+
+* Which identities present the greatest enterprise risk?
+* How can an attacker move through my environment?
+* Which remediation provides the greatest reduction in risk?
+* What changed after remediation?
+* Which vulnerabilities create exploitable attack paths?
+* How can technical findings be explained to leadership?
+
+The goal is to reduce investigation time while improving the quality of security decisions.
+
+---
+
+# Current Platform Capabilities
+
+## Identity Intelligence
+
+* Identity graph
+* Identity timeline
+* Exposure scoring
+* Risk analytics
+* Recommendation engine
 
 ## Identity Governance
 
-* Identity inventory
 * Accounts
 * Groups
 * Roles
 * Permissions
 * Memberships
-* Role assignments
 * Access Reviews
 * Review Campaigns
-* Reviewer Workbench
-
----
-
-## Identity Intelligence
-
-* Identity Intelligence API
-* Identity Timeline
-* Identity Graph
-* Exposure Scoring
-* Risk Analytics
-* Prioritized Recommendations
-* Executive Exposure Dashboard
-
----
+* Governance workflows
 
 ## Attack Path Intelligence
 
-* Identity attack graph generation
+* Attack graph generation
 * Attack path ranking
-* Attack path replay
-* Attack simulation
-* Risk reduction analysis
+* Replay engine
+* Simulation engine
+* Transition engine
 * Graph visualization
-* Graph transition engine
-* Graph animation pipeline
-
----
 
 ## Decision Intelligence
 
 * Decision Intelligence Engine
-* Risk comparison
-* Recommended remediation
-* Executive decision summaries
 * Simulation comparison
-
----
-
-## Synchronization Pipeline
-
-* Connector Framework
-* Synchronization Engine
-* Normalization Engine
-* Reconciliation Engine
-* Change Detection
-* Identity Graph Updates
-
----
+* Remediation recommendations
+* Executive decision summaries
 
 ## Analyst Workspace
 
-The Analyst Workspace provides a modern security investigation experience including:
-
-* Interactive attack graph visualization
+* Interactive graph visualization
 * Mission context
 * Decision Intelligence panel
-* Attack path replay
-* Attack simulation
-* Animated graph transitions
-* Animated risk metrics
+* Animated graph rendering
+* Attack replay
 * Simulation reset
-* Real-time graph rendering pipeline
+* Animated risk metrics
 
 ---
 
-# Architecture
+# Platform Architecture
 
 ```text
-                   External Security Platforms
+External Security Platforms
+        │
+        ▼
+Synchronization Layer
+        │
+        ▼
+Identity Graph
+        │
+        ▼
+Workspace State Engine
+        │
+ ┌──────┼────────────┐
+ ▼      ▼            ▼
 
-     Microsoft Entra ID
-     Microsoft Sentinel
-     Microsoft Defender
-     Tenable
-     BloodHound
-     CMDB
-     Ticketing Systems
-     Future Connectors
-               │
-               ▼
+Graph  Decision  Transition
+Engine Engine     Engine
 
-      Synchronization & Reconciliation Layer
+        ▼
+Animation Pipeline
 
-               │
-               ▼
-
-          Identity Graph Platform
-
-               │
-               ▼
-
-        Workspace State Engine
-
-               │
-   ┌───────────┼────────────┐
-   ▼           ▼            ▼
-
-Graph       Decision    Transition
-Engine      Engine       Engine
-
-   └───────────┼────────────┘
-               ▼
-
-     Graph Animation Service
-
-               ▼
-
- Graph Render Animation Adapter
-
-               ▼
-
-          Graph Renderer
-
-               ▼
-
-        Analyst Workspace
+        ▼
+Analyst Workspace
 ```
 
 ---
 
-# Design Principles
+# Engineering Principles
 
-USOP is built around several engineering principles.
+USOP is engineered around several core principles.
 
-## Intelligence First
-
-Security intelligence is generated by backend engines.
-
-The frontend visualizes intelligence rather than creating it.
-
----
-
-## Separation of Concerns
-
-Every layer has a single responsibility.
-
-* Engines generate intelligence.
+* Backend intelligence is the source of truth.
+* Engines produce intelligence.
 * Services coordinate workflows.
-* Adapters translate between systems.
-* Renderers display data.
+* Adapters translate between architectural layers.
+* Renderers display intelligence.
 * Pages orchestrate user experiences.
+* One architectural responsibility per commit.
+* Documentation evolves with the platform.
 
 ---
 
-## Modular Architecture
+# Technology Stack
 
-Each major capability is designed as an independent module.
-
-Examples include:
-
-* Graph Intelligence Engine
-* Decision Intelligence Engine
-* Graph Transition Engine
-* Animation Service
-* Workspace State Engine
-
-This allows new capabilities to be added without major architectural changes.
-
----
-
-## API First
-
-All intelligence is exposed through documented REST APIs.
-
-The frontend consumes the same APIs that external integrations can use.
-
----
-
-## Commercial Platform Mindset
-
-USOP is intentionally designed using patterns commonly found in enterprise security products including:
-
-* Microsoft Defender
-* Microsoft Sentinel
-* BloodHound Enterprise
-* ServiceNow
-* SailPoint
-* CrowdStrike Falcon
-
----
-
-# Current Technology Stack
-
-## Backend
+### Backend
 
 * Python
 * FastAPI
 * PostgreSQL
 * SQLAlchemy
 * Alembic
-* Pydantic
 * Docker
 
-## Frontend
+### Frontend
 
 * React
 * Material UI
@@ -267,62 +163,37 @@ USOP is intentionally designed using patterns commonly found in enterprise secur
 
 ---
 
-# Current REST API
+# Engineering Handbook
 
-## Identity
+Detailed engineering documentation is available in the `/docs` directory.
 
-```
-GET /identities/
-GET /identity-intelligence/{identity_id}
-GET /identity-graph/{identity_id}
-```
+Current documentation includes:
 
-## Governance
-
-```
-GET /accounts/
-GET /groups/
-GET /roles/
-GET /access-reviews/
-GET /review-campaigns/
-GET /reviewer-workbench/
-```
-
-## Executive Intelligence
-
-```
-GET /executive-dashboard/
-GET /executive-exposure-dashboard/
-```
-
-## Synchronization
-
-```
-POST /governance-jobs/run-synchronization/{connector_name}
-POST /governance-jobs/run-identity-risk-analysis
-```
+* Vision
+* Platform Architecture
+* Engineering Standards
+* Architecture Decision Records (ADRs)
+* Roadmap
+* Release Notes
+* Sprint Documentation
 
 ---
 
 # Getting Started
 
-## Clone
+Clone the repository:
 
 ```bash
 git clone https://github.com/sloopyeod-ctrl/USOP.git
 ```
 
----
-
-## Start with Docker
+Start the platform:
 
 ```bash
 docker compose up
 ```
 
----
-
-## Run Backend
+Run the backend locally:
 
 ```bash
 cd backend
@@ -350,93 +221,49 @@ http://127.0.0.1:8000/docs
 
 # Roadmap
 
-## ✅ Platform Foundation
+## Completed
 
-* FastAPI
-* Docker
-* PostgreSQL
-* SQLAlchemy
-* Alembic
-
----
-
-## ✅ Identity Governance
-
-* Identity domain model
-* Governance workflows
-* Review campaigns
-* Policy engine
-* Risk engine
-
----
-
-## ✅ Intelligence Platform
-
+* Platform Foundation
+* Identity Governance
 * Identity Intelligence
-* Executive dashboards
-* Graph Intelligence
+* Analyst Workspace
 * Decision Intelligence
-* Attack simulations
-* Graph transition engine
-* Animation pipeline
+* Attack Path Analysis
+* Simulation Engine
+* Transition Engine
+* Graph Animation Pipeline
 
----
+## In Progress
 
-## 🚧 In Progress
-
-* Live connector framework
-* Investigation workspace
-* Timeline replay
-* Enhanced graph visualization
-* Threat correlation
-
----
+* Productization
+* Engineering Handbook
+* Documentation
+* Repository modernization
 
 ## Planned
 
-* Microsoft Graph connector
+* Microsoft Entra ID connector
+* Microsoft Graph integration
 * Microsoft Sentinel ingestion
-* Defender for Endpoint integration
 * BloodHound integration
 * Tenable integration
-* AI Security Copilot
+* AI Security Analyst
+* Investigation sessions
+* Timeline replay
 * Plugin architecture
-* Background jobs
-* Workflow approvals
-* Ticketing integrations
-* Multi-tenant support
+* Enterprise reporting
 
 ---
 
-# Architecture Decision Records (ADRs)
+# Current Status
 
-USOP uses Architecture Decision Records (ADRs) to document significant design decisions.
+**Version:** v1.0-alpha
 
-Examples include:
+**Current Sprint:** Sprint 10
 
-* ADR-001 Project Principles
-* ADR-012 Database Strategy
-* ADR-013 Identity Domain Model
+**Theme:** Productization
 
-Every major architectural change is documented before implementation.
-
----
-
-# Project Status
-
-**Current Version**
-
-**v1.0-alpha**
-
-USOP is under active development with a strong emphasis on modular architecture, clean engineering practices, and scalable security intelligence.
-
-Recent development has focused on:
-
-* Intelligence-driven architecture
-* Interactive analyst workspace
-* Attack simulation
-* Transition-aware graph rendering
-* Modular visualization pipeline
+USOP is under active development with a focus on modular architecture, intelligence-driven design, and enterprise security operations.
 
 ---
 
@@ -446,23 +273,12 @@ Recent development has focused on:
 
 Retired U.S. Army Master Sergeant (EOD)
 
-Security Engineer
+Cloud Security Engineer • Security Platform Engineer • Identity & Access Management • Enterprise Cybersecurity Architecture
 
-Bachelor of Applied Science — Computer Information Systems (Cloud Computing)
-
-Areas of interest include:
-
-* Cloud Security
-* Identity & Access Management
-* Security Engineering
-* Security Operations
-* Threat Detection
-* Vulnerability Management
-* Enterprise Architecture
-* Cybersecurity Automation
+USOP represents my vision for a modern, intelligence-driven security operations platform that unifies identity, governance, attack-path analysis, decision intelligence, and analyst workflows into a single operational experience.
 
 ---
 
-## License
+# License
 
 MIT License
