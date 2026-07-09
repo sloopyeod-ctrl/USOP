@@ -1,4 +1,6 @@
 import { useMemo, useReducer } from "react";
+import { buildUsopGraph } from "../graph/GraphBuilder";
+import { diffGraphs } from "../graph/services/GraphDiffService";
 
 const GRAPH_MODES = {
   BASELINE: "baseline",
@@ -13,6 +15,10 @@ const initialState = {
     baseline: null,
     current: null,
     projected: null,
+    baselineModel: null,
+    currentModel: null,
+    projectedModel: null,
+    diff: null,
     mode: GRAPH_MODES.BASELINE,
   },
 
@@ -38,6 +44,8 @@ const initialState = {
 function workspaceReducer(state, action) {
   switch (action.type) {
     case "SET_BASELINE_GRAPH": {
+      const baselineModel = buildUsopGraph(action.payload);
+
       return {
         ...state,
         graph: {
@@ -45,18 +53,28 @@ function workspaceReducer(state, action) {
           baseline: action.payload,
           current: action.payload,
           projected: null,
+          baselineModel,
+          currentModel: baselineModel,
+          projectedModel: null,
+          diff: null,
           mode: GRAPH_MODES.BASELINE,
         },
       };
     }
 
     case "SET_PROJECTED_GRAPH": {
+      const projectedModel = buildUsopGraph(action.payload);
+      const diff = diffGraphs(state.graph.currentModel, projectedModel);
+
       return {
         ...state,
         graph: {
           ...state.graph,
           projected: action.payload,
           current: action.payload,
+          projectedModel,
+          currentModel: projectedModel,
+          diff,
           mode: GRAPH_MODES.SIMULATION,
         },
       };
@@ -105,12 +123,23 @@ function workspaceReducer(state, action) {
     }
 
     case "COMPLETE_SIMULATION": {
+      const projectedGraph = action.payload?.projected || null;
+      const projectedModel = projectedGraph ? buildUsopGraph(projectedGraph) : null;
+
+      const diff =
+        projectedModel && state.graph.currentModel
+          ? diffGraphs(state.graph.currentModel, projectedModel)
+          : null;
+
       return {
         ...state,
         graph: {
           ...state.graph,
-          projected: action.payload?.projected || null,
-          current: action.payload?.projected || state.graph.current,
+          projected: projectedGraph,
+          current: projectedGraph || state.graph.current,
+          projectedModel,
+          currentModel: projectedModel || state.graph.currentModel,
+          diff,
           mode: GRAPH_MODES.SIMULATION,
         },
         simulation: {
@@ -140,6 +169,9 @@ function workspaceReducer(state, action) {
           ...state.graph,
           current: state.graph.baseline,
           projected: null,
+          currentModel: state.graph.baselineModel,
+          projectedModel: null,
+          diff: null,
           mode: GRAPH_MODES.BASELINE,
         },
         simulation: {
