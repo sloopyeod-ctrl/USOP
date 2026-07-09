@@ -3,6 +3,7 @@ import { Alert, Box, CircularProgress } from "@mui/material";
 import { useParams } from "react-router-dom";
 
 import api from "../api/usopApi";
+import useWorkspaceState from "../hooks/useWorkspaceState";
 
 import WorkspaceHeader from "../components/workspace/WorkspaceHeader";
 import MissionStatusCard from "../components/workspace/MissionStatusCard";
@@ -18,16 +19,17 @@ import AttackSimulationPanel from "../components/workspace/AttackSimulationPanel
 export default function AnalystWorkspace() {
   const { identityId } = useParams();
 
+  const workspace = useWorkspaceState();
+
   const [data, setData] = useState(null);
   const [attackPath, setAttackPath] = useState(null);
-
-  const [selectedNode, setSelectedNode] = useState(null);
-  const [selectedPath, setSelectedPath] = useState(null);
-
-  const [simulationResult, setSimulationResult] = useState(null);
-  const [isSimulating, setIsSimulating] = useState(false);
-
   const [error, setError] = useState(null);
+
+  const selectedNode = workspace.selection.node;
+  const selectedPath = workspace.selection.path;
+  const simulationResult = workspace.simulation.result;
+  const isSimulating = workspace.simulation.running;
+  const activeGraph = workspace.graph.current;
 
   useEffect(() => {
     Promise.all([
@@ -37,9 +39,10 @@ export default function AnalystWorkspace() {
       .then(([intel, attack]) => {
         setData(intel.data);
         setAttackPath(attack.data);
+        workspace.setBaselineGraph(attack.data);
 
         if (attack.data.summary.ranked_paths.length) {
-          setSelectedPath(attack.data.summary.ranked_paths[0]);
+          workspace.selectPath(attack.data.summary.ranked_paths[0]);
         }
       })
       .catch((err) => {
@@ -57,40 +60,37 @@ export default function AnalystWorkspace() {
 
     if (!accountStep) return;
 
-    setIsSimulating(true);
+    const actions = [
+      {
+        type: "enable_mfa",
+        account_id: accountStep.node_id,
+      },
+    ];
+
+    workspace.beginSimulation(actions);
 
     try {
       const response = await api.post("/attack-path/simulate", {
         identity_id: identityId,
-        actions: [
-          {
-            type: "enable_mfa",
-            account_id: accountStep.node_id,
-          },
-        ],
+        actions,
       });
 
-      setSimulationResult(response.data);
+      workspace.completeSimulation(response.data);
     } catch (err) {
       console.error(err);
-    } finally {
-      setIsSimulating(false);
+      workspace.failSimulation("Unable to run attack path simulation.");
     }
   }
 
   if (error) return <Alert severity="error">{error}</Alert>;
 
-  if (!data || !attackPath) return <CircularProgress />;
+  if (!data || !attackPath || !activeGraph) return <CircularProgress />;
 
   const { identity, exposure, risk, access, recommendations, timeline } = data;
 
   return (
     <Box>
-
-      <WorkspaceHeader
-        identity={identity}
-        exposure={exposure}
-      />
+      <WorkspaceHeader identity={identity} exposure={exposure} />
 
       <Box
         sx={{
@@ -105,24 +105,16 @@ export default function AnalystWorkspace() {
       >
         <MissionStatusCard
           exposure={exposure}
-          missingMfaCount={
-            access.accounts.filter((a) => !a.mfa_enabled).length
-          }
+          missingMfaCount={access.accounts.filter((a) => !a.mfa_enabled).length}
           privilegedAccountCount={
-            access.accounts.filter(
-              (a) => a.privilege_level === "Privileged"
-            ).length
+            access.accounts.filter((a) => a.privilege_level === "Privileged")
+              .length
           }
         />
 
-        <RiskSummaryCard
-          risk={risk}
-          access={access}
-        />
+        <RiskSummaryCard risk={risk} access={access} />
 
-        <RemediationImpactCard
-          recommendations={recommendations}
-        />
+        <RemediationImpactCard recommendations={recommendations} />
       </Box>
 
       <Box
@@ -137,14 +129,12 @@ export default function AnalystWorkspace() {
         }}
       >
         <IdentityGraphPanel
-          attackPath={simulationResult ? simulationResult.projected : attackPath}
+          attackPath={activeGraph}
           selectedNode={selectedNode}
-          setSelectedNode={setSelectedNode}
+          setSelectedNode={workspace.selectNode}
         />
 
-        <MissionContextPanel
-          node={selectedNode}
-        />
+        <MissionContextPanel node={selectedNode} />
       </Box>
 
       <Box
@@ -160,7 +150,7 @@ export default function AnalystWorkspace() {
         <AttackSimulationPanel
           rankedPaths={attackPath.summary.ranked_paths}
           selectedPath={selectedPath}
-          setSelectedPath={setSelectedPath}
+          setSelectedPath={workspace.selectPath}
           runSimulation={runSimulation}
           simulationResult={simulationResult}
           isSimulating={isSimulating}
@@ -171,12 +161,8 @@ export default function AnalystWorkspace() {
           selectedNode={selectedNode}
         />
 
-        <RecentActivityPanel
-          events={timeline}
-          selectedNode={selectedNode}
-        />
+        <RecentActivityPanel events={timeline} selectedNode={selectedNode} />
       </Box>
-
     </Box>
   );
 }
