@@ -118,6 +118,21 @@ Good examples:
 Avoid combining unrelated work into a single commit.
 
 ---
+# Development Standards
+
+Infrastructure Independence
+
+Application code should not know where infrastructure resources originate.
+
+Examples include:
+
+secrets,
+authentication,
+storage,
+messaging,
+scheduling.
+
+Instead, application code should depend on interfaces and factories.
 
 # Development Workflow
 
@@ -133,6 +148,9 @@ Every feature follows the same lifecycle.
 Do not skip review simply because the code compiles.
 
 ---
+# Evolution Before Replacement
+
+Before introducing a new subsystem, inspect the existing implementation. Extend or modernize it when possible. Replace only when the existing architecture cannot reasonably evolve.
 
 # Testing Standards
 
@@ -197,6 +215,44 @@ Avoid unnecessary abstraction.
 Favor clarity over cleverness.
 
 ---
+# Evolution Before Replacement
+
+Before introducing a new subsystem or major architectural component, the existing platform should be evaluated.
+
+The preferred engineering approach is:
+
+1. Inspect the current implementation.
+2. Understand its responsibilities.
+3. Extend or modernize it where practical.
+4. Replace it only when the existing architecture cannot reasonably evolve.
+
+Creating duplicate subsystems should be avoided whenever possible.
+
+This approach preserves engineering investment, reduces technical debt, and maintains architectural consistency throughout the platform.
+
+Examples include:
+
+- Modernizing the Synchronization Engine instead of replacing it.
+- Integrating Connector Framework v2 into the existing normalization and reconciliation pipeline.
+- Extending existing intelligence engines rather than creating competing implementations.
+
+# Architecture Review Before Implementation
+
+Every significant feature should begin with an architectural review before new code is written.
+
+The preferred workflow is:
+
+1. Identify the capability to be added.
+2. Inspect existing architecture.
+3. Determine whether the capability already exists.
+4. Extend existing architecture when appropriate.
+5. Design new components only when necessary.
+6. Implement one architectural responsibility at a time.
+7. Validate functionality.
+8. Review the Git diff.
+9. Commit only after successful verification.
+
+This review-first approach helps prevent duplicated functionality, reduces future refactoring, and keeps the platform architecture cohesive.
 
 # Architecture First
 
