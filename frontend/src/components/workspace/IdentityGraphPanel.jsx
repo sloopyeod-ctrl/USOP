@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../../api/usopApi";
 import useAttackReplay from "../../hooks/useAttackReplay";
+import AttackPathNode from "./AttackPathNode";
 
 import {
   Alert,
@@ -14,13 +15,7 @@ import {
   Typography,
 } from "@mui/material";
 
-import {
-  Background,
-  Controls,
-  Handle,
-  Position,
-  ReactFlow,
-} from "@xyflow/react";
+import { Background, Controls, ReactFlow } from "@xyflow/react";
 
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import StopIcon from "@mui/icons-material/Stop";
@@ -39,14 +34,6 @@ function riskChipColor(riskLevel) {
   if (riskLevel === "High") return "warning";
   if (riskLevel === "Medium") return "info";
   return "success";
-}
-
-function nodeIcon(type) {
-  if (type === "identity") return "👤";
-  if (type === "account") return "💻";
-  if (type === "group") return "👥";
-  if (type === "role") return "🛡";
-  return "●";
 }
 
 function displayNodeType(type) {
@@ -70,58 +57,6 @@ function getConnectedIds(edges, selectedNodeId) {
   return connected;
 }
 
-function AttackPathNode({ data }) {
-  const node = data.attackPathNode;
-  const riskColor = riskColorHex(node.risk_level);
-
-  const glow = data.isReplayActive
-    ? "0 0 0 4px rgba(34,211,238,0.35), 0 0 36px rgba(34,211,238,0.95)"
-    : data.isSelected
-      ? "0 0 0 3px rgba(34,211,238,0.25), 0 0 28px rgba(34,211,238,0.85)"
-      : data.isConnected
-        ? `0 0 20px ${riskColor}66`
-        : "0 10px 25px rgba(0,0,0,0.20)";
-
-  return (
-    <Box
-      sx={{
-        width: 220,
-        minHeight: 78,
-        p: 1.2,
-        borderRadius: 2,
-        textAlign: "center",
-        background: "#111827",
-        color: "#E5E7EB",
-        border:
-          data.isReplayActive || data.isSelected
-            ? "3px solid #22D3EE"
-            : `2px solid ${riskColor}`,
-        opacity: data.isConnected ? 1 : 0.35,
-        transform:
-          data.isReplayActive || data.isSelected ? "scale(1.05)" : "scale(1)",
-        boxShadow: glow,
-        transition: "all 0.2s ease-in-out",
-      }}
-    >
-      <Handle type="target" position={Position.Top} />
-
-      <Typography fontSize={13} fontWeight={900}>
-        {nodeIcon(node.type)} {node.label}
-      </Typography>
-
-      <Typography fontSize={11} fontWeight={900} sx={{ color: riskColor, mt: 0.5 }}>
-        {node.risk_level} • +{node.risk_contribution}
-      </Typography>
-
-      <Typography fontSize={10} sx={{ color: "#9CA3AF", mt: 0.5 }}>
-        Criticality {node.criticality}
-      </Typography>
-
-      <Handle type="source" position={Position.Bottom} />
-    </Box>
-  );
-}
-
 const nodeTypes = {
   attackPathNode: AttackPathNode,
 };
@@ -134,29 +69,18 @@ function layoutNodes(nodes) {
   const groups = nodes.filter((node) => node.type === "group");
   const roles = nodes.filter((node) => node.type === "role");
 
-  if (identity) {
-    positions[identity.id] = { x: 420, y: 20 };
-  }
+  if (identity) positions[identity.id] = { x: 420, y: 20 };
 
   accounts.forEach((node, index) => {
-    positions[node.id] = {
-      x: 0 + index * 250,
-      y: 210,
-    };
+    positions[node.id] = { x: index * 250, y: 210 };
   });
 
   groups.forEach((node, index) => {
-    positions[node.id] = {
-      x: 420 + index * 290,
-      y: 420,
-    };
+    positions[node.id] = { x: 420 + index * 290, y: 420 };
   });
 
   roles.forEach((node, index) => {
-    positions[node.id] = {
-      x: 275 + index * 290,
-      y: 620,
-    };
+    positions[node.id] = { x: 275 + index * 290, y: 620 };
   });
 
   return positions;
@@ -258,13 +182,8 @@ export default function IdentityGraphPanel({
     [rawEdges]
   );
 
-  const {
-    playReplay,
-    stopReplay,
-    activeNodes,
-    activeEdges,
-    isPlaying,
-  } = useAttackReplay(rawNodes, replayEdges);
+  const { playReplay, stopReplay, activeNodes, activeEdges, isPlaying } =
+    useAttackReplay(rawNodes, replayEdges);
 
   useEffect(() => {
     setSelectedNode(null);
@@ -281,18 +200,11 @@ export default function IdentityGraphPanel({
 
   const nodes = useMemo(() => {
     if (!attackPath) return [];
-
-    return buildNodes(
-      rawNodes,
-      rawEdges,
-      selectedNode,
-      activeNodes
-    );
+    return buildNodes(rawNodes, rawEdges, selectedNode, activeNodes);
   }, [attackPath, rawNodes, rawEdges, selectedNode, activeNodes]);
 
   const edges = useMemo(() => {
     if (!attackPath) return [];
-
     return buildEdges(rawEdges, selectedNode, activeEdges);
   }, [attackPath, rawEdges, selectedNode, activeEdges]);
 
