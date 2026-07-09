@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session
 
+from app.connectors.manager.ConnectorManager import ConnectorManager
+from app.connectors.microsoft.EntraProvider import EntraProvider
 from app.services.audit_service import AuditService
-from app.services.connector_service import ConnectorService
 from app.synchronization.normalization import NormalizationEngine
 from app.reconciliation.reconciliation_engine import ReconciliationEngine
 from app.graph.identity_graph_service import IdentityGraphService
@@ -12,7 +13,10 @@ from app.events.change_event_engine import ChangeEventEngine
 class SynchronizationEngine:
     def __init__(self, db: Session):
         self.db = db
-        self.connector_service = ConnectorService()
+
+        self.connector_manager = ConnectorManager()
+        self.connector_manager.register(EntraProvider())
+
         self.audit_service = AuditService(db)
         self.normalizer = NormalizationEngine()
         self.reconciliation_engine = ReconciliationEngine(db)
@@ -21,14 +25,17 @@ class SynchronizationEngine:
         self.change_event_engine = ChangeEventEngine(db)
 
     def run(self, connector_name: str):
-        collected = self.connector_service.collect(connector_name)
+        provider = self.connector_manager.get(connector_name)
 
-        if collected is None:
+        if provider is None:
             return {
                 "status": "failed",
                 "connector": connector_name,
-                "reason": "Connector not found",
+                "reason": "Connector provider not found",
+                "available_connectors": list(self.connector_manager.providers()),
             }
+
+        collected = provider.collect()
 
         normalized = self.normalizer.normalize(
             connector_name,
@@ -71,12 +78,14 @@ class SynchronizationEngine:
             metadata={
                 "connector": connector_name,
                 "summary": summary,
+                "provider": provider.provider_name,
             },
         )
 
         return {
             "status": "completed",
             "connector": connector_name,
+            "provider": provider.provider_name,
             "summary": summary,
             "normalized": normalized,
             "reconciliation": reconciliation,
