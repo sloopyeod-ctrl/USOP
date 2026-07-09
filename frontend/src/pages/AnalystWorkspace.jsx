@@ -16,6 +16,8 @@ import ImmediateActionsPanel from "../components/workspace/ImmediateActionsPanel
 import RecentActivityPanel from "../components/workspace/RecentActivityPanel";
 import AttackSimulationPanel from "../components/workspace/AttackSimulationPanel";
 
+import DecisionRenderer from "../intelligence/DecisionRenderer";
+
 export default function AnalystWorkspace() {
   const { identityId } = useParams();
 
@@ -30,6 +32,7 @@ export default function AnalystWorkspace() {
   const simulationResult = workspace.simulation.result;
   const isSimulating = workspace.simulation.running;
   const activeGraph = workspace.graph.current;
+  const decisionIntelligence = workspace.decision.intelligence;
 
   useEffect(() => {
     Promise.all([
@@ -137,6 +140,12 @@ export default function AnalystWorkspace() {
 
         <MissionContextPanel node={selectedNode} />
       </Box>
+
+      {decisionIntelligence && (
+        <Box sx={{ mb: 3 }}>
+          <DecisionRenderer decision={decisionIntelligence} />
+        </Box>
+      )}
 
       <Box
         sx={{
