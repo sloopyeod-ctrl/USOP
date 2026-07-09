@@ -68,6 +68,26 @@ class BlastRadiusSummary(BaseModel):
     medium_risk_objects: int
 
 
+class RankedAttackPathStep(BaseModel):
+    order: int
+    node_id: str
+    node_type: str
+    label: str
+    risk_contribution: int
+    risk_level: str
+
+
+class RankedAttackPath(BaseModel):
+    path_rank: int
+    name: str
+    likelihood: int
+    difficulty: str
+    estimated_time: str
+    total_risk: int
+    risk_level: str
+    steps: list[RankedAttackPathStep]
+
+
 class AttackPathSummary(BaseModel):
     total_nodes: int
     total_edges: int
@@ -75,6 +95,7 @@ class AttackPathSummary(BaseModel):
     top_remediation: AttackPathRecommendation | None = None
     blast_radius: BlastRadiusSummary
     critical_paths: list[CriticalPath]
+    ranked_paths: list[RankedAttackPath]
 
 
 class AttackPathIdentity(BaseModel):

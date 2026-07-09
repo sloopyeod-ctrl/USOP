@@ -123,7 +123,8 @@ function buildEdges(attackEdges, selectedNode, activeEdges) {
 
   return attackEdges.map((edge, index) => {
     const edgeId = `${edge.source}-${edge.target}-${index}`;
-    const isReplayActive = replayEdgeSet.has(edgeId);
+    const replayId = `${edge.source}-${edge.target}`;
+    const isReplayActive = replayEdgeSet.has(replayId);
 
     const isConnected =
       !selectedId || edge.source === selectedId || edge.target === selectedId;
@@ -172,18 +173,10 @@ export default function IdentityGraphPanel({
 
   const rawNodes = attackPath?.attack_path?.nodes || [];
   const rawEdges = attackPath?.attack_path?.edges || [];
-
-  const replayEdges = useMemo(
-    () =>
-      rawEdges.map((edge, index) => ({
-        ...edge,
-        id: `${edge.source}-${edge.target}-${index}`,
-      })),
-    [rawEdges]
-  );
+  const rankedPath = attackPath?.summary?.ranked_paths?.[0] || null;
 
   const { playReplay, stopReplay, activeNodes, activeEdges, isPlaying } =
-    useAttackReplay(rawNodes, replayEdges);
+    useAttackReplay(rankedPath);
 
   useEffect(() => {
     setSelectedNode(null);
@@ -229,7 +222,8 @@ export default function IdentityGraphPanel({
             </Typography>
 
             <Typography color="text.secondary">
-              Risk-weighted identity relationships and attack-path contribution.
+              Replaying highest-ranked path:{" "}
+              {rankedPath ? rankedPath.name : "No ranked path available"}
             </Typography>
           </Box>
 
@@ -239,9 +233,18 @@ export default function IdentityGraphPanel({
               size="small"
               startIcon={isPlaying ? <StopIcon /> : <PlayArrowIcon />}
               onClick={isPlaying ? stopReplay : playReplay}
+              disabled={!rankedPath}
             >
-              {isPlaying ? "Stop" : "Replay Attack"}
+              {isPlaying ? "Stop" : "Replay Highest Risk"}
             </Button>
+
+            {rankedPath && (
+              <Chip
+                label={`Path #${rankedPath.path_rank} • ${rankedPath.likelihood}%`}
+                color={riskChipColor(rankedPath.risk_level)}
+                size="small"
+              />
+            )}
 
             <Chip
               label={`${attackPath.attack_path.risk_level} Risk`}

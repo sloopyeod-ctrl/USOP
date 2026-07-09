@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 
-export default function useAttackReplay(nodes, edges) {
+export default function useAttackReplay(rankedPath) {
   const timer = useRef();
+
   const [activeNodes, setActiveNodes] = useState([]);
   const [activeEdges, setActiveEdges] = useState([]);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -20,29 +21,36 @@ export default function useAttackReplay(nodes, edges) {
   function playReplay() {
     stopReplay();
 
-    if (!nodes.length) return;
+    if (!rankedPath?.steps?.length) return;
 
     setIsPlaying(true);
 
     let step = 0;
 
     function animate() {
-      if (step >= edges.length) {
+      if (step >= rankedPath.steps.length) {
         setIsPlaying(false);
         return;
       }
 
-      const edge = edges[step];
-
-      setActiveEdges((previous) => [...previous, edge.id]);
+      const current = rankedPath.steps[step];
 
       setActiveNodes((previous) => [
-        ...new Set([...previous, edge.source, edge.target]),
+        ...new Set([...previous, current.node_id]),
       ]);
+
+      if (step > 0) {
+        const previousStep = rankedPath.steps[step - 1];
+
+        setActiveEdges((previous) => [
+          ...previous,
+          `${previousStep.node_id}-${current.node_id}`,
+        ]);
+      }
 
       step++;
 
-      timer.current = setTimeout(animate, 500);
+      timer.current = setTimeout(animate, 700);
     }
 
     animate();

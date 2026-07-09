@@ -38,7 +38,7 @@ class AttackPathService:
 
         for account in graph["accounts"]:
             contribution = self._account_risk(account)
-            account_recommendations = self._related_recommendations(
+            related_recommendations = self._related_recommendations(
                 recommendations,
                 account.get("username"),
             )
@@ -51,7 +51,7 @@ class AttackPathService:
                 "risk_level": self._risk_level(contribution),
                 "criticality": min(contribution * 2, 100),
                 "blast_radius": self._account_blast_radius(account, graph),
-                "recommendation_count": len(account_recommendations),
+                "recommendation_count": len(related_recommendations),
                 "details": account,
             })
 
@@ -65,7 +65,7 @@ class AttackPathService:
 
         for group in graph["groups"]:
             contribution = self._group_risk(group)
-            group_recommendations = self._related_recommendations(
+            related_recommendations = self._related_recommendations(
                 recommendations,
                 group.get("group_name"),
             )
@@ -78,7 +78,7 @@ class AttackPathService:
                 "risk_level": self._risk_level(contribution),
                 "criticality": min(contribution * 2, 100),
                 "blast_radius": self._group_blast_radius(group, graph),
-                "recommendation_count": len(group_recommendations),
+                "recommendation_count": len(related_recommendations),
                 "details": group,
             })
 
@@ -92,7 +92,7 @@ class AttackPathService:
 
         for role in graph["roles"]:
             contribution = self._role_risk(role)
-            role_recommendations = self._related_recommendations(
+            related_recommendations = self._related_recommendations(
                 recommendations,
                 role.get("role_name"),
             )
@@ -105,7 +105,7 @@ class AttackPathService:
                 "risk_level": self._risk_level(contribution),
                 "criticality": min(contribution * 2, 100),
                 "blast_radius": self._role_blast_radius(role, graph),
-                "recommendation_count": len(role_recommendations),
+                "recommendation_count": len(related_recommendations),
                 "details": role,
             })
 
@@ -118,6 +118,7 @@ class AttackPathService:
             })
 
         total_risk = sum(node["risk_contribution"] for node in nodes)
+        ranked_paths = self._ranked_paths(identity, nodes, edges, findings)
 
         return {
             "identity": identity,
@@ -136,6 +137,7 @@ class AttackPathService:
                 "top_remediation": self._top_remediation(recommendations),
                 "blast_radius": self._blast_radius(nodes),
                 "critical_paths": self._critical_paths(nodes, edges),
+                "ranked_paths": ranked_paths,
             },
         }
 
@@ -291,3 +293,149 @@ class AttackPathService:
                 })
 
         return paths
+
+    def _ranked_paths(self, identity, nodes, edges, findings):
+        node_lookup = {node["id"]: node for node in nodes}
+        identity_node = next(
+            (node for node in nodes if node["type"] == "identity"),
+            None,
+        )
+
+        account_nodes = [
+            node for node in nodes
+            if node["type"] == "account"
+        ]
+
+        paths = []
+
+        for account in account_nodes:
+            downstream_edges = [
+                edge for edge in edges
+                if edge["source"] == account["id"]
+            ]
+
+            path_nodes = [identity_node, account]
+
+            for edge in downstream_edges:
+                target_node = node_lookup.get(edge["target"])
+                if target_node:
+                    path_nodes.append(target_node)
+
+            path_nodes = [node for node in path_nodes if node is not None]
+
+            total_risk = sum(node["risk_contribution"] for node in path_nodes)
+            likelihood = self._path_likelihood(account, total_risk, len(downstream_edges) + 1)
+            attack_score = self._attack_score(account, total_risk, likelihood, findings)
+
+            steps = [
+                {
+                    "order": index + 1,
+                    "node_id": node["id"],
+                    "node_type": node["type"],
+                    "label": node["label"],
+                    "risk_contribution": node["risk_contribution"],
+                    "risk_level": node["risk_level"],
+                }
+                for index, node in enumerate(path_nodes)
+            ]
+
+            paths.append({
+                "path_rank": 0,
+                "name": f"{identity.get('display_name')} → {account.get('label')}",
+                "likelihood": likelihood,
+                "difficulty": self._path_difficulty(account, len(downstream_edges) + 1),
+                "estimated_time": self._estimated_time(account, len(downstream_edges) + 1),
+                "total_risk": min(total_risk, 100),
+                "risk_level": self._risk_level(total_risk),
+                "attack_score": attack_score,
+                "steps": steps,
+            })
+
+        ranked = sorted(
+            paths,
+            key=lambda path: path["attack_score"],
+            reverse=True,
+        )
+
+        for index, path in enumerate(ranked):
+            path["path_rank"] = index + 1
+            path.pop("attack_score", None)
+
+        return ranked
+
+    def _attack_score(self, account, total_risk, likelihood, findings):
+        details = account.get("details", {})
+        username = details.get("username")
+        account_id = details.get("id")
+
+        score = total_risk
+        score += int(likelihood * 0.6)
+
+        if details.get("mfa_enabled") is False:
+            score += 30
+
+        if details.get("privilege_level") == "Privileged":
+            score += 35
+
+        if details.get("account_type") == "Admin":
+            score += 20
+
+        related_findings = [
+            finding for finding in findings
+            if finding.get("username") == username or finding.get("account_id") == account_id
+        ]
+
+        for finding in related_findings:
+            score += finding.get("weight", 0)
+
+            if finding.get("type") == "policy_violation":
+                score += 35
+
+            if finding.get("type") == "weak_authentication":
+                score += 25
+
+            if finding.get("type") == "dormant_account":
+                score += 15
+
+        return score
+
+    def _path_likelihood(self, account, total_risk, edge_count):
+        likelihood = 35
+
+        details = account.get("details", {})
+
+        if details.get("mfa_enabled") is False:
+            likelihood += 25
+
+        if details.get("privilege_level") == "Privileged":
+            likelihood += 20
+
+        if details.get("account_type") == "Admin":
+            likelihood += 10
+
+        likelihood += min(edge_count * 5, 15)
+        likelihood += min(total_risk // 10, 10)
+
+        return min(likelihood, 99)
+
+    def _path_difficulty(self, account, edge_count):
+        details = account.get("details", {})
+
+        if details.get("mfa_enabled") is False:
+            return "Low"
+
+        if details.get("privilege_level") == "Privileged" and edge_count > 1:
+            return "Medium"
+
+        return "High"
+
+    def _estimated_time(self, account, edge_count):
+        details = account.get("details", {})
+
+        if details.get("mfa_enabled") is False:
+            return "3 minutes"
+
+        if details.get("privilege_level") == "Privileged":
+            return "10 minutes"
+
+        return f"{max(edge_count * 5, 15)} minutes"
