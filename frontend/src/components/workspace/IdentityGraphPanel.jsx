@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
-import api from "../../api/usopApi";
+import { useMemo } from "react";
 import useAttackReplay from "../../hooks/useAttackReplay";
 import AttackPathNode from "./AttackPathNode";
 
@@ -163,33 +162,17 @@ function buildEdges(attackEdges, selectedNode, activeEdges) {
 }
 
 export default function IdentityGraphPanel({
-  identityId,
+  attackPath,
   height = "62vh",
   selectedNode,
   setSelectedNode,
 }) {
-  const [attackPath, setAttackPath] = useState(null);
-  const [error, setError] = useState(null);
-
   const rawNodes = attackPath?.attack_path?.nodes || [];
   const rawEdges = attackPath?.attack_path?.edges || [];
   const rankedPath = attackPath?.summary?.ranked_paths?.[0] || null;
 
   const { playReplay, stopReplay, activeNodes, activeEdges, isPlaying } =
     useAttackReplay(rankedPath);
-
-  useEffect(() => {
-    setSelectedNode(null);
-    stopReplay();
-
-    api
-      .get(`/attack-path/${identityId}`)
-      .then((response) => setAttackPath(response.data))
-      .catch((err) => {
-        console.error(err);
-        setError("Unable to load attack path graph.");
-      });
-  }, [identityId, setSelectedNode]);
 
   const nodes = useMemo(() => {
     if (!attackPath) return [];
@@ -201,8 +184,8 @@ export default function IdentityGraphPanel({
     return buildEdges(rawEdges, selectedNode, activeEdges);
   }, [attackPath, rawEdges, selectedNode, activeEdges]);
 
-  if (error) return <Alert severity="error">{error}</Alert>;
-  if (!attackPath || !nodes.length) return <CircularProgress />;
+  if (!attackPath) return <CircularProgress />;
+  if (!nodes.length) return <Alert severity="warning">No attack path data found.</Alert>;
 
   return (
     <Card>

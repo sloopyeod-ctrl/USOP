@@ -137,7 +137,7 @@ export default function AnalystWorkspace() {
         }}
       >
         <IdentityGraphPanel
-          identityId={identityId}
+          attackPath={simulationResult ? simulationResult.projected : attackPath}
           selectedNode={selectedNode}
           setSelectedNode={setSelectedNode}
         />
