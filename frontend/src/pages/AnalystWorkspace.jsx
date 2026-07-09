@@ -130,6 +130,7 @@ export default function AnalystWorkspace() {
       >
         <IdentityGraphPanel
           attackPath={activeGraph}
+          selectedPath={selectedPath}
           selectedNode={selectedNode}
           setSelectedNode={workspace.selectNode}
         />

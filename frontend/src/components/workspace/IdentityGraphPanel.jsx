@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import useAttackReplay from "../../hooks/useAttackReplay";
-import AttackPathNode from "./AttackPathNode";
+import GraphRenderer from "./GraphRenderer";
 
 import {
   Alert,
@@ -14,12 +14,8 @@ import {
   Typography,
 } from "@mui/material";
 
-import { Background, Controls, ReactFlow } from "@xyflow/react";
-
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import StopIcon from "@mui/icons-material/Stop";
-
-import "@xyflow/react/dist/style.css";
 
 function riskColorHex(riskLevel) {
   if (riskLevel === "Critical") return "#EF4444";
@@ -55,10 +51,6 @@ function getConnectedIds(edges, selectedNodeId) {
 
   return connected;
 }
-
-const nodeTypes = {
-  attackPathNode: AttackPathNode,
-};
 
 function layoutNodes(nodes) {
   const positions = {};
@@ -163,16 +155,18 @@ function buildEdges(attackEdges, selectedNode, activeEdges) {
 
 export default function IdentityGraphPanel({
   attackPath,
+  selectedPath,
   height = "62vh",
   selectedNode,
   setSelectedNode,
 }) {
   const rawNodes = attackPath?.attack_path?.nodes || [];
   const rawEdges = attackPath?.attack_path?.edges || [];
-  const rankedPath = attackPath?.summary?.ranked_paths?.[0] || null;
+
+  const replayPath = selectedPath || attackPath?.summary?.ranked_paths?.[0] || null;
 
   const { playReplay, stopReplay, activeNodes, activeEdges, isPlaying } =
-    useAttackReplay(rankedPath);
+    useAttackReplay(replayPath);
 
   const nodes = useMemo(() => {
     if (!attackPath) return [];
@@ -185,7 +179,9 @@ export default function IdentityGraphPanel({
   }, [attackPath, rawEdges, selectedNode, activeEdges]);
 
   if (!attackPath) return <CircularProgress />;
-  if (!nodes.length) return <Alert severity="warning">No attack path data found.</Alert>;
+  if (!nodes.length) {
+    return <Alert severity="warning">No attack path data found.</Alert>;
+  }
 
   return (
     <Card>
@@ -205,8 +201,8 @@ export default function IdentityGraphPanel({
             </Typography>
 
             <Typography color="text.secondary">
-              Replaying highest-ranked path:{" "}
-              {rankedPath ? rankedPath.name : "No ranked path available"}
+              Replaying selected path:{" "}
+              {replayPath ? replayPath.name : "No ranked path available"}
             </Typography>
           </Box>
 
@@ -216,15 +212,15 @@ export default function IdentityGraphPanel({
               size="small"
               startIcon={isPlaying ? <StopIcon /> : <PlayArrowIcon />}
               onClick={isPlaying ? stopReplay : playReplay}
-              disabled={!rankedPath}
+              disabled={!replayPath}
             >
-              {isPlaying ? "Stop" : "Replay Highest Risk"}
+              {isPlaying ? "Stop" : "Replay Selected Path"}
             </Button>
 
-            {rankedPath && (
+            {replayPath && (
               <Chip
-                label={`Path #${rankedPath.path_rank} • ${rankedPath.likelihood}%`}
-                color={riskChipColor(rankedPath.risk_level)}
+                label={`Path #${replayPath.path_rank} • ${replayPath.likelihood}%`}
+                color={riskChipColor(replayPath.risk_level)}
                 size="small"
               />
             )}
@@ -249,23 +245,14 @@ export default function IdentityGraphPanel({
           </Stack>
         </Stack>
 
-        <Box sx={{ height }}>
-          <ReactFlow
-            key={attackPath.identity.id}
-            nodes={nodes}
-            edges={edges}
-            nodeTypes={nodeTypes}
-            defaultViewport={{ x: 50, y: 55, zoom: 0.72 }}
-            minZoom={0.35}
-            maxZoom={1.4}
-            onNodeClick={(_, node) => setSelectedNode(node)}
-            onPaneClick={() => setSelectedNode(null)}
-            proOptions={{ hideAttribution: true }}
-          >
-            <Controls />
-            <Background color="#1F2937" gap={18} />
-          </ReactFlow>
-        </Box>
+        <GraphRenderer
+          graphKey={attackPath.identity.id}
+          nodes={nodes}
+          edges={edges}
+          height={height}
+          selectedNode={selectedNode}
+          setSelectedNode={setSelectedNode}
+        />
       </CardContent>
     </Card>
   );
