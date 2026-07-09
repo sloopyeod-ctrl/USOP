@@ -16,9 +16,44 @@ function nodeIcon(type) {
   return "●";
 }
 
+function resolveAnimationStyle(renderAnimation, riskColor) {
+  const state = renderAnimation?.state || "stable";
+
+  if (state === "added") {
+    return {
+      animation: "usopNodeEnter 520ms ease-out",
+      boxShadow: `0 0 0 4px ${riskColor}33, 0 0 34px ${riskColor}AA`,
+    };
+  }
+
+  if (state === "updated") {
+    return {
+      animation: "usopNodePulse 900ms ease-in-out",
+      boxShadow: `0 0 0 3px ${riskColor}33, 0 0 30px ${riskColor}99`,
+    };
+  }
+
+  if (state === "moved") {
+    return {
+      animation: "usopNodeMorph 600ms ease-in-out",
+      boxShadow: `0 0 0 3px rgba(34,211,238,0.28), 0 0 28px rgba(34,211,238,0.78)`,
+    };
+  }
+
+  if (state === "removed") {
+    return {
+      animation: "usopNodeExit 420ms ease-in",
+      opacity: 0.4,
+    };
+  }
+
+  return {};
+}
+
 export default function AttackPathNode({ data }) {
   const node = data.attackPathNode;
   const riskColor = riskColorHex(node.risk_level);
+  const animationStyle = resolveAnimationStyle(data.renderAnimation, riskColor);
 
   const glow = data.isReplayActive
     ? "0 0 0 4px rgba(34,211,238,0.35), 0 0 36px rgba(34,211,238,0.95)"
@@ -42,11 +77,59 @@ export default function AttackPathNode({ data }) {
           data.isReplayActive || data.isSelected
             ? "3px solid #22D3EE"
             : `2px solid ${riskColor}`,
-        opacity: data.isConnected ? 1 : 0.35,
+        opacity:
+          animationStyle.opacity !== undefined
+            ? animationStyle.opacity
+            : data.isConnected
+              ? 1
+              : 0.35,
         transform:
           data.isReplayActive || data.isSelected ? "scale(1.05)" : "scale(1)",
-        boxShadow: glow,
-        transition: "all 0.2s ease-in-out",
+        boxShadow: animationStyle.boxShadow || glow,
+        animation: animationStyle.animation || "none",
+        transition: "all 0.28s ease-in-out",
+        "@keyframes usopNodeEnter": {
+          "0%": {
+            opacity: 0,
+            transform: "scale(0.92)",
+          },
+          "100%": {
+            opacity: 1,
+            transform: "scale(1)",
+          },
+        },
+        "@keyframes usopNodePulse": {
+          "0%": {
+            transform: "scale(1)",
+          },
+          "50%": {
+            transform: "scale(1.06)",
+          },
+          "100%": {
+            transform: "scale(1)",
+          },
+        },
+        "@keyframes usopNodeMorph": {
+          "0%": {
+            transform: "scale(0.98)",
+          },
+          "50%": {
+            transform: "scale(1.05)",
+          },
+          "100%": {
+            transform: "scale(1)",
+          },
+        },
+        "@keyframes usopNodeExit": {
+          "0%": {
+            opacity: 1,
+            transform: "scale(1)",
+          },
+          "100%": {
+            opacity: 0.4,
+            transform: "scale(0.94)",
+          },
+        },
       }}
     >
       <Handle type="target" position={Position.Top} />
