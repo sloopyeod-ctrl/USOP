@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Alert, Box, CircularProgress } from "@mui/material";
 import { useParams } from "react-router-dom";
 
@@ -9,6 +9,7 @@ import WorkspaceHeader from "../components/workspace/WorkspaceHeader";
 import MissionStatusCard from "../components/workspace/MissionStatusCard";
 import RiskSummaryCard from "../components/workspace/RiskSummaryCard";
 import RemediationImpactCard from "../components/workspace/RemediationImpactCard";
+import AnimatedRiskMetrics from "../components/workspace/AnimatedRiskMetrics";
 
 import IdentityGraphPanel from "../components/workspace/IdentityGraphPanel";
 import MissionContextPanel from "../components/workspace/MissionContextPanel";
@@ -17,6 +18,11 @@ import RecentActivityPanel from "../components/workspace/RecentActivityPanel";
 import AttackSimulationPanel from "../components/workspace/AttackSimulationPanel";
 
 import DecisionRenderer from "../intelligence/DecisionRenderer";
+
+import {
+  applyGraphAnimationMetadata,
+  GRAPH_ANIMATION_MODES,
+} from "../services/graphAnimationService";
 
 export default function AnalystWorkspace() {
   const { identityId } = useParams();
@@ -54,6 +60,20 @@ export default function AnalystWorkspace() {
       });
   }, [identityId]);
 
+  const animatedGraph = useMemo(() => {
+    if (!activeGraph) return null;
+
+    const mode = simulationResult
+      ? GRAPH_ANIMATION_MODES.SIMULATION
+      : GRAPH_ANIMATION_MODES.IDLE;
+
+    return {
+      ...activeGraph,
+      nodes: applyGraphAnimationMetadata(activeGraph.nodes || [], mode),
+      animationMode: mode,
+    };
+  }, [activeGraph, simulationResult]);
+
   async function runSimulation() {
     if (!selectedPath) return;
 
@@ -87,9 +107,18 @@ export default function AnalystWorkspace() {
 
   if (error) return <Alert severity="error">{error}</Alert>;
 
-  if (!data || !attackPath || !activeGraph) return <CircularProgress />;
+  if (!data || !attackPath || !activeGraph || !animatedGraph) {
+    return <CircularProgress />;
+  }
 
   const { identity, exposure, risk, access, recommendations, timeline } = data;
+
+  const riskMetrics = {
+    riskScore: risk?.score || risk?.overall_score || exposure?.risk_score || 0,
+    exposureScore: exposure?.score || exposure?.exposure_score || 0,
+    confidenceScore:
+      risk?.confidence || risk?.confidence_score || exposure?.confidence || 0,
+  };
 
   return (
     <Box>
@@ -132,13 +161,16 @@ export default function AnalystWorkspace() {
         }}
       >
         <IdentityGraphPanel
-          attackPath={activeGraph}
+          attackPath={animatedGraph}
           selectedPath={selectedPath}
           selectedNode={selectedNode}
           setSelectedNode={workspace.selectNode}
         />
 
-        <MissionContextPanel node={selectedNode} />
+        <Box>
+          <AnimatedRiskMetrics metrics={riskMetrics} />
+          <MissionContextPanel node={selectedNode} />
+        </Box>
       </Box>
 
       {decisionIntelligence && (
