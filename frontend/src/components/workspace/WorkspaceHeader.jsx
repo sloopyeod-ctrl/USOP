@@ -1,4 +1,4 @@
-import { Card, CardContent, Chip, Stack, Typography, Box } from "@mui/material";
+import { Box, Card, CardContent, Chip, Stack, Typography } from "@mui/material";
 
 function severityColor(value) {
   if (value === "Critical") return "error";
@@ -20,9 +20,11 @@ export default function WorkspaceHeader({ identity, exposure }) {
       <CardContent>
         <Stack
           direction={{ xs: "column", md: "row" }}
-          justifyContent="space-between"
-          alignItems={{ xs: "flex-start", md: "center" }}
           spacing={2}
+          sx={{
+            justifyContent: "space-between",
+            alignItems: { xs: "flex-start", md: "center" },
+          }}
         >
           <Box>
             <Typography variant="h4" fontWeight={900}>

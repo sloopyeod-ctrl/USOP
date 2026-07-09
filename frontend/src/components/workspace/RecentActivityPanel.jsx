@@ -1,4 +1,12 @@
-import { Box, Card, CardContent, Chip, Divider, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Card,
+  CardContent,
+  Chip,
+  Divider,
+  Stack,
+  Typography,
+} from "@mui/material";
 
 function collapseEvents(events) {
   const grouped = {};
@@ -40,6 +48,20 @@ function filterEvents(events, selectedNode) {
   return filtered.length ? filtered : events;
 }
 
+function eventColor(type) {
+  if (type?.toLowerCase().includes("violation")) return "error";
+  if (type?.toLowerCase().includes("review")) return "success";
+  if (type?.toLowerCase().includes("sync")) return "info";
+  return "primary";
+}
+
+function eventIcon(type) {
+  if (type?.toLowerCase().includes("violation")) return "🔴";
+  if (type?.toLowerCase().includes("review")) return "🟢";
+  if (type?.toLowerCase().includes("sync")) return "🔵";
+  return "🟡";
+}
+
 export default function RecentActivityPanel({ events, selectedNode }) {
   const filteredEvents = filterEvents(events, selectedNode);
   const collapsedEvents = collapseEvents(filteredEvents);
@@ -47,16 +69,28 @@ export default function RecentActivityPanel({ events, selectedNode }) {
   return (
     <Card>
       <CardContent>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-          <Typography variant="h5" fontWeight={800}>
-            Recent Activity
-          </Typography>
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          sx={{ mb: 2 }}
+        >
+          <Box>
+            <Typography variant="h5" fontWeight={900}>
+              Recent Activity
+            </Typography>
+
+            <Typography color="text.secondary">
+              Showing {collapsedEvents.length} grouped events
+            </Typography>
+          </Box>
 
           {selectedNode && (
             <Chip
               label={`Context: ${selectedNode.data.nodeType}`}
               color="primary"
               size="small"
+              sx={{ fontWeight: 800 }}
             />
           )}
         </Stack>
@@ -64,22 +98,39 @@ export default function RecentActivityPanel({ events, selectedNode }) {
         <Stack spacing={2}>
           {collapsedEvents.map((event, index) => (
             <Box key={`${event.event_type}-${index}`}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Box>
-                  <Typography fontWeight={800}>{event.event_type}</Typography>
+              <Stack direction="row" spacing={2} alignItems="flex-start">
+                <Typography fontSize={22}>{eventIcon(event.event_type)}</Typography>
 
-                  <Typography color="text.secondary">
+                <Box sx={{ flexGrow: 1 }}>
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    spacing={2}
+                  >
+                    <Typography fontWeight={900}>{event.event_type}</Typography>
+
+                    <Stack direction="row" spacing={1}>
+                      <Chip
+                        label={event.event_type}
+                        color={eventColor(event.event_type)}
+                        size="small"
+                      />
+
+                      {event.count > 1 && (
+                        <Chip label={`${event.count}x`} color="warning" size="small" />
+                      )}
+                    </Stack>
+                  </Stack>
+
+                  <Typography color="text.secondary" sx={{ mt: 0.5 }}>
                     {event.message}
                   </Typography>
 
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                     Last seen: {new Date(event.timestamp).toLocaleString()}
                   </Typography>
                 </Box>
-
-                {event.count > 1 && (
-                  <Chip label={`${event.count}x`} color="warning" size="small" />
-                )}
               </Stack>
 
               <Divider sx={{ mt: 2 }} />

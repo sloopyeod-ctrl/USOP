@@ -1,4 +1,14 @@
-import { Box, Card, CardContent, Chip, Divider, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  Divider,
+  LinearProgress,
+  Stack,
+  Typography,
+} from "@mui/material";
 
 function severityColor(value) {
   if (value === "Critical") return "error";
@@ -34,39 +44,94 @@ export default function ImmediateActionsPanel({ recommendations, selectedNode })
   return (
     <Card>
       <CardContent>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-          <Typography variant="h5" fontWeight={800}>
-            Immediate Actions
-          </Typography>
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          sx={{ mb: 2 }}
+        >
+          <Box>
+            <Typography variant="h5" fontWeight={900}>
+              Immediate Actions
+            </Typography>
+
+            <Typography color="text.secondary">
+              Showing {visibleRecommendations.length} of {recommendations.length} recommendations
+            </Typography>
+          </Box>
 
           {selectedNode && (
             <Chip
               label={`Context: ${selectedNode.data.nodeType}`}
               color="primary"
               size="small"
+              sx={{ fontWeight: 800 }}
             />
           )}
         </Stack>
 
         <Stack spacing={2}>
           {visibleRecommendations.map((rec, index) => (
-            <Box key={`${rec.title}-${index}`}>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Chip label={`P${rec.priority}`} size="small" color="primary" />
-                <Chip label={rec.severity} size="small" color={severityColor(rec.severity)} />
-                <Typography fontWeight={800}>{rec.title}</Typography>
-              </Stack>
+            <Card
+              key={`${rec.title}-${index}`}
+              sx={{
+                background: "linear-gradient(135deg, #111827 0%, #0B1220 100%)",
+                border:
+                  rec.severity === "Critical"
+                    ? "1px solid #7F1D1D"
+                    : "1px solid #1F2937",
+              }}
+            >
+              <CardContent>
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                  <Chip label={`P${rec.priority}`} size="small" color="primary" />
+                  <Chip
+                    label={rec.severity}
+                    size="small"
+                    color={severityColor(rec.severity)}
+                  />
+                  <Typography fontWeight={900}>{rec.title}</Typography>
+                </Stack>
 
-              <Typography color="text.secondary" sx={{ mt: 1 }}>
-                {rec.description}
-              </Typography>
+                <Typography color="text.secondary" sx={{ mb: 2 }}>
+                  {rec.description}
+                </Typography>
 
-              <Typography variant="body2">
-                Risk reduction: {rec.risk_reduction} • Effort: {rec.estimated_effort}
-              </Typography>
+                <Stack direction="row" justifyContent="space-between">
+                  <Typography variant="body2" color="text.secondary">
+                    Risk Reduction
+                  </Typography>
+                  <Typography fontWeight={900}>{rec.risk_reduction}</Typography>
+                </Stack>
 
-              <Divider sx={{ mt: 2 }} />
-            </Box>
+                <LinearProgress
+                  variant="determinate"
+                  value={Math.min(rec.risk_reduction * 3, 100)}
+                  color={severityColor(rec.severity)}
+                  sx={{ mt: 1, mb: 2, height: 8, borderRadius: 10 }}
+                />
+
+                <Typography variant="body2" color="text.secondary">
+                  Estimated effort: {rec.estimated_effort}
+                </Typography>
+
+                <Divider sx={{ my: 2 }} />
+
+                <Stack direction="row" spacing={1}>
+                  <Button variant="contained" size="small">
+                    Investigate
+                  </Button>
+
+                  <Button variant="outlined" size="small">
+                    Approve
+                  </Button>
+
+                  <Button variant="outlined" size="small">
+                    Dismiss
+                  </Button>
+                </Stack>
+              </CardContent>
+            </Card>
           ))}
         </Stack>
       </CardContent>
