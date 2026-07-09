@@ -8,6 +8,7 @@ import {
   buildReactFlowNodes,
 } from "../../graph/GraphReactFlowAdapter";
 import { riskChipColor } from "../../graph/GraphTypes";
+import { applyRenderAnimationMetadata } from "../../graph/adapters/GraphRenderAnimationAdapter";
 
 import {
   Alert,
@@ -30,6 +31,8 @@ export default function IdentityGraphPanel({
   height = "62vh",
   selectedNode,
   setSelectedNode,
+  transition = null,
+  animationMode = "idle",
 }) {
   const usopGraph = useMemo(() => {
     if (!attackPath) return null;
@@ -51,9 +54,23 @@ export default function IdentityGraphPanel({
     return buildReactFlowEdges(usopGraph, selectedNode, activeEdges);
   }, [usopGraph, selectedNode, activeEdges]);
 
+  const animatedRenderGraph = useMemo(() => {
+    return applyRenderAnimationMetadata({
+      graph: {
+        nodes,
+        edges,
+      },
+      transition,
+      animationMode,
+    });
+  }, [nodes, edges, transition, animationMode]);
+
+  const renderNodes = animatedRenderGraph?.nodes || [];
+  const renderEdges = animatedRenderGraph?.edges || [];
+
   if (!attackPath || !usopGraph) return <CircularProgress />;
 
-  if (!nodes.length) {
+  if (!renderNodes.length) {
     return <Alert severity="warning">No attack path data found.</Alert>;
   }
 
@@ -106,13 +123,13 @@ export default function IdentityGraphPanel({
             />
 
             <Chip
-              label={`${usopGraph.summary?.total_nodes || nodes.length} Nodes`}
+              label={`${usopGraph.summary?.total_nodes || renderNodes.length} Nodes`}
               color="primary"
               size="small"
             />
 
             <Chip
-              label={`${usopGraph.summary?.total_edges || edges.length} Edges`}
+              label={`${usopGraph.summary?.total_edges || renderEdges.length} Edges`}
               color="secondary"
               size="small"
             />
@@ -121,8 +138,8 @@ export default function IdentityGraphPanel({
 
         <GraphRenderer
           graphKey={usopGraph.id}
-          nodes={nodes}
-          edges={edges}
+          nodes={renderNodes}
+          edges={renderEdges}
           height={height}
           selectedNode={selectedNode}
           setSelectedNode={setSelectedNode}

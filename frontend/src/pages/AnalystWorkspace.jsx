@@ -165,6 +165,8 @@ export default function AnalystWorkspace() {
           selectedPath={selectedPath}
           selectedNode={selectedNode}
           setSelectedNode={workspace.selectNode}
+          transition={workspace.graph.transition}
+          animationMode={workspace.graph.mode}
         />
 
         <Box>
