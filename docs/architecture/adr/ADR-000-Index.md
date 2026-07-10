@@ -19,3 +19,5 @@
 | ADR-013 | Identity Domain Model | Accepted |
 | ADR-014 | Shared Domain Base Classes | Accepted |
 | ADR-015 | Access Governance Suite | Accepted |
+| ADR-016 | Continuous Access Reviews | Accepted |
+| ADR-017 | Evolution Before Replacement | Accepted |
