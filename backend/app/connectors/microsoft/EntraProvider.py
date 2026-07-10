@@ -4,17 +4,19 @@ from app.connectors.core.BaseConnector import BaseConnector
 from app.connectors.core.ConnectorConfiguration import ConnectorConfiguration
 from app.connectors.core.ConnectorHealth import ConnectorHealth
 from app.connectors.core.ConnectorResult import ConnectorResult
+from app.security.graph.GraphClient import GraphClient
 
 
 class EntraProvider(BaseConnector):
     """
-    Prototype Microsoft Entra provider.
+    Microsoft Entra Provider.
 
-    This provider preserves the original demo connector behavior while conforming
-    to the Connector Framework v2 contract.
+    Supports both:
 
-    Future versions should replace the static demo payload with Microsoft Graph
-    collection logic.
+    - demo mode
+    - live Microsoft Graph mode
+
+    Additional Microsoft Graph object collection will be added incrementally.
     """
 
     def __init__(self, configuration: ConnectorConfiguration | None = None):
@@ -24,119 +26,150 @@ class EntraProvider(BaseConnector):
                 provider_name="microsoft-entra",
                 environment="development",
                 settings={
-                    "mode": "demo",
-                    "source": "static",
+                    "mode": "live",
                 },
             )
         )
+
+        self.graph = GraphClient()
+
+    #
+    # Authentication
+    #
 
     def authenticate(self) -> ConnectorResult:
         return ConnectorResult(
             provider_name=self.provider_name,
             operation="authenticate",
             success=True,
-            message="Demo Entra provider authentication bypassed.",
-            metadata={
-                "mode": self.configuration.get_setting("mode"),
-                "source": self.configuration.get_setting("source"),
-            },
+            message="Authentication handled by GraphClient.",
         ).complete()
+
+    #
+    # Health
+    #
 
     def health(self) -> ConnectorHealth:
         return ConnectorHealth(
             provider_name=self.provider_name,
             healthy=True,
             status="healthy",
-            details={
-                "mode": self.configuration.get_setting("mode"),
-                "source": self.configuration.get_setting("source"),
+        )
+
+    #
+    # Public Collection
+    #
+
+    def collect(self) -> dict[str, Any]:
+        mode = self.configuration.get_setting("mode", "demo").lower()
+
+        if mode == "live":
+            identities = self.collect_live_users()
+        else:
+            identities = self.collect_demo_users()
+
+        return {
+            "identities": identities,
+            "accounts": self.collect_demo_accounts(),
+            "groups": self.collect_demo_groups(),
+            "roles": self.collect_demo_roles(),
+            "memberships": self.collect_demo_memberships(),
+            "role_assignments": self.collect_demo_role_assignments(),
+        }
+
+    #
+    # Live Microsoft Graph
+    #
+
+    def collect_live_users(self) -> list[dict[str, Any]]:
+        response = self.graph.get(
+            "/users",
+            params={
+                "$select": "displayName,userPrincipalName",
+                "$top": 100,
             },
         )
 
-    def collect(self) -> dict[str, Any]:
-        return {
-            "identities": [
-                {
-                    "display_name": "Marvin Dewitt",
-                    "primary_email": "mgeoffdewitt@gmail.com",
-                }
-            ],
-            "accounts": [
-                {
-                    "username": "mdewitt",
-                    "system_name": "Microsoft Entra ID",
-                }
-            ],
-            "groups": [
-                {
-                    "name": "entra-security-admins",
-                }
-            ],
-            "roles": [
-                {
-                    "name": "Global Reader",
-                }
-            ],
-            "memberships": [
-                {
-                    "username": "mdewitt",
-                    "group_name": "entra-security-admins",
-                }
-            ],
-            "role_assignments": [
-                {
-                    "username": "mdewitt",
-                    "role_name": "Global Reader",
-                }
-            ],
-        }
+        identities = []
 
-    def normalize(self, raw_data: dict[str, Any]) -> dict[str, Any]:
-        return {
-            "identities": raw_data.get("identities", []),
-            "accounts": raw_data.get("accounts", []),
-            "groups": raw_data.get("groups", []),
-            "roles": raw_data.get("roles", []),
-            "memberships": raw_data.get("memberships", []),
-            "role_assignments": raw_data.get("role_assignments", []),
-        }
+        for user in response.get("value", []):
+            identities.append(
+                {
+                    "display_name": user.get("displayName"),
+                    "primary_email": user.get("userPrincipalName"),
+                }
+            )
 
-    def synchronize(self) -> ConnectorResult:
-        auth_result = self.authenticate()
+        return identities
 
-        if not auth_result.success:
-            return ConnectorResult(
-                provider_name=self.provider_name,
-                operation="synchronize",
-                success=False,
-                message="Authentication failed.",
-                errors=auth_result.errors,
-            ).complete()
+    #
+    # Demo Data
+    #
 
-        raw_data = self.collect()
-        normalized_data = self.normalize(raw_data)
+    def collect_demo_users(self):
+        return [
+            {
+                "display_name": "Marvin Dewitt",
+                "primary_email": "mgeoffdewitt@gmail.com",
+            }
+        ]
 
-        records_collected = sum(len(value) for value in raw_data.values())
-        records_normalized = sum(len(value) for value in normalized_data.values())
+    def collect_demo_accounts(self):
+        return [
+            {
+                "username": "mdewitt",
+                "system_name": "Microsoft Entra ID",
+            }
+        ]
+
+    def collect_demo_groups(self):
+        return [
+            {
+                "name": "entra-security-admins",
+            }
+        ]
+
+    def collect_demo_roles(self):
+        return [
+            {
+                "name": "Global Reader",
+            }
+        ]
+
+    def collect_demo_memberships(self):
+        return [
+            {
+                "username": "mdewitt",
+                "group_name": "entra-security-admins",
+            }
+        ]
+
+    def collect_demo_role_assignments(self):
+        return [
+            {
+                "username": "mdewitt",
+                "role_name": "Global Reader",
+            }
+        ]
+
+    #
+    # Normalization
+    #
+
+    def normalize(self, raw_data):
+        return raw_data
+
+    #
+    # Synchronization
+    #
+
+    def synchronize(self):
+        data = self.collect()
 
         return ConnectorResult(
             provider_name=self.provider_name,
             operation="synchronize",
             success=True,
-            message="Demo Entra provider synchronized successfully.",
-            records_collected=records_collected,
-            records_normalized=records_normalized,
-            records_synchronized=records_normalized,
-            metadata={
-                "mode": self.configuration.get_setting("mode"),
-                "source": self.configuration.get_setting("source"),
-                "objects": {
-                    "identities": len(normalized_data["identities"]),
-                    "accounts": len(normalized_data["accounts"]),
-                    "groups": len(normalized_data["groups"]),
-                    "roles": len(normalized_data["roles"]),
-                    "memberships": len(normalized_data["memberships"]),
-                    "role_assignments": len(normalized_data["role_assignments"]),
-                },
-            },
+            message="Collection completed.",
+            records_collected=sum(len(v) for v in data.values()),
         ).complete()
