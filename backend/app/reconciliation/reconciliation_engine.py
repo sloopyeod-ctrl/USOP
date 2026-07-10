@@ -32,30 +32,60 @@ class ReconciliationEngine:
         # Reconcile identities
         #
         for identity in normalized.get("identities", []):
-            existing = (
-                self.db.query(Identity)
-                .filter(
-                    func.lower(Identity.primary_email)
-                    == identity["primary_email"].lower()
+            source_identifier = identity.get("source_identifier")
+            primary_email = identity.get("primary_email")
+
+            existing = None
+
+            if source_identifier:
+                existing = (
+                    self.db.query(Identity)
+                    .filter(
+                        Identity.source_system
+                        == identity.get("source_system"),
+                        Identity.source_identifier
+                        == source_identifier,
+                    )
+                    .first()
                 )
-                .first()
-            )
+
+            if existing is None and primary_email:
+                existing = (
+                    self.db.query(Identity)
+                    .filter(
+                        func.lower(Identity.primary_email)
+                        == primary_email.lower()
+                    )
+                    .first()
+                )
 
             if existing:
                 existing.display_name = identity["display_name"]
+                existing.primary_email = primary_email
+                existing.status = identity.get("status", "Active")
+                existing.source_system = identity.get(
+                    "source_system"
+                )
+                existing.source_identifier = source_identifier
+
                 summary["identities_updated"] += 1
 
             else:
                 self.db.add(
                     Identity(
                         display_name=identity["display_name"],
-                        primary_email=identity["primary_email"],
+                        primary_email=primary_email,
+                        status=identity.get("status", "Active"),
+                        source_system=identity.get(
+                            "source_system"
+                        ),
+                        source_identifier=source_identifier,
                     )
                 )
 
                 summary["identities_created"] += 1
 
-            #
+        #
         # Reconcile accounts
         #
         for account in normalized.get("accounts", []):
@@ -93,7 +123,7 @@ class ReconciliationEngine:
 
                     summary["accounts_created"] += 1   
 
-                #
+        #
         # Reconcile groups
         #
         for group in normalized.get("groups", []):
@@ -119,7 +149,7 @@ class ReconciliationEngine:
 
                 summary["groups_created"] += 1  
 
-                #
+        #
         # Reconcile roles
         #
         for role in normalized.get("roles", []):
@@ -148,7 +178,7 @@ class ReconciliationEngine:
 
                 summary["roles_created"] += 1   
 
-                #
+        #
         # Reconcile memberships
         #
 
@@ -199,7 +229,7 @@ class ReconciliationEngine:
                 summary.setdefault("memberships_created", 0)
                 summary["memberships_created"] += 1   
 
-                #
+        #
         # Reconcile role assignments
         #
         for assignment in normalized.get("role_assignments", []):

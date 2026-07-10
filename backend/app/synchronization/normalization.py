@@ -46,14 +46,35 @@ class NormalizationEngine:
         normalized = []
 
         for identity in identities:
+            display_name = self.clean_string(
+                identity.get("display_name")
+            )
+            primary_email = self.clean_string(
+                identity.get("primary_email")
+            )
+
+            if not display_name:
+                continue
+
             normalized.append(
                 {
-                    "display_name": identity.get("display_name"),
-                    "primary_email": identity.get("primary_email"),
+                    "display_name": display_name,
+                    "primary_email": primary_email,
+                    "status": self.clean_string(
+                        identity.get("status", "Active")
+                    ),
+                    "source_system": self.clean_string(
+                        identity.get(
+                            "source_system",
+                            connector_name,
+                        )
+                    ),
+                    "source_identifier": self.clean_string(
+                        identity.get("source_identifier")
+                    ),
                     "source": connector_name,
                 }
             )
-
         return normalized
 
     def normalize_accounts(self, connector_name, accounts):

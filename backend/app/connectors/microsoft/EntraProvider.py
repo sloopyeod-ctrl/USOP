@@ -112,6 +112,7 @@ class EntraProvider(BaseConnector):
                 {
                     "display_name": display_name,
                     "primary_email": primary_email,
+                    "source_system": "Microsoft Entra ID",
                     "source_identifier": user.get("id"),
                     "status": (
                         "Active"
