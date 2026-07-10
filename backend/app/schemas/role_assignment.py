@@ -2,11 +2,17 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.domain.subject_type import SubjectType
+
 
 class RoleAssignmentCreate(BaseModel):
+    """
+    Request schema for a canonical subject-to-role relationship.
+    """
+
     role_id: str
 
-    subject_type: str = "Account"
+    subject_type: SubjectType = SubjectType.ACCOUNT
     subject_id: str
 
     assignment_type: str = "Direct"
@@ -18,7 +24,11 @@ class RoleAssignmentCreate(BaseModel):
     first_seen_at: datetime | None = None
     last_seen_at: datetime | None = None
 
-    confidence_score: int = Field(default=100, ge=0, le=100)
+    confidence_score: int = Field(
+        default=100,
+        ge=0,
+        le=100,
+    )
 
 
 class RoleAssignmentRead(RoleAssignmentCreate):
