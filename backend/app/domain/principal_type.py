@@ -1,9 +1,9 @@
 from enum import StrEnum
 
 
-class SubjectType(StrEnum):
+class PrincipalType(StrEnum):
     """
-    Canonical subject types used by USOP relationships.
+    Canonical security principal types used by USOP relationships.
 
     Database models continue storing string values so provider integrations
     and future domain evolution do not require PostgreSQL enum migrations.

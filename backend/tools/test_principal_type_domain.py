@@ -11,13 +11,13 @@ sys.path.insert(
     str(BACKEND_ROOT),
 )
 
-from app.domain.subject_type import SubjectType
+from app.domain.principal_type import PrincipalType
 from app.schemas.role_assignment import RoleAssignmentCreate
 
 
 def main() -> int:
-    print("USOP Canonical Subject Type Test")
-    print("--------------------------------")
+    print("USOP Canonical Principal Type Test")
+    print("----------------------------------")
 
     expected_values = {
         "Account",
@@ -29,14 +29,14 @@ def main() -> int:
     }
 
     actual_values = {
-        subject_type.value
-        for subject_type in SubjectType
+        principal_type.value
+        for principal_type in PrincipalType
     }
 
     if actual_values != expected_values:
         print("Validation: FAILED")
         print(
-            "Canonical subject type values do not match "
+            "Canonical principal type values do not match "
             "the expected domain vocabulary."
         )
         return 1
@@ -48,37 +48,37 @@ def main() -> int:
 
     if (
         account_assignment.subject_type
-        != SubjectType.ACCOUNT
+        != PrincipalType.ACCOUNT
     ):
         print("Validation: FAILED")
         print(
             "Role assignments did not default to the "
-            "Account subject type."
+            "Account principal type."
         )
         return 1
 
     group_assignment = RoleAssignmentCreate(
         role_id="test-role-id",
-        subject_type=SubjectType.GROUP,
+        subject_type=PrincipalType.GROUP,
         subject_id="test-group-id",
     )
 
     if (
         group_assignment.subject_type
-        != SubjectType.GROUP
+        != PrincipalType.GROUP
     ):
         print("Validation: FAILED")
         print(
             "Role assignments did not accept the "
-            "Group subject type."
+            "Group principal type."
         )
         return 1
 
     try:
         RoleAssignmentCreate(
             role_id="test-role-id",
-            subject_type="InvalidSubjectType",
-            subject_id="test-subject-id",
+            subject_type="InvalidPrincipalType",
+            subject_id="test-principal-id",
         )
     except ValidationError:
         invalid_value_rejected = True
@@ -88,20 +88,20 @@ def main() -> int:
     if not invalid_value_rejected:
         print("Validation: FAILED")
         print(
-            "The schema accepted an invalid subject type."
+            "The schema accepted an invalid principal type."
         )
         return 1
 
-    print("Canonical subject types:")
+    print("Canonical principal types:")
 
-    for subject_type in SubjectType:
-        print(f"- {subject_type.value}")
+    for principal_type in PrincipalType:
+        print(f"- {principal_type.value}")
 
     print()
     print("Validation: PASSED")
     print(
         "Role assignments now use the shared canonical "
-        "subject-type vocabulary."
+        "principal-type vocabulary."
     )
 
     return 0

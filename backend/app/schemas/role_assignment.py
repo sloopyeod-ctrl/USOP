@@ -2,17 +2,21 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from app.domain.subject_type import SubjectType
+from app.domain.principal_type import PrincipalType
 
 
 class RoleAssignmentCreate(BaseModel):
     """
-    Request schema for a canonical subject-to-role relationship.
+    Request schema for a canonical principal-to-role relationship.
+
+    The external field name remains subject_type for compatibility with the
+    existing API and persistence model. Its value is validated using the
+    canonical PrincipalType vocabulary.
     """
 
     role_id: str
 
-    subject_type: SubjectType = SubjectType.ACCOUNT
+    subject_type: PrincipalType = PrincipalType.ACCOUNT
     subject_id: str
 
     assignment_type: str = "Direct"

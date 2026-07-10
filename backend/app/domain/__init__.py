@@ -1,6 +1,6 @@
-from app.domain.subject_type import SubjectType
+from app.domain.principal_type import PrincipalType
 
 
 __all__ = [
-    "SubjectType",
+    "PrincipalType",
 ]
