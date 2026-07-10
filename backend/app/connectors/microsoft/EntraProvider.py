@@ -31,6 +31,7 @@ class EntraProvider(BaseConnector):
 
     - identities derived from Microsoft Entra users
     - accounts derived from Microsoft Entra users
+    - groups derived from Microsoft Entra groups
     """
 
     PROVIDER_NAME = "microsoft-entra"
@@ -85,6 +86,7 @@ class EntraProvider(BaseConnector):
                 "live_capabilities": [
                     "identities",
                     "accounts",
+                    "groups",
                 ],
             },
         )
@@ -112,33 +114,40 @@ class EntraProvider(BaseConnector):
         """
         Collect currently supported live Microsoft Entra resources.
 
-        A Microsoft Entra user represents two distinct USOP concepts:
+        Microsoft Entra users are translated into both canonical identities
+        and provider accounts from one Graph request.
 
-        - an identity representing the security principal
-        - an account representing the principal in Microsoft Entra
-
-        Both collections are created from one Microsoft Graph request so the
-        connector does not perform duplicate collection work.
+        Microsoft Entra groups are collected through a separate Graph request
+        because they represent an independent provider resource.
 
         Collections not yet supported remain empty until their individual
         milestones are implemented.
         """
 
         graph_users = self._collect_live_user_records()
+        graph_groups = self._collect_live_group_records()
 
         return {
-            "identities": self._build_live_identities(graph_users),
-            "accounts": self._build_live_accounts(graph_users),
-            "groups": [],
+            "identities": self._build_live_identities(
+                graph_users
+            ),
+            "accounts": self._build_live_accounts(
+                graph_users
+            ),
+            "groups": self._build_live_groups(
+                graph_groups
+            ),
             "roles": [],
             "memberships": [],
             "role_assignments": [],
         }
 
-    def _collect_live_user_records(self) -> list[dict[str, Any]]:
+    def _collect_live_user_records(
+        self,
+    ) -> list[dict[str, Any]]:
         """
-        Retrieve the Microsoft Graph user records needed by the currently
-        supported identity and account translations.
+        Retrieve Microsoft Graph user records needed by supported identity
+        and account translations.
 
         Pagination will be introduced as a separate connector capability.
         """
@@ -157,12 +166,61 @@ class EntraProvider(BaseConnector):
             },
         )
 
+        return self._extract_graph_collection(
+            response=response,
+            resource_name="users",
+        )
+
+    def _collect_live_group_records(
+        self,
+    ) -> list[dict[str, Any]]:
+        """
+        Retrieve Microsoft Graph group records needed by the canonical group
+        translation.
+
+        Provider-native properties are used only inside the connector. The
+        returned USOP group records remain provider-neutral.
+
+        Pagination will be introduced as a separate connector capability.
+        """
+
+        response = self.graph.get(
+            "/groups",
+            params={
+                "$select": (
+                    "id,"
+                    "displayName,"
+                    "description,"
+                    "securityEnabled,"
+                    "mailEnabled,"
+                    "groupTypes,"
+                    "membershipRule,"
+                    "membershipRuleProcessingState"
+                ),
+                "$top": 100,
+            },
+        )
+
+        return self._extract_graph_collection(
+            response=response,
+            resource_name="groups",
+        )
+
+    @staticmethod
+    def _extract_graph_collection(
+        response: dict[str, Any],
+        resource_name: str,
+    ) -> list[dict[str, Any]]:
+        """
+        Validate and return the object collection from a Graph response.
+        """
+
         records = response.get("value", [])
 
         if not isinstance(records, list):
             raise ValueError(
-                "Microsoft Graph users response did not contain a valid "
-                "'value' collection."
+                f"Microsoft Graph {resource_name} response did not "
+                "contain a valid 'value' collection."
             )
 
         return [
@@ -182,7 +240,9 @@ class EntraProvider(BaseConnector):
         identities: list[dict[str, Any]] = []
 
         for user in graph_users:
-            source_identifier = self._clean_string(user.get("id"))
+            source_identifier = self._clean_string(
+                user.get("id")
+            )
             display_name = self._clean_string(
                 user.get("displayName")
             )
@@ -217,14 +277,15 @@ class EntraProvider(BaseConnector):
         Translate Microsoft Graph users into provider account records.
 
         identity_source_system and identity_source_identifier provide a
-        provider-neutral correlation reference. Persistence support for this
-        reference will be introduced in the next milestone.
+        provider-neutral correlation reference.
         """
 
         accounts: list[dict[str, Any]] = []
 
         for user in graph_users:
-            source_identifier = self._clean_string(user.get("id"))
+            source_identifier = self._clean_string(
+                user.get("id")
+            )
             username = self._clean_string(
                 user.get("userPrincipalName")
             )
@@ -239,8 +300,10 @@ class EntraProvider(BaseConnector):
                 {
                     "username": username,
                     "display_name": display_name,
-                    "account_type": self._account_type_from_user_type(
-                        user.get("userType")
+                    "account_type": (
+                        self._account_type_from_user_type(
+                            user.get("userType")
+                        )
                     ),
                     "status": self._status_from_account_enabled(
                         user.get("accountEnabled")
@@ -249,35 +312,108 @@ class EntraProvider(BaseConnector):
                     "source_system": self.SYSTEM_NAME,
                     "source_identifier": source_identifier,
                     "identity_source_system": self.SYSTEM_NAME,
-                    "identity_source_identifier": source_identifier,
+                    "identity_source_identifier": (
+                        source_identifier
+                    ),
                     "confidence_score": 100,
                 }
             )
 
         return accounts
 
-    def collect_live_users(self) -> list[dict[str, Any]]:
+    def _build_live_groups(
+        self,
+        graph_groups: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """
+        Translate Microsoft Graph groups into canonical USOP group records.
+
+        Microsoft-specific group properties are translated into a stable
+        provider-neutral group_type value.
+
+        The current domain model stores the durable group concept. Provider
+        properties such as mailEnabled, groupTypes, and membershipRule remain
+        connector concerns until a broader cross-provider domain requirement
+        justifies additional canonical structures.
+        """
+
+        groups: list[dict[str, Any]] = []
+
+        for group in graph_groups:
+            source_identifier = self._clean_string(
+                group.get("id")
+            )
+            display_name = self._clean_string(
+                group.get("displayName")
+            )
+
+            if not source_identifier or not display_name:
+                continue
+
+            groups.append(
+                {
+                    "name": display_name,
+                    "display_name": display_name,
+                    "group_type": self._group_type_from_graph_group(
+                        group
+                    ),
+                    "status": "Active",
+                    "system_name": self.SYSTEM_NAME,
+                    "description": self._clean_string(
+                        group.get("description")
+                    ),
+                    "source_system": self.SYSTEM_NAME,
+                    "source_identifier": source_identifier,
+                    "confidence_score": 100,
+                }
+            )
+
+        return groups
+
+    def collect_live_users(
+        self,
+    ) -> list[dict[str, Any]]:
         """
         Collect live identities derived from Microsoft Entra users.
 
-        This public method remains available for compatibility with existing
-        development tools. collect_live() should be preferred when multiple
-        supported collections are needed from one Graph request.
+        collect_live() should be preferred when multiple supported collections
+        are required because it avoids duplicate Graph requests.
         """
 
         graph_users = self._collect_live_user_records()
-        return self._build_live_identities(graph_users)
 
-    def collect_live_accounts(self) -> list[dict[str, Any]]:
+        return self._build_live_identities(
+            graph_users
+        )
+
+    def collect_live_accounts(
+        self,
+    ) -> list[dict[str, Any]]:
         """
         Collect live accounts derived from Microsoft Entra users.
 
         collect_live() should be preferred when identities and accounts are
-        needed together because it avoids a duplicate Graph request.
+        required together because it avoids duplicate Graph requests.
         """
 
         graph_users = self._collect_live_user_records()
-        return self._build_live_accounts(graph_users)
+
+        return self._build_live_accounts(
+            graph_users
+        )
+
+    def collect_live_groups(
+        self,
+    ) -> list[dict[str, Any]]:
+        """
+        Collect live groups derived from Microsoft Entra groups.
+        """
+
+        graph_groups = self._collect_live_group_records()
+
+        return self._build_live_groups(
+            graph_groups
+        )
 
     def collect_demo(self) -> dict[str, Any]:
         """
@@ -290,10 +426,14 @@ class EntraProvider(BaseConnector):
             "groups": self.collect_demo_groups(),
             "roles": self.collect_demo_roles(),
             "memberships": self.collect_demo_memberships(),
-            "role_assignments": self.collect_demo_role_assignments(),
+            "role_assignments": (
+                self.collect_demo_role_assignments()
+            ),
         }
 
-    def collect_demo_users(self) -> list[dict[str, Any]]:
+    def collect_demo_users(
+        self,
+    ) -> list[dict[str, Any]]:
         return [
             {
                 "display_name": "Marvin Dewitt",
@@ -301,12 +441,16 @@ class EntraProvider(BaseConnector):
                 "primary_email": "mgeoffdewitt@gmail.com",
                 "status": "Active",
                 "source_system": self.SYSTEM_NAME,
-                "source_identifier": "demo-user-marvin-dewitt",
+                "source_identifier": (
+                    "demo-user-marvin-dewitt"
+                ),
                 "confidence_score": 100,
             }
         ]
 
-    def collect_demo_accounts(self) -> list[dict[str, Any]]:
+    def collect_demo_accounts(
+        self,
+    ) -> list[dict[str, Any]]:
         return [
             {
                 "username": "mdewitt",
@@ -315,7 +459,9 @@ class EntraProvider(BaseConnector):
                 "status": "Active",
                 "system_name": self.SYSTEM_NAME,
                 "source_system": self.SYSTEM_NAME,
-                "source_identifier": "demo-account-mdewitt",
+                "source_identifier": (
+                    "demo-account-mdewitt"
+                ),
                 "identity_source_system": self.SYSTEM_NAME,
                 "identity_source_identifier": (
                     "demo-user-marvin-dewitt"
@@ -324,11 +470,15 @@ class EntraProvider(BaseConnector):
             }
         ]
 
-    def collect_demo_groups(self) -> list[dict[str, Any]]:
+    def collect_demo_groups(
+        self,
+    ) -> list[dict[str, Any]]:
         return [
             {
                 "name": "entra-security-admins",
-                "display_name": "Entra Security Administrators",
+                "display_name": (
+                    "Entra Security Administrators"
+                ),
                 "group_type": "Security",
                 "status": "Active",
                 "system_name": self.SYSTEM_NAME,
@@ -340,7 +490,9 @@ class EntraProvider(BaseConnector):
             }
         ]
 
-    def collect_demo_roles(self) -> list[dict[str, Any]]:
+    def collect_demo_roles(
+        self,
+    ) -> list[dict[str, Any]]:
         return [
             {
                 "name": "Global Reader",
@@ -349,16 +501,22 @@ class EntraProvider(BaseConnector):
                 "status": "Active",
                 "system_name": self.SYSTEM_NAME,
                 "source_system": self.SYSTEM_NAME,
-                "source_identifier": "demo-role-global-reader",
+                "source_identifier": (
+                    "demo-role-global-reader"
+                ),
                 "confidence_score": 100,
             }
         ]
 
-    def collect_demo_memberships(self) -> list[dict[str, Any]]:
+    def collect_demo_memberships(
+        self,
+    ) -> list[dict[str, Any]]:
         return [
             {
                 "username": "mdewitt",
-                "group_name": "entra-security-admins",
+                "group_name": (
+                    "entra-security-admins"
+                ),
                 "source_system": self.SYSTEM_NAME,
                 "source_identifier": (
                     "demo-membership-mdewitt-security-admins"
@@ -366,7 +524,9 @@ class EntraProvider(BaseConnector):
             }
         ]
 
-    def collect_demo_role_assignments(self) -> list[dict[str, Any]]:
+    def collect_demo_role_assignments(
+        self,
+    ) -> list[dict[str, Any]]:
         return [
             {
                 "username": "mdewitt",
@@ -408,7 +568,9 @@ class EntraProvider(BaseConnector):
             provider_name=self.provider_name,
             operation="synchronize",
             success=True,
-            message="Microsoft Entra collection completed.",
+            message=(
+                "Microsoft Entra collection completed."
+            ),
             records_collected=records_collected,
             metadata={
                 "mode": self.configuration.get_setting(
@@ -424,7 +586,9 @@ class EntraProvider(BaseConnector):
         ).complete()
 
     @staticmethod
-    def _clean_string(value: Any) -> str | None:
+    def _clean_string(
+        value: Any,
+    ) -> str | None:
         """
         Convert a provider value into a trimmed string.
         """
@@ -433,6 +597,7 @@ class EntraProvider(BaseConnector):
             return None
 
         cleaned = str(value).strip()
+
         return cleaned or None
 
     @staticmethod
@@ -459,9 +624,71 @@ class EntraProvider(BaseConnector):
         users are represented as External accounts.
         """
 
-        normalized_user_type = str(user_type or "").strip().lower()
+        normalized_user_type = str(
+            user_type or ""
+        ).strip().lower()
 
         if normalized_user_type == "guest":
             return "External"
 
         return "User"
+
+    @staticmethod
+    def _group_type_from_graph_group(
+        group: dict[str, Any],
+    ) -> str:
+        """
+        Translate Microsoft Graph group properties into a canonical type.
+
+        Precedence:
+
+        - Dynamic security group
+        - Dynamic collaboration group
+        - Collaboration group
+        - Mail-enabled security group
+        - Security group
+        - Distribution group
+        - General group fallback
+        """
+
+        group_types = group.get("groupTypes") or []
+
+        normalized_group_types = {
+            str(value).strip().lower()
+            for value in group_types
+        }
+
+        security_enabled = (
+            group.get("securityEnabled") is True
+        )
+        mail_enabled = (
+            group.get("mailEnabled") is True
+        )
+        dynamic_membership = (
+            "dynamicmembership"
+            in normalized_group_types
+        )
+        unified = (
+            "unified"
+            in normalized_group_types
+        )
+
+        if dynamic_membership and security_enabled:
+            return "DynamicSecurity"
+
+        if dynamic_membership and unified:
+            return "DynamicCollaboration"
+
+        if unified:
+            return "Collaboration"
+
+        if security_enabled and mail_enabled:
+            return "MailEnabledSecurity"
+
+        if security_enabled:
+            return "Security"
+
+        if mail_enabled:
+            return "Distribution"
+
+        return "Group"
