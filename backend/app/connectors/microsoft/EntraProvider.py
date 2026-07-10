@@ -9,14 +9,16 @@ from app.security.graph.GraphClient import GraphClient
 
 class EntraProvider(BaseConnector):
     """
-    Microsoft Entra Provider.
+    Microsoft Entra provider.
 
-    Supports both:
+    Supports:
 
-    - demo mode
-    - live Microsoft Graph mode
+    - demo mode with static development data
+    - live mode with Microsoft Graph user collection
 
-    Additional Microsoft Graph object collection will be added incrementally.
+    Live object types are enabled incrementally. Object types that are not yet
+    implemented return empty collections to prevent demo data from being mixed
+    with live tenant data.
     """
 
     def __init__(self, configuration: ConnectorConfiguration | None = None):
@@ -33,10 +35,6 @@ class EntraProvider(BaseConnector):
 
         self.graph = GraphClient()
 
-    #
-    # Authentication
-    #
-
     def authenticate(self) -> ConnectorResult:
         return ConnectorResult(
             provider_name=self.provider_name,
@@ -45,31 +43,89 @@ class EntraProvider(BaseConnector):
             message="Authentication handled by GraphClient.",
         ).complete()
 
-    #
-    # Health
-    #
-
     def health(self) -> ConnectorHealth:
         return ConnectorHealth(
             provider_name=self.provider_name,
             healthy=True,
             status="healthy",
+            details={
+                "mode": self.configuration.get_setting("mode", "demo"),
+            },
         )
 
-    #
-    # Public Collection
-    #
-
     def collect(self) -> dict[str, Any]:
-        mode = self.configuration.get_setting("mode", "demo").lower()
+        mode = str(
+            self.configuration.get_setting("mode", "demo")
+        ).lower().strip()
 
         if mode == "live":
-            identities = self.collect_live_users()
-        else:
-            identities = self.collect_demo_users()
+            return self.collect_live()
+
+        if mode == "demo":
+            return self.collect_demo()
+
+        raise ValueError(
+            f"Unsupported Microsoft Entra provider mode: {mode}"
+        )
+
+    def collect_live(self) -> dict[str, Any]:
+        """
+        Collect currently supported live Microsoft Entra resources.
+
+        Users are live. All other resource collections remain empty until their
+        individual Graph collection milestones are implemented.
+        """
 
         return {
-            "identities": identities,
+            "identities": self.collect_live_users(),
+            "accounts": [],
+            "groups": [],
+            "roles": [],
+            "memberships": [],
+            "role_assignments": [],
+        }
+
+    def collect_live_users(self) -> list[dict[str, Any]]:
+        response = self.graph.get(
+            "/users",
+            params={
+                "$select": (
+                    "id,"
+                    "displayName,"
+                    "userPrincipalName,"
+                    "accountEnabled"
+                ),
+                "$top": 100,
+            },
+        )
+
+        identities: list[dict[str, Any]] = []
+
+        for user in response.get("value", []):
+            display_name = user.get("displayName")
+            primary_email = user.get("userPrincipalName")
+
+            if not display_name:
+                continue
+
+            identities.append(
+                {
+                    "display_name": display_name,
+                    "primary_email": primary_email,
+                    "source_identifier": user.get("id"),
+                    "status": (
+                        "Active"
+                        if user.get("accountEnabled", True)
+                        else "Inactive"
+                    ),
+                }
+            )
+
+        return identities
+
+    def collect_demo(self) -> dict[str, Any]:
+        return {
+            "identities": self.collect_demo_users(),
             "accounts": self.collect_demo_accounts(),
             "groups": self.collect_demo_groups(),
             "roles": self.collect_demo_roles(),
@@ -77,36 +133,7 @@ class EntraProvider(BaseConnector):
             "role_assignments": self.collect_demo_role_assignments(),
         }
 
-    #
-    # Live Microsoft Graph
-    #
-
-    def collect_live_users(self) -> list[dict[str, Any]]:
-        response = self.graph.get(
-            "/users",
-            params={
-                "$select": "displayName,userPrincipalName",
-                "$top": 100,
-            },
-        )
-
-        identities = []
-
-        for user in response.get("value", []):
-            identities.append(
-                {
-                    "display_name": user.get("displayName"),
-                    "primary_email": user.get("userPrincipalName"),
-                }
-            )
-
-        return identities
-
-    #
-    # Demo Data
-    #
-
-    def collect_demo_users(self):
+    def collect_demo_users(self) -> list[dict[str, Any]]:
         return [
             {
                 "display_name": "Marvin Dewitt",
@@ -114,7 +141,7 @@ class EntraProvider(BaseConnector):
             }
         ]
 
-    def collect_demo_accounts(self):
+    def collect_demo_accounts(self) -> list[dict[str, Any]]:
         return [
             {
                 "username": "mdewitt",
@@ -122,21 +149,21 @@ class EntraProvider(BaseConnector):
             }
         ]
 
-    def collect_demo_groups(self):
+    def collect_demo_groups(self) -> list[dict[str, Any]]:
         return [
             {
                 "name": "entra-security-admins",
             }
         ]
 
-    def collect_demo_roles(self):
+    def collect_demo_roles(self) -> list[dict[str, Any]]:
         return [
             {
                 "name": "Global Reader",
             }
         ]
 
-    def collect_demo_memberships(self):
+    def collect_demo_memberships(self) -> list[dict[str, Any]]:
         return [
             {
                 "username": "mdewitt",
@@ -144,7 +171,7 @@ class EntraProvider(BaseConnector):
             }
         ]
 
-    def collect_demo_role_assignments(self):
+    def collect_demo_role_assignments(self) -> list[dict[str, Any]]:
         return [
             {
                 "username": "mdewitt",
@@ -152,24 +179,32 @@ class EntraProvider(BaseConnector):
             }
         ]
 
-    #
-    # Normalization
-    #
-
-    def normalize(self, raw_data):
+    def normalize(
+        self,
+        raw_data: dict[str, Any],
+    ) -> dict[str, Any]:
         return raw_data
 
-    #
-    # Synchronization
-    #
-
-    def synchronize(self):
+    def synchronize(self) -> ConnectorResult:
         data = self.collect()
+        records_collected = sum(
+            len(value)
+            for value in data.values()
+            if isinstance(value, list)
+        )
 
         return ConnectorResult(
             provider_name=self.provider_name,
             operation="synchronize",
             success=True,
-            message="Collection completed.",
-            records_collected=sum(len(v) for v in data.values()),
+            message="Microsoft Entra collection completed.",
+            records_collected=records_collected,
+            metadata={
+                "mode": self.configuration.get_setting("mode", "demo"),
+                "objects": {
+                    key: len(value)
+                    for key, value in data.items()
+                    if isinstance(value, list)
+                },
+            },
         ).complete()
