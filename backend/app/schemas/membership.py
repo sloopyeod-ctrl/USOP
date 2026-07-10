@@ -2,9 +2,16 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.domain.principal_type import PrincipalType
+
 
 class MembershipCreate(BaseModel):
-    account_id: str
+    """
+    Request schema for a canonical principal-to-group relationship.
+    """
+
+    subject_type: PrincipalType = PrincipalType.ACCOUNT
+    subject_id: str
     group_id: str
 
     membership_type: str = "Member"
@@ -16,7 +23,11 @@ class MembershipCreate(BaseModel):
     first_seen_at: datetime | None = None
     last_seen_at: datetime | None = None
 
-    confidence_score: int = Field(default=100, ge=0, le=100)
+    confidence_score: int = Field(
+        default=100,
+        ge=0,
+        le=100,
+    )
 
 
 class MembershipRead(MembershipCreate):

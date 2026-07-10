@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 
+from app.domain.principal_type import PrincipalType
 from app.models.account import Account
 from app.models.group import Group
 from app.models.identity import Identity
@@ -9,15 +10,25 @@ from app.models.role_assignment import RoleAssignment
 
 
 class IdentityGraphService:
+    """
+    Build an identity-centered view of canonical security relationships.
+
+    Membership and role-assignment traversal use the shared canonical
+    principal vocabulary rather than account-specific relationship columns.
+    """
+
     def __init__(self, db: Session):
         self.db = db
 
-    def get_identity_graph(self, identity_id: str):
+    def get_identity_graph(
+        self,
+        identity_id: str,
+    ):
         identity = (
             self.db.query(Identity)
             .filter(
                 Identity.id == identity_id,
-                Identity.is_active == True,
+                Identity.is_active.is_(True),
             )
             .first()
         )
@@ -29,7 +40,7 @@ class IdentityGraphService:
             self.db.query(Account)
             .filter(
                 Account.identity_id == identity.id,
-                Account.is_active == True,
+                Account.is_active.is_(True),
             )
             .all()
         )
@@ -55,8 +66,11 @@ class IdentityGraphService:
             memberships = (
                 self.db.query(Membership)
                 .filter(
-                    Membership.account_id == account.id,
-                    Membership.is_active == True,
+                    Membership.subject_type
+                    == PrincipalType.ACCOUNT.value,
+                    Membership.subject_id
+                    == account.id,
+                    Membership.is_active.is_(True),
                 )
                 .all()
             )
@@ -66,7 +80,7 @@ class IdentityGraphService:
                     self.db.query(Group)
                     .filter(
                         Group.id == membership.group_id,
-                        Group.is_active == True,
+                        Group.is_active.is_(True),
                     )
                     .first()
                 )
@@ -74,21 +88,34 @@ class IdentityGraphService:
                 if group:
                     group_results.append(
                         {
+                            "subject_type": (
+                                membership.subject_type
+                            ),
+                            "subject_id": (
+                                membership.subject_id
+                            ),
                             "account_id": account.id,
                             "username": account.username,
+                            "membership_type": (
+                                membership.membership_type
+                            ),
                             "group_id": group.id,
                             "group_name": group.name,
                             "system_name": group.system_name,
-                            "privilege_level": group.privilege_level,
+                            "privilege_level": (
+                                group.privilege_level
+                            ),
                         }
                     )
 
             assignments = (
                 self.db.query(RoleAssignment)
                 .filter(
-                    RoleAssignment.subject_type == "Account",
-                    RoleAssignment.subject_id == account.id,
-                    RoleAssignment.is_active == True,
+                    RoleAssignment.subject_type
+                    == PrincipalType.ACCOUNT.value,
+                    RoleAssignment.subject_id
+                    == account.id,
+                    RoleAssignment.is_active.is_(True),
                 )
                 .all()
             )
@@ -98,7 +125,7 @@ class IdentityGraphService:
                     self.db.query(Role)
                     .filter(
                         Role.id == assignment.role_id,
-                        Role.is_active == True,
+                        Role.is_active.is_(True),
                     )
                     .first()
                 )
@@ -106,12 +133,20 @@ class IdentityGraphService:
                 if role:
                     role_results.append(
                         {
+                            "subject_type": (
+                                assignment.subject_type
+                            ),
+                            "subject_id": (
+                                assignment.subject_id
+                            ),
                             "account_id": account.id,
                             "username": account.username,
                             "role_id": role.id,
                             "role_name": role.name,
                             "system_name": role.system_name,
-                            "privilege_level": role.privilege_level,
+                            "privilege_level": (
+                                role.privilege_level
+                            ),
                         }
                     )
 
