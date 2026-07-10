@@ -21,3 +21,4 @@
 | ADR-015 | Access Governance Suite | Accepted |
 | ADR-016 | Continuous Access Reviews | Accepted |
 | ADR-017 | Evolution Before Replacement | Accepted |
+| ADR-018 | Canonical Relationship Model | Accepted |
