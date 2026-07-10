@@ -6,6 +6,7 @@ from app.connectors.core.ConnectorConfiguration import (
 )
 from app.connectors.core.ConnectorHealth import ConnectorHealth
 from app.connectors.core.ConnectorResult import ConnectorResult
+from app.domain.principal_type import PrincipalType
 from app.security.graph.GraphClient import GraphClient
 
 
@@ -32,6 +33,7 @@ class EntraProvider(BaseConnector):
     - identities derived from Microsoft Entra users
     - accounts derived from Microsoft Entra users
     - groups derived from Microsoft Entra groups
+    - direct group memberships derived from Microsoft Entra group members
     """
 
     PROVIDER_NAME = "microsoft-entra"
@@ -87,6 +89,7 @@ class EntraProvider(BaseConnector):
                     "identities",
                     "accounts",
                     "groups",
+                    "memberships",
                 ],
             },
         )
@@ -97,7 +100,10 @@ class EntraProvider(BaseConnector):
         """
 
         mode = str(
-            self.configuration.get_setting("mode", "demo")
+            self.configuration.get_setting(
+                "mode",
+                "demo",
+            )
         ).lower().strip()
 
         if mode == "live":
@@ -117,8 +123,12 @@ class EntraProvider(BaseConnector):
         Microsoft Entra users are translated into both canonical identities
         and provider accounts from one Graph request.
 
-        Microsoft Entra groups are collected through a separate Graph request
-        because they represent an independent provider resource.
+        Microsoft Entra groups are collected independently and reused for
+        direct membership collection.
+
+        Membership records contain provider source references rather than
+        PostgreSQL identifiers. Canonical database identifiers are resolved
+        later by reconciliation.
 
         Collections not yet supported remain empty until their individual
         milestones are implemented.
@@ -138,7 +148,11 @@ class EntraProvider(BaseConnector):
                 graph_groups
             ),
             "roles": [],
-            "memberships": [],
+            "memberships": (
+                self._collect_and_build_live_memberships(
+                    graph_groups
+                )
+            ),
             "role_assignments": [],
         }
 
@@ -175,11 +189,10 @@ class EntraProvider(BaseConnector):
         self,
     ) -> list[dict[str, Any]]:
         """
-        Retrieve Microsoft Graph group records needed by the canonical group
-        translation.
+        Retrieve Microsoft Graph group records needed by group and membership
+        translations.
 
-        Provider-native properties are used only inside the connector. The
-        returned USOP group records remain provider-neutral.
+        Provider-native properties are used only inside the connector.
 
         Pagination will be introduced as a separate connector capability.
         """
@@ -204,6 +217,54 @@ class EntraProvider(BaseConnector):
         return self._extract_graph_collection(
             response=response,
             resource_name="groups",
+        )
+
+    def _collect_live_group_member_records(
+        self,
+        group: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        """
+        Retrieve direct Microsoft Entra members for one group.
+
+        The returned records retain the Graph object type so the connector can
+        translate users, service principals, devices, nested groups, and other
+        supported principals into the canonical PrincipalType vocabulary.
+
+        Transitive membership is intentionally not collected in this
+        milestone.
+        """
+
+        group_identifier = self._clean_string(
+            group.get("id")
+        )
+        group_name = self._clean_string(
+            group.get("displayName")
+        )
+
+        if not group_identifier:
+            return []
+
+        response = self.graph.get(
+            f"/groups/{group_identifier}/members",
+            params={
+                "$select": (
+                    "id,"
+                    "displayName,"
+                    "userPrincipalName,"
+                    "appId,"
+                    "deviceId"
+                ),
+                "$top": 100,
+            },
+        )
+
+        resource_name = (
+            f"group members for {group_name or group_identifier}"
+        )
+
+        return self._extract_graph_collection(
+            response=response,
+            resource_name=resource_name,
         )
 
     @staticmethod
@@ -277,7 +338,7 @@ class EntraProvider(BaseConnector):
         Translate Microsoft Graph users into provider account records.
 
         identity_source_system and identity_source_identifier provide a
-        provider-neutral correlation reference.
+        provider-neutral identity correlation reference.
         """
 
         accounts: list[dict[str, Any]] = []
@@ -330,11 +391,6 @@ class EntraProvider(BaseConnector):
 
         Microsoft-specific group properties are translated into a stable
         provider-neutral group_type value.
-
-        The current domain model stores the durable group concept. Provider
-        properties such as mailEnabled, groupTypes, and membershipRule remain
-        connector concerns until a broader cross-provider domain requirement
-        justifies additional canonical structures.
         """
 
         groups: list[dict[str, Any]] = []
@@ -354,8 +410,10 @@ class EntraProvider(BaseConnector):
                 {
                     "name": display_name,
                     "display_name": display_name,
-                    "group_type": self._group_type_from_graph_group(
-                        group
+                    "group_type": (
+                        self._group_type_from_graph_group(
+                            group
+                        )
                     ),
                     "status": "Active",
                     "system_name": self.SYSTEM_NAME,
@@ -370,14 +428,108 @@ class EntraProvider(BaseConnector):
 
         return groups
 
+    def _collect_and_build_live_memberships(
+        self,
+        graph_groups: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """
+        Collect and translate direct group membership relationships.
+
+        Each canonical membership identifies both ends of the relationship
+        using provider source references:
+
+        - subject_source_system
+        - subject_source_identifier
+        - group_source_system
+        - group_source_identifier
+
+        Reconciliation will resolve those references into canonical database
+        identifiers in the persistence milestone.
+        """
+
+        memberships: list[dict[str, Any]] = []
+
+        for group in graph_groups:
+            group_source_identifier = self._clean_string(
+                group.get("id")
+            )
+
+            if not group_source_identifier:
+                continue
+
+            graph_members = (
+                self._collect_live_group_member_records(
+                    group
+                )
+            )
+
+            for member in graph_members:
+                membership = self._build_live_membership(
+                    member=member,
+                    group_source_identifier=(
+                        group_source_identifier
+                    ),
+                )
+
+                if membership:
+                    memberships.append(
+                        membership
+                    )
+
+        return memberships
+
+    def _build_live_membership(
+        self,
+        member: dict[str, Any],
+        group_source_identifier: str,
+    ) -> dict[str, Any] | None:
+        """
+        Translate one Graph group-member edge into a canonical relationship.
+
+        Unsupported Graph member types are skipped rather than being forced
+        into an incorrect principal category.
+        """
+
+        subject_source_identifier = self._clean_string(
+            member.get("id")
+        )
+        subject_type = self._principal_type_from_graph_member(
+            member
+        )
+
+        if (
+            not subject_source_identifier
+            or subject_type is None
+        ):
+            return None
+
+        source_identifier = (
+            f"{group_source_identifier}:"
+            f"{subject_source_identifier}:direct"
+        )
+
+        return {
+            "subject_type": subject_type.value,
+            "subject_source_system": self.SYSTEM_NAME,
+            "subject_source_identifier": (
+                subject_source_identifier
+            ),
+            "group_source_system": self.SYSTEM_NAME,
+            "group_source_identifier": (
+                group_source_identifier
+            ),
+            "membership_type": "Direct",
+            "status": "Active",
+            "source_system": self.SYSTEM_NAME,
+            "source_identifier": source_identifier,
+            "confidence_score": 100,
+        }
+
     def collect_live_users(
         self,
     ) -> list[dict[str, Any]]:
         """
         Collect live identities derived from Microsoft Entra users.
-
-        collect_live() should be preferred when multiple supported collections
-        are required because it avoids duplicate Graph requests.
         """
 
         graph_users = self._collect_live_user_records()
@@ -391,9 +543,6 @@ class EntraProvider(BaseConnector):
     ) -> list[dict[str, Any]]:
         """
         Collect live accounts derived from Microsoft Entra users.
-
-        collect_live() should be preferred when identities and accounts are
-        required together because it avoids duplicate Graph requests.
         """
 
         graph_users = self._collect_live_user_records()
@@ -412,6 +561,19 @@ class EntraProvider(BaseConnector):
         graph_groups = self._collect_live_group_records()
 
         return self._build_live_groups(
+            graph_groups
+        )
+
+    def collect_live_memberships(
+        self,
+    ) -> list[dict[str, Any]]:
+        """
+        Collect direct live Microsoft Entra group memberships.
+        """
+
+        graph_groups = self._collect_live_group_records()
+
+        return self._collect_and_build_live_memberships(
             graph_groups
         )
 
@@ -513,14 +675,24 @@ class EntraProvider(BaseConnector):
     ) -> list[dict[str, Any]]:
         return [
             {
-                "username": "mdewitt",
-                "group_name": (
-                    "entra-security-admins"
+                "subject_type": (
+                    PrincipalType.ACCOUNT.value
                 ),
+                "subject_source_system": self.SYSTEM_NAME,
+                "subject_source_identifier": (
+                    "demo-account-mdewitt"
+                ),
+                "group_source_system": self.SYSTEM_NAME,
+                "group_source_identifier": (
+                    "demo-group-entra-security-admins"
+                ),
+                "membership_type": "Direct",
+                "status": "Active",
                 "source_system": self.SYSTEM_NAME,
                 "source_identifier": (
                     "demo-membership-mdewitt-security-admins"
                 ),
+                "confidence_score": 100,
             }
         ]
 
@@ -619,9 +791,6 @@ class EntraProvider(BaseConnector):
     ) -> str:
         """
         Translate the Entra userType value into a canonical account type.
-
-        Entra Member users are represented as User accounts. Entra Guest
-        users are represented as External accounts.
         """
 
         normalized_user_type = str(
@@ -634,21 +803,43 @@ class EntraProvider(BaseConnector):
         return "User"
 
     @staticmethod
+    def _principal_type_from_graph_member(
+        member: dict[str, Any],
+    ) -> PrincipalType | None:
+        """
+        Translate a Microsoft Graph directory object type into a canonical
+        PrincipalType.
+
+        Unknown directory object types are intentionally not guessed.
+        """
+
+        odata_type = str(
+            member.get("@odata.type") or ""
+        ).strip().lower()
+
+        if odata_type.endswith(".user"):
+            return PrincipalType.ACCOUNT
+
+        if odata_type.endswith(".serviceprincipal"):
+            return PrincipalType.SERVICE_PRINCIPAL
+
+        if odata_type.endswith(".device"):
+            return PrincipalType.DEVICE
+
+        if odata_type.endswith(".group"):
+            return PrincipalType.GROUP
+
+        if odata_type.endswith(".orgcontact"):
+            return PrincipalType.EXTERNAL_PRINCIPAL
+
+        return None
+
+    @staticmethod
     def _group_type_from_graph_group(
         group: dict[str, Any],
     ) -> str:
         """
         Translate Microsoft Graph group properties into a canonical type.
-
-        Precedence:
-
-        - Dynamic security group
-        - Dynamic collaboration group
-        - Collaboration group
-        - Mail-enabled security group
-        - Security group
-        - Distribution group
-        - General group fallback
         """
 
         group_types = group.get("groupTypes") or []
