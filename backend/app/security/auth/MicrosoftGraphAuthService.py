@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-import requests
+import httpx
 
 from app.security.auth.GraphToken import GraphToken
 from app.security.secrets.SecretProviderFactory import SecretProviderFactory
@@ -11,10 +11,12 @@ class MicrosoftGraphAuthService:
     """
     Handles Microsoft Graph OAuth authentication.
 
-    Uses client credentials flow with Microsoft Entra App Registration.
+    Uses the OAuth 2.0 client credentials flow with a Microsoft Entra
+    application registration.
 
-    Secrets are loaded through the configured USOP secret provider so providers
-    do not directly access environment variables, Keeper, or future vaults.
+    Secrets are loaded through the configured USOP secret provider so callers
+    do not need to know whether credentials originate from environment
+    variables, Keeper Secrets Manager, or a future credential source.
     """
 
     TOKEN_URL_TEMPLATE = (
@@ -45,7 +47,7 @@ class MicrosoftGraphAuthService:
 
         token_url = self.TOKEN_URL_TEMPLATE.format(tenant_id=tenant_id)
 
-        response = requests.post(
+        response = httpx.post(
             token_url,
             data={
                 "client_id": client_id,
@@ -53,22 +55,29 @@ class MicrosoftGraphAuthService:
                 "scope": self.DEFAULT_SCOPE,
                 "grant_type": "client_credentials",
             },
-            timeout=30,
+            timeout=30.0,
         )
 
         response.raise_for_status()
 
         payload: dict[str, Any] = response.json()
 
+        access_token = payload.get("access_token")
+
+        if not access_token:
+            raise ValueError(
+                "Microsoft Entra token response did not include an access token."
+            )
+
         expires_in = int(payload.get("expires_in", 3600))
 
-        # Refresh slightly early to avoid edge-of-expiration failures.
+        # Refresh slightly early to reduce edge-of-expiration failures.
         expires_at = datetime.now(timezone.utc) + timedelta(
             seconds=max(expires_in - 60, 60)
         )
 
         self._cached_token = GraphToken(
-            access_token=payload["access_token"],
+            access_token=access_token,
             token_type=payload.get("token_type", "Bearer"),
             expires_at=expires_at,
         )
