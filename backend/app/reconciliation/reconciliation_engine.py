@@ -13,9 +13,9 @@ class ReconciliationEngine:
     """
     Reconcile normalized provider records into the canonical USOP domain.
 
-    Provider-native records are matched through provider-neutral source
-    identifiers whenever possible. Human-readable fields are used only as
-    controlled fallbacks when stable source identifiers are unavailable.
+    Stable provider source identifiers are preferred for matching. Human-
+    readable values are used only as controlled fallbacks when a provider
+    does not supply a durable identifier.
     """
 
     def __init__(self, db: Session):
@@ -30,6 +30,7 @@ class ReconciliationEngine:
             "accounts_skipped": 0,
             "groups_created": 0,
             "groups_updated": 0,
+            "groups_skipped": 0,
             "roles_created": 0,
             "roles_updated": 0,
             "memberships_created": 0,
@@ -78,11 +79,15 @@ class ReconciliationEngine:
         summary: dict,
     ) -> None:
         for identity in identities:
-            source_system = identity.get("source_system")
+            source_system = identity.get(
+                "source_system"
+            )
             source_identifier = identity.get(
                 "source_identifier"
             )
-            primary_email = identity.get("primary_email")
+            primary_email = identity.get(
+                "primary_email"
+            )
 
             existing = None
 
@@ -121,7 +126,7 @@ class ReconciliationEngine:
                 existing.primary_email = primary_email
                 existing.status = identity.get(
                     "status",
-                    "Active",
+                    existing.status,
                 )
                 existing.source_system = source_system
                 existing.source_identifier = (
@@ -131,6 +136,7 @@ class ReconciliationEngine:
                     "confidence_score",
                     existing.confidence_score,
                 )
+                existing.is_active = True
 
                 summary["identities_updated"] += 1
                 continue
@@ -176,8 +182,16 @@ class ReconciliationEngine:
             source_identifier = account.get(
                 "source_identifier"
             )
-            system_name = account.get("system_name")
-            username = account.get("username")
+            system_name = account.get(
+                "system_name"
+            )
+            username = account.get(
+                "username"
+            )
+
+            if not username or not system_name:
+                summary["accounts_skipped"] += 1
+                continue
 
             identity = self._resolve_account_identity(
                 account
@@ -200,6 +214,7 @@ class ReconciliationEngine:
                     account=account,
                     identity=identity,
                 )
+
                 summary["accounts_updated"] += 1
                 continue
 
@@ -309,7 +324,8 @@ class ReconciliationEngine:
             .filter(
                 func.lower(Account.username)
                 == username.lower(),
-                Account.system_name == system_name,
+                Account.system_name
+                == system_name,
             )
             .first()
         )
@@ -365,35 +381,158 @@ class ReconciliationEngine:
             "confidence_score",
             existing.confidence_score,
         )
+        existing.is_active = True
 
     def _reconcile_groups(
         self,
         groups: list[dict],
         summary: dict,
     ) -> None:
+        """
+        Create or update canonical groups.
+
+        Provider source identity is the primary match. Name and system are used
+        only as a fallback for providers that do not expose stable identifiers.
+        """
+
         for group in groups:
-            existing = (
-                self.db.query(Group)
-                .filter(
-                    func.lower(Group.name)
-                    == group["name"].lower()
-                )
-                .first()
+            name = group.get("name")
+            system_name = group.get(
+                "system_name"
+            )
+            source_system = group.get(
+                "source_system"
+            )
+            source_identifier = group.get(
+                "source_identifier"
+            )
+
+            if not name or not system_name:
+                summary["groups_skipped"] += 1
+                continue
+
+            existing = self._find_existing_group(
+                source_system=source_system,
+                source_identifier=source_identifier,
+                system_name=system_name,
+                name=name,
             )
 
             if existing:
+                self._update_group(
+                    existing=existing,
+                    group=group,
+                )
+
                 summary["groups_updated"] += 1
                 continue
 
             self.db.add(
                 Group(
-                    name=group["name"],
-                    source_system=group["source"],
-                    source_identifier=group["name"],
+                    name=name,
+                    display_name=group.get(
+                        "display_name"
+                    ),
+                    group_type=group.get(
+                        "group_type",
+                        "Security",
+                    ),
+                    status=group.get(
+                        "status",
+                        "Active",
+                    ),
+                    system_name=system_name,
+                    description=group.get(
+                        "description"
+                    ),
+                    privilege_level=group.get(
+                        "privilege_level"
+                    ),
+                    source_system=source_system,
+                    source_identifier=(
+                        source_identifier
+                    ),
+                    confidence_score=group.get(
+                        "confidence_score",
+                        100,
+                    ),
                 )
             )
 
             summary["groups_created"] += 1
+
+        self.db.flush()
+
+    def _find_existing_group(
+        self,
+        source_system: str | None,
+        source_identifier: str | None,
+        system_name: str,
+        name: str,
+    ) -> Group | None:
+        if source_system and source_identifier:
+            existing = (
+                self.db.query(Group)
+                .filter(
+                    Group.source_system
+                    == source_system,
+                    Group.source_identifier
+                    == source_identifier,
+                )
+                .first()
+            )
+
+            if existing:
+                return existing
+
+        return (
+            self.db.query(Group)
+            .filter(
+                func.lower(Group.name)
+                == name.lower(),
+                Group.system_name
+                == system_name,
+            )
+            .first()
+        )
+
+    @staticmethod
+    def _update_group(
+        existing: Group,
+        group: dict,
+    ) -> None:
+        existing.name = group["name"]
+        existing.display_name = group.get(
+            "display_name"
+        )
+        existing.group_type = group.get(
+            "group_type",
+            existing.group_type,
+        )
+        existing.status = group.get(
+            "status",
+            existing.status,
+        )
+        existing.system_name = group[
+            "system_name"
+        ]
+        existing.description = group.get(
+            "description"
+        )
+        existing.privilege_level = group.get(
+            "privilege_level"
+        )
+        existing.source_system = group.get(
+            "source_system"
+        )
+        existing.source_identifier = group.get(
+            "source_identifier"
+        )
+        existing.confidence_score = group.get(
+            "confidence_score",
+            existing.confidence_score,
+        )
+        existing.is_active = True
 
     def _reconcile_roles(
         self,

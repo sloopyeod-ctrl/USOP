@@ -3,7 +3,8 @@ class NormalizationEngine:
     Translate provider collection records into canonical USOP structures.
 
     Connectors own provider-specific collection and translation. This engine
-    applies shared normalization rules before records enter reconciliation.
+    applies shared normalization and validation rules before records enter
+    reconciliation.
     """
 
     def normalize(
@@ -40,19 +41,46 @@ class NormalizationEngine:
 
     @staticmethod
     def clean_string(value):
+        """
+        Convert a value into a trimmed string.
+
+        Empty values are normalized to None.
+        """
+
         if value is None:
             return None
 
         cleaned = str(value).strip()
+
         return cleaned or None
 
     def canonical_key(self, value):
+        """
+        Produce a case-insensitive comparison key.
+        """
+
         cleaned = self.clean_string(value)
 
         if cleaned is None:
             return None
 
         return cleaned.lower()
+
+    @staticmethod
+    def normalize_confidence_score(
+        value,
+        default: int = 100,
+    ) -> int:
+        """
+        Normalize a confidence score into the supported range of 0 to 100.
+        """
+
+        try:
+            score = int(value)
+        except (TypeError, ValueError):
+            return default
+
+        return max(0, min(score, 100))
 
     def normalize_identities(
         self,
@@ -97,9 +125,13 @@ class NormalizationEngine:
                     "source_identifier": self.clean_string(
                         identity.get("source_identifier")
                     ),
-                    "confidence_score": identity.get(
-                        "confidence_score",
-                        100,
+                    "confidence_score": (
+                        self.normalize_confidence_score(
+                            identity.get(
+                                "confidence_score",
+                                100,
+                            )
+                        )
                     ),
                     "source": connector_name,
                 }
@@ -185,14 +217,21 @@ class NormalizationEngine:
                         )
                     ),
                     "mfa_enabled": bool(
-                        account.get("mfa_enabled", False)
+                        account.get(
+                            "mfa_enabled",
+                            False,
+                        )
                     ),
                     "last_seen_at": account.get(
                         "last_seen_at"
                     ),
-                    "confidence_score": account.get(
-                        "confidence_score",
-                        100,
+                    "confidence_score": (
+                        self.normalize_confidence_score(
+                            account.get(
+                                "confidence_score",
+                                100,
+                            )
+                        )
                     ),
                     "source": connector_name,
                 }
@@ -205,20 +244,70 @@ class NormalizationEngine:
         connector_name,
         groups,
     ):
+        """
+        Normalize provider-neutral group collection records.
+
+        Stable provider identifiers are preserved so reconciliation can
+        distinguish groups that share a display name across systems or
+        providers.
+        """
+
         normalized = []
 
         for group in groups:
             name = self.clean_string(
                 group.get("name")
             )
+            system_name = self.clean_string(
+                group.get("system_name")
+            )
 
-            if not name:
+            if not name or not system_name:
                 continue
 
             normalized.append(
                 {
                     "name": name,
                     "name_key": self.canonical_key(name),
+                    "display_name": self.clean_string(
+                        group.get("display_name")
+                    ),
+                    "group_type": self.clean_string(
+                        group.get(
+                            "group_type",
+                            "Security",
+                        )
+                    ),
+                    "status": self.clean_string(
+                        group.get(
+                            "status",
+                            "Active",
+                        )
+                    ),
+                    "system_name": system_name,
+                    "description": self.clean_string(
+                        group.get("description")
+                    ),
+                    "privilege_level": self.clean_string(
+                        group.get("privilege_level")
+                    ),
+                    "source_system": self.clean_string(
+                        group.get(
+                            "source_system",
+                            connector_name,
+                        )
+                    ),
+                    "source_identifier": self.clean_string(
+                        group.get("source_identifier")
+                    ),
+                    "confidence_score": (
+                        self.normalize_confidence_score(
+                            group.get(
+                                "confidence_score",
+                                100,
+                            )
+                        )
+                    ),
                     "source": connector_name,
                 }
             )
@@ -236,20 +325,21 @@ class NormalizationEngine:
             name = self.clean_string(
                 role.get("name")
             )
+            system_name = self.clean_string(
+                role.get(
+                    "system_name",
+                    "Entra ID",
+                )
+            )
 
-            if not name:
+            if not name or not system_name:
                 continue
 
             normalized.append(
                 {
                     "name": name,
                     "name_key": self.canonical_key(name),
-                    "system_name": self.clean_string(
-                        role.get(
-                            "system_name",
-                            "Entra ID",
-                        )
-                    ),
+                    "system_name": system_name,
                     "source": connector_name,
                 }
             )
