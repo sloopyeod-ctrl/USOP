@@ -5,6 +5,9 @@ class NormalizationEngine:
     Connectors own provider-specific collection and translation. This engine
     applies shared normalization and validation rules before records enter
     reconciliation.
+
+    Normalization preserves provider identity. Reconciliation resolves
+    provider references into canonical database identifiers.
     """
 
     def normalize(
@@ -351,9 +354,56 @@ class NormalizationEngine:
         connector_name,
         memberships,
     ):
+        """
+        Normalize canonical principal-to-group relationships.
+
+        Provider identity is preserved through source-system and
+        source-identifier references. Database IDs are intentionally not
+        introduced during normalization.
+
+        Legacy username and group-name fields remain supported as controlled
+        fallbacks for older demo connectors.
+        """
+
         normalized = []
 
         for membership in memberships:
+            subject_type = self.clean_string(
+                membership.get(
+                    "subject_type",
+                    "Account",
+                )
+            )
+
+            subject_source_system = self.clean_string(
+                membership.get(
+                    "subject_source_system"
+                )
+            )
+            subject_source_identifier = self.clean_string(
+                membership.get(
+                    "subject_source_identifier"
+                )
+            )
+
+            group_source_system = self.clean_string(
+                membership.get(
+                    "group_source_system"
+                )
+            )
+            group_source_identifier = self.clean_string(
+                membership.get(
+                    "group_source_identifier"
+                )
+            )
+
+            subject_id = self.clean_string(
+                membership.get("subject_id")
+            )
+            group_id = self.clean_string(
+                membership.get("group_id")
+            )
+
             username = self.clean_string(
                 membership.get("username")
             )
@@ -361,13 +411,87 @@ class NormalizationEngine:
                 membership.get("group_name")
             )
 
-            if not username or not group_name:
+            has_subject_reference = bool(
+                subject_id
+                or (
+                    subject_source_system
+                    and subject_source_identifier
+                )
+                or username
+            )
+
+            has_group_reference = bool(
+                group_id
+                or (
+                    group_source_system
+                    and group_source_identifier
+                )
+                or group_name
+            )
+
+            if (
+                not subject_type
+                or not has_subject_reference
+                or not has_group_reference
+            ):
                 continue
 
             normalized.append(
                 {
+                    "subject_type": subject_type,
+                    "subject_id": subject_id,
+                    "subject_source_system": (
+                        subject_source_system
+                    ),
+                    "subject_source_identifier": (
+                        subject_source_identifier
+                    ),
+                    "group_id": group_id,
+                    "group_source_system": (
+                        group_source_system
+                    ),
+                    "group_source_identifier": (
+                        group_source_identifier
+                    ),
                     "username": username,
                     "group_name": group_name,
+                    "membership_type": self.clean_string(
+                        membership.get(
+                            "membership_type",
+                            "Direct",
+                        )
+                    ),
+                    "status": self.clean_string(
+                        membership.get(
+                            "status",
+                            "Active",
+                        )
+                    ),
+                    "source_system": self.clean_string(
+                        membership.get(
+                            "source_system",
+                            connector_name,
+                        )
+                    ),
+                    "source_identifier": self.clean_string(
+                        membership.get(
+                            "source_identifier"
+                        )
+                    ),
+                    "first_seen_at": membership.get(
+                        "first_seen_at"
+                    ),
+                    "last_seen_at": membership.get(
+                        "last_seen_at"
+                    ),
+                    "confidence_score": (
+                        self.normalize_confidence_score(
+                            membership.get(
+                                "confidence_score",
+                                100,
+                            )
+                        )
+                    ),
                     "source": connector_name,
                 }
             )

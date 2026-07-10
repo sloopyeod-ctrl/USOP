@@ -17,6 +17,9 @@ class ReconciliationEngine:
     Stable provider source identifiers are preferred for matching. Human-
     readable values are used only as controlled fallbacks when a provider
     does not supply a durable identifier.
+
+    Normalization preserves provider identity. Reconciliation resolves
+    provider references into canonical database identifiers.
     """
 
     def __init__(self, db: Session):
@@ -562,6 +565,8 @@ class ReconciliationEngine:
 
             summary["roles_created"] += 1
 
+        self.db.flush()
+
     def _reconcile_memberships(
         self,
         memberships: list[dict],
@@ -570,12 +575,9 @@ class ReconciliationEngine:
         """
         Reconcile canonical principal-to-group relationships.
 
-        Current normalized demo and legacy connector records may identify an
-        account by username and a group by name. These values are resolved into
-        canonical IDs before the generalized relationship is persisted.
-
-        Future connectors may provide explicit principal and group source
-        references without changing the Membership persistence model.
+        Provider source references are resolved into canonical database IDs.
+        Explicit canonical IDs remain supported for internal callers, while
+        username and group-name lookups remain controlled legacy fallbacks.
         """
 
         for membership in memberships:
@@ -584,84 +586,31 @@ class ReconciliationEngine:
                 PrincipalType.ACCOUNT.value,
             )
 
-            subject_id = membership.get(
-                "subject_id"
+            subject_id = self._resolve_membership_subject(
+                membership=membership,
+                subject_type=subject_type,
             )
 
-            group_id = membership.get(
-                "group_id"
+            group_id = self._resolve_membership_group_id(
+                membership
             )
-
-            if (
-                subject_type
-                == PrincipalType.ACCOUNT.value
-                and not subject_id
-            ):
-                account = self._resolve_membership_account(
-                    membership
-                )
-
-                if account:
-                    subject_id = account.id
-
-            if not group_id:
-                group = self._resolve_membership_group(
-                    membership
-                )
-
-                if group:
-                    group_id = group.id
 
             if not subject_id or not group_id:
                 summary["memberships_skipped"] += 1
                 continue
 
-            existing = (
-                self.db.query(Membership)
-                .filter(
-                    Membership.subject_type
-                    == subject_type,
-                    Membership.subject_id
-                    == subject_id,
-                    Membership.group_id
-                    == group_id,
-                )
-                .first()
+            existing = self._find_existing_membership(
+                membership=membership,
+                subject_type=subject_type,
+                subject_id=subject_id,
+                group_id=group_id,
             )
 
             if existing:
-                existing.membership_type = membership.get(
-                    "membership_type",
-                    existing.membership_type,
+                self._update_membership(
+                    existing=existing,
+                    membership=membership,
                 )
-                existing.status = membership.get(
-                    "status",
-                    existing.status,
-                )
-                existing.source_system = membership.get(
-                    "source_system",
-                    membership.get(
-                        "source",
-                        existing.source_system,
-                    ),
-                )
-                existing.source_identifier = membership.get(
-                    "source_identifier",
-                    existing.source_identifier,
-                )
-                existing.first_seen_at = membership.get(
-                    "first_seen_at",
-                    existing.first_seen_at,
-                )
-                existing.last_seen_at = membership.get(
-                    "last_seen_at",
-                    existing.last_seen_at,
-                )
-                existing.confidence_score = membership.get(
-                    "confidence_score",
-                    existing.confidence_score,
-                )
-                existing.is_active = True
 
                 summary["memberships_updated"] += 1
                 continue
@@ -673,7 +622,7 @@ class ReconciliationEngine:
                     group_id=group_id,
                     membership_type=membership.get(
                         "membership_type",
-                        "Member",
+                        "Direct",
                     ),
                     status=membership.get(
                         "status",
@@ -703,7 +652,102 @@ class ReconciliationEngine:
 
         self.db.flush()
 
-    def _resolve_membership_account(
+    def _resolve_membership_subject(
+        self,
+        membership: dict,
+        subject_type: str,
+    ) -> str | None:
+        explicit_subject_id = membership.get(
+            "subject_id"
+        )
+
+        if explicit_subject_id:
+            return explicit_subject_id
+
+        subject_source_system = membership.get(
+            "subject_source_system"
+        )
+        subject_source_identifier = membership.get(
+            "subject_source_identifier"
+        )
+
+        if (
+            subject_type == PrincipalType.ACCOUNT.value
+            and subject_source_system
+            and subject_source_identifier
+        ):
+            account = (
+                self.db.query(Account)
+                .filter(
+                    Account.source_system
+                    == subject_source_system,
+                    Account.source_identifier
+                    == subject_source_identifier,
+                    Account.is_active.is_(True),
+                )
+                .first()
+            )
+
+            if account:
+                return account.id
+
+        if subject_type == PrincipalType.ACCOUNT.value:
+            account = self._resolve_membership_account_by_username(
+                membership
+            )
+
+            if account:
+                return account.id
+
+        return None
+
+    def _resolve_membership_group_id(
+        self,
+        membership: dict,
+    ) -> str | None:
+        explicit_group_id = membership.get(
+            "group_id"
+        )
+
+        if explicit_group_id:
+            return explicit_group_id
+
+        group_source_system = membership.get(
+            "group_source_system"
+        )
+        group_source_identifier = membership.get(
+            "group_source_identifier"
+        )
+
+        if (
+            group_source_system
+            and group_source_identifier
+        ):
+            group = (
+                self.db.query(Group)
+                .filter(
+                    Group.source_system
+                    == group_source_system,
+                    Group.source_identifier
+                    == group_source_identifier,
+                    Group.is_active.is_(True),
+                )
+                .first()
+            )
+
+            if group:
+                return group.id
+
+        group = self._resolve_membership_group_by_name(
+            membership
+        )
+
+        if group:
+            return group.id
+
+        return None
+
+    def _resolve_membership_account_by_username(
         self,
         membership: dict,
     ) -> Account | None:
@@ -716,12 +760,13 @@ class ReconciliationEngine:
             self.db.query(Account)
             .filter(
                 func.lower(Account.username)
-                == username.lower()
+                == username.lower(),
+                Account.is_active.is_(True),
             )
             .first()
         )
 
-    def _resolve_membership_group(
+    def _resolve_membership_group_by_name(
         self,
         membership: dict,
     ) -> Group | None:
@@ -734,10 +779,91 @@ class ReconciliationEngine:
             self.db.query(Group)
             .filter(
                 func.lower(Group.name)
-                == group_name.lower()
+                == group_name.lower(),
+                Group.is_active.is_(True),
             )
             .first()
         )
+
+    def _find_existing_membership(
+        self,
+        membership: dict,
+        subject_type: str,
+        subject_id: str,
+        group_id: str,
+    ) -> Membership | None:
+        source_system = membership.get(
+            "source_system"
+        )
+        source_identifier = membership.get(
+            "source_identifier"
+        )
+
+        if source_system and source_identifier:
+            existing = (
+                self.db.query(Membership)
+                .filter(
+                    Membership.source_system
+                    == source_system,
+                    Membership.source_identifier
+                    == source_identifier,
+                )
+                .first()
+            )
+
+            if existing:
+                return existing
+
+        return (
+            self.db.query(Membership)
+            .filter(
+                Membership.subject_type
+                == subject_type,
+                Membership.subject_id
+                == subject_id,
+                Membership.group_id
+                == group_id,
+            )
+            .first()
+        )
+
+    @staticmethod
+    def _update_membership(
+        existing: Membership,
+        membership: dict,
+    ) -> None:
+        existing.membership_type = membership.get(
+            "membership_type",
+            existing.membership_type,
+        )
+        existing.status = membership.get(
+            "status",
+            existing.status,
+        )
+        existing.source_system = membership.get(
+            "source_system",
+            membership.get(
+                "source",
+                existing.source_system,
+            ),
+        )
+        existing.source_identifier = membership.get(
+            "source_identifier",
+            existing.source_identifier,
+        )
+        existing.first_seen_at = membership.get(
+            "first_seen_at",
+            existing.first_seen_at,
+        )
+        existing.last_seen_at = membership.get(
+            "last_seen_at",
+            existing.last_seen_at,
+        )
+        existing.confidence_score = membership.get(
+            "confidence_score",
+            existing.confidence_score,
+        )
+        existing.is_active = True
 
     def _reconcile_role_assignments(
         self,
