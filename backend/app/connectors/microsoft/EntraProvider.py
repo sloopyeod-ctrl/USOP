@@ -33,7 +33,9 @@ class EntraProvider(BaseConnector):
     - identities derived from Microsoft Entra users
     - accounts derived from Microsoft Entra users
     - groups derived from Microsoft Entra groups
-    - direct group memberships derived from Microsoft Entra group members
+    - direct group memberships
+    - assigned directory role definitions
+    - active directory role assignments
     """
 
     PROVIDER_NAME = "microsoft-entra"
@@ -90,6 +92,8 @@ class EntraProvider(BaseConnector):
                     "accounts",
                     "groups",
                     "memberships",
+                    "roles",
+                    "role_assignments",
                 ],
             },
         )
@@ -120,22 +124,28 @@ class EntraProvider(BaseConnector):
         """
         Collect currently supported live Microsoft Entra resources.
 
-        Microsoft Entra users are translated into both canonical identities
-        and provider accounts from one Graph request.
+        Users are translated into both canonical identities and provider
+        accounts from one Graph request.
 
-        Microsoft Entra groups are collected independently and reused for
-        direct membership collection.
+        Groups are reused for both group collection and direct membership
+        collection.
 
-        Membership records contain provider source references rather than
-        PostgreSQL identifiers. Canonical database identifiers are resolved
-        later by reconciliation.
+        Role collection is assignment-driven. The provider retrieves active
+        role assignments first and then fetches only the role definitions and
+        principals referenced by those assignments. The complete Microsoft
+        directory role catalog is intentionally not collected.
 
-        Collections not yet supported remain empty until their individual
-        milestones are implemented.
+        Relationship records contain provider source references rather than
+        PostgreSQL identifiers. Canonical IDs are resolved during
+        reconciliation.
         """
 
         graph_users = self._collect_live_user_records()
         graph_groups = self._collect_live_group_records()
+
+        role_collection = (
+            self._collect_live_role_assignment_bundle()
+        )
 
         return {
             "identities": self._build_live_identities(
@@ -147,21 +157,23 @@ class EntraProvider(BaseConnector):
             "groups": self._build_live_groups(
                 graph_groups
             ),
-            "roles": [],
+            "roles": role_collection["roles"],
             "memberships": (
                 self._collect_and_build_live_memberships(
                     graph_groups
                 )
             ),
-            "role_assignments": [],
+            "role_assignments": (
+                role_collection["role_assignments"]
+            ),
         }
 
     def _collect_live_user_records(
         self,
     ) -> list[dict[str, Any]]:
         """
-        Retrieve Microsoft Graph user records needed by supported identity
-        and account translations.
+        Retrieve Microsoft Graph users needed by identity and account
+        translations.
 
         Pagination will be introduced as a separate connector capability.
         """
@@ -189,10 +201,8 @@ class EntraProvider(BaseConnector):
         self,
     ) -> list[dict[str, Any]]:
         """
-        Retrieve Microsoft Graph group records needed by group and membership
+        Retrieve Microsoft Graph groups needed by group and membership
         translations.
-
-        Provider-native properties are used only inside the connector.
 
         Pagination will be introduced as a separate connector capability.
         """
@@ -226,12 +236,8 @@ class EntraProvider(BaseConnector):
         """
         Retrieve direct Microsoft Entra members for one group.
 
-        The returned records retain the Graph object type so the connector can
-        translate users, service principals, devices, nested groups, and other
-        supported principals into the canonical PrincipalType vocabulary.
-
         Transitive membership is intentionally not collected in this
-        milestone.
+        capability.
         """
 
         group_identifier = self._clean_string(
@@ -259,13 +265,171 @@ class EntraProvider(BaseConnector):
         )
 
         resource_name = (
-            f"group members for {group_name or group_identifier}"
+            f"group members for "
+            f"{group_name or group_identifier}"
         )
 
         return self._extract_graph_collection(
             response=response,
             resource_name=resource_name,
         )
+
+    def _collect_live_role_assignment_records(
+        self,
+    ) -> list[dict[str, Any]]:
+        """
+        Retrieve active Microsoft Entra directory role assignments.
+
+        No expansion or selection parameters are used because support for
+        combined expansions varies on the Graph collection endpoint.
+
+        Role definitions and principals are resolved separately by their
+        stable provider identifiers.
+        """
+
+        response = self.graph.get(
+            "/roleManagement/directory/roleAssignments"
+        )
+
+        return self._extract_graph_collection(
+            response=response,
+            resource_name="directory role assignments",
+        )
+
+    def _collect_live_role_definition_record(
+        self,
+        role_definition_identifier: str,
+    ) -> dict[str, Any]:
+        """
+        Retrieve one directory role definition referenced by an assignment.
+        """
+
+        response = self.graph.get(
+            "/roleManagement/directory/"
+            f"roleDefinitions/{role_definition_identifier}"
+        )
+
+        if not isinstance(response, dict):
+            raise ValueError(
+                "Microsoft Graph directory role definition "
+                "response was not an object."
+            )
+
+        return response
+
+    def _collect_live_directory_object_record(
+        self,
+        principal_identifier: str,
+    ) -> dict[str, Any]:
+        """
+        Retrieve one directory principal referenced by a role assignment.
+
+        The directory object type is retained so the connector can translate
+        the principal into the canonical PrincipalType vocabulary.
+        """
+
+        response = self.graph.get(
+            f"/directoryObjects/{principal_identifier}"
+        )
+
+        if not isinstance(response, dict):
+            raise ValueError(
+                "Microsoft Graph directory object response "
+                "was not an object."
+            )
+
+        return response
+
+    def _collect_live_role_assignment_bundle(
+        self,
+    ) -> dict[str, list[dict[str, Any]]]:
+        """
+        Collect assigned role definitions and active role assignments.
+
+        Assignment-driven collection prevents USOP from importing every
+        available Microsoft directory role definition when most are not
+        operationally relevant to the tenant.
+
+        The returned role-assignment records contain provider references.
+        They do not contain PostgreSQL IDs.
+        """
+
+        graph_assignments = (
+            self._collect_live_role_assignment_records()
+        )
+
+        role_definition_identifiers = {
+            role_definition_identifier
+            for assignment in graph_assignments
+            if (
+                role_definition_identifier
+                := self._clean_string(
+                    assignment.get("roleDefinitionId")
+                )
+            )
+        }
+
+        principal_identifiers = {
+            principal_identifier
+            for assignment in graph_assignments
+            if (
+                principal_identifier
+                := self._clean_string(
+                    assignment.get("principalId")
+                )
+            )
+        }
+
+        graph_role_definitions: dict[
+            str,
+            dict[str, Any],
+        ] = {}
+
+        for role_definition_identifier in sorted(
+            role_definition_identifiers
+        ):
+            graph_role_definitions[
+                role_definition_identifier
+            ] = (
+                self._collect_live_role_definition_record(
+                    role_definition_identifier
+                )
+            )
+
+        graph_principals: dict[
+            str,
+            dict[str, Any],
+        ] = {}
+
+        for principal_identifier in sorted(
+            principal_identifiers
+        ):
+            graph_principals[
+                principal_identifier
+            ] = (
+                self._collect_live_directory_object_record(
+                    principal_identifier
+                )
+            )
+
+        roles = self._build_live_roles(
+            graph_role_definitions
+        )
+
+        role_assignments = (
+            self._build_live_role_assignments(
+                graph_assignments=graph_assignments,
+                graph_role_definitions=(
+                    graph_role_definitions
+                ),
+                graph_principals=graph_principals,
+            )
+        )
+
+        return {
+            "roles": roles,
+            "role_assignments": role_assignments,
+        }
 
     @staticmethod
     def _extract_graph_collection(
@@ -319,8 +483,10 @@ class EntraProvider(BaseConnector):
                     "display_name": display_name,
                     "identity_class": "Person",
                     "primary_email": primary_email,
-                    "status": self._status_from_account_enabled(
-                        user.get("accountEnabled")
+                    "status": (
+                        self._status_from_account_enabled(
+                            user.get("accountEnabled")
+                        )
                     ),
                     "source_system": self.SYSTEM_NAME,
                     "source_identifier": source_identifier,
@@ -336,9 +502,6 @@ class EntraProvider(BaseConnector):
     ) -> list[dict[str, Any]]:
         """
         Translate Microsoft Graph users into provider account records.
-
-        identity_source_system and identity_source_identifier provide a
-        provider-neutral identity correlation reference.
         """
 
         accounts: list[dict[str, Any]] = []
@@ -366,13 +529,17 @@ class EntraProvider(BaseConnector):
                             user.get("userType")
                         )
                     ),
-                    "status": self._status_from_account_enabled(
-                        user.get("accountEnabled")
+                    "status": (
+                        self._status_from_account_enabled(
+                            user.get("accountEnabled")
+                        )
                     ),
                     "system_name": self.SYSTEM_NAME,
                     "source_system": self.SYSTEM_NAME,
                     "source_identifier": source_identifier,
-                    "identity_source_system": self.SYSTEM_NAME,
+                    "identity_source_system": (
+                        self.SYSTEM_NAME
+                    ),
                     "identity_source_identifier": (
                         source_identifier
                     ),
@@ -387,10 +554,7 @@ class EntraProvider(BaseConnector):
         graph_groups: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
         """
-        Translate Microsoft Graph groups into canonical USOP group records.
-
-        Microsoft-specific group properties are translated into a stable
-        provider-neutral group_type value.
+        Translate Microsoft Graph groups into canonical group records.
         """
 
         groups: list[dict[str, Any]] = []
@@ -434,17 +598,6 @@ class EntraProvider(BaseConnector):
     ) -> list[dict[str, Any]]:
         """
         Collect and translate direct group membership relationships.
-
-        Each canonical membership identifies both ends of the relationship
-        using provider source references:
-
-        - subject_source_system
-        - subject_source_identifier
-        - group_source_system
-        - group_source_identifier
-
-        Reconciliation will resolve those references into canonical database
-        identifiers in the persistence milestone.
         """
 
         memberships: list[dict[str, Any]] = []
@@ -485,16 +638,15 @@ class EntraProvider(BaseConnector):
     ) -> dict[str, Any] | None:
         """
         Translate one Graph group-member edge into a canonical relationship.
-
-        Unsupported Graph member types are skipped rather than being forced
-        into an incorrect principal category.
         """
 
         subject_source_identifier = self._clean_string(
             member.get("id")
         )
-        subject_type = self._principal_type_from_graph_member(
-            member
+        subject_type = (
+            self._principal_type_from_graph_object(
+                member
+            )
         )
 
         if (
@@ -524,6 +676,182 @@ class EntraProvider(BaseConnector):
             "source_identifier": source_identifier,
             "confidence_score": 100,
         }
+
+    def _build_live_roles(
+        self,
+        graph_role_definitions: dict[
+            str,
+            dict[str, Any],
+        ],
+    ) -> list[dict[str, Any]]:
+        """
+        Translate only role definitions referenced by active assignments.
+
+        The complete Microsoft Entra role-definition catalog is intentionally
+        excluded from operational collection.
+        """
+
+        roles: list[dict[str, Any]] = []
+
+        for (
+            expected_identifier,
+            role_definition,
+        ) in sorted(
+            graph_role_definitions.items()
+        ):
+            source_identifier = self._clean_string(
+                role_definition.get("id")
+            ) or expected_identifier
+
+            display_name = self._clean_string(
+                role_definition.get("displayName")
+            )
+
+            if not source_identifier or not display_name:
+                continue
+
+            roles.append(
+                {
+                    "name": display_name,
+                    "display_name": display_name,
+                    "role_type": "Directory",
+                    "status": (
+                        "Inactive"
+                        if role_definition.get("isEnabled")
+                        is False
+                        else "Active"
+                    ),
+                    "system_name": self.SYSTEM_NAME,
+                    "description": self._clean_string(
+                        role_definition.get("description")
+                    ),
+                    "source_system": self.SYSTEM_NAME,
+                    "source_identifier": source_identifier,
+                    "confidence_score": 100,
+                }
+            )
+
+        return roles
+
+    def _build_live_role_assignments(
+        self,
+        graph_assignments: list[dict[str, Any]],
+        graph_role_definitions: dict[
+            str,
+            dict[str, Any],
+        ],
+        graph_principals: dict[
+            str,
+            dict[str, Any],
+        ],
+    ) -> list[dict[str, Any]]:
+        """
+        Translate Graph role assignments into canonical relationships.
+
+        assignment_type is intentionally recorded as Direct rather than
+        Permanent. The roleAssignments endpoint establishes the active
+        principal-to-role edge but does not provide sufficient schedule
+        evidence to classify every assignment as permanently active.
+
+        PIM eligibility, schedule instances, and activation history remain
+        separate capabilities.
+        """
+
+        role_assignments: list[dict[str, Any]] = []
+
+        for assignment in graph_assignments:
+            assignment_identifier = self._clean_string(
+                assignment.get("id")
+            )
+            principal_identifier = self._clean_string(
+                assignment.get("principalId")
+            )
+            role_definition_identifier = (
+                self._clean_string(
+                    assignment.get(
+                        "roleDefinitionId"
+                    )
+                )
+            )
+
+            if (
+                not assignment_identifier
+                or not principal_identifier
+                or not role_definition_identifier
+            ):
+                continue
+
+            principal = graph_principals.get(
+                principal_identifier,
+                {},
+            )
+
+            role_definition = (
+                graph_role_definitions.get(
+                    role_definition_identifier,
+                    {},
+                )
+            )
+
+            subject_type = (
+                self._principal_type_from_graph_object(
+                    principal
+                )
+            )
+
+            resolved_role_identifier = (
+                self._clean_string(
+                    role_definition.get("id")
+                )
+                or role_definition_identifier
+            )
+
+            if (
+                subject_type is None
+                or not resolved_role_identifier
+            ):
+                continue
+
+            role_assignments.append(
+                {
+                    "subject_type": subject_type.value,
+                    "subject_source_system": (
+                        self.SYSTEM_NAME
+                    ),
+                    "subject_source_identifier": (
+                        principal_identifier
+                    ),
+                    "role_source_system": (
+                        self.SYSTEM_NAME
+                    ),
+                    "role_source_identifier": (
+                        resolved_role_identifier
+                    ),
+                    "assignment_type": "Direct",
+                    "status": "Active",
+                    "directory_scope": (
+                        self._clean_string(
+                            assignment.get(
+                                "directoryScopeId"
+                            )
+                        )
+                    ),
+                    "application_scope": (
+                        self._clean_string(
+                            assignment.get(
+                                "appScopeId"
+                            )
+                        )
+                    ),
+                    "source_system": self.SYSTEM_NAME,
+                    "source_identifier": (
+                        assignment_identifier
+                    ),
+                    "confidence_score": 100,
+                }
+            )
+
+        return role_assignments
 
     def collect_live_users(
         self,
@@ -577,6 +905,32 @@ class EntraProvider(BaseConnector):
             graph_groups
         )
 
+    def collect_live_roles(
+        self,
+    ) -> list[dict[str, Any]]:
+        """
+        Collect role definitions referenced by active assignments.
+        """
+
+        collection = (
+            self._collect_live_role_assignment_bundle()
+        )
+
+        return collection["roles"]
+
+    def collect_live_role_assignments(
+        self,
+    ) -> list[dict[str, Any]]:
+        """
+        Collect active Microsoft Entra role assignments.
+        """
+
+        collection = (
+            self._collect_live_role_assignment_bundle()
+        )
+
+        return collection["role_assignments"]
+
     def collect_demo(self) -> dict[str, Any]:
         """
         Return provider-neutral static development records.
@@ -624,7 +978,9 @@ class EntraProvider(BaseConnector):
                 "source_identifier": (
                     "demo-account-mdewitt"
                 ),
-                "identity_source_system": self.SYSTEM_NAME,
+                "identity_source_system": (
+                    self.SYSTEM_NAME
+                ),
                 "identity_source_identifier": (
                     "demo-user-marvin-dewitt"
                 ),
@@ -678,7 +1034,9 @@ class EntraProvider(BaseConnector):
                 "subject_type": (
                     PrincipalType.ACCOUNT.value
                 ),
-                "subject_source_system": self.SYSTEM_NAME,
+                "subject_source_system": (
+                    self.SYSTEM_NAME
+                ),
                 "subject_source_identifier": (
                     "demo-account-mdewitt"
                 ),
@@ -701,12 +1059,28 @@ class EntraProvider(BaseConnector):
     ) -> list[dict[str, Any]]:
         return [
             {
-                "username": "mdewitt",
-                "role_name": "Global Reader",
+                "subject_type": (
+                    PrincipalType.ACCOUNT.value
+                ),
+                "subject_source_system": (
+                    self.SYSTEM_NAME
+                ),
+                "subject_source_identifier": (
+                    "demo-account-mdewitt"
+                ),
+                "role_source_system": self.SYSTEM_NAME,
+                "role_source_identifier": (
+                    "demo-role-global-reader"
+                ),
+                "assignment_type": "Direct",
+                "status": "Active",
+                "directory_scope": "/",
+                "application_scope": None,
                 "source_system": self.SYSTEM_NAME,
                 "source_identifier": (
                     "demo-role-assignment-mdewitt-global-reader"
                 ),
+                "confidence_score": 100,
             }
         ]
 
@@ -777,7 +1151,7 @@ class EntraProvider(BaseConnector):
         account_enabled: Any,
     ) -> str:
         """
-        Translate the provider account state into a canonical status.
+        Translate provider account state into canonical status.
         """
 
         if account_enabled is False:
@@ -790,7 +1164,7 @@ class EntraProvider(BaseConnector):
         user_type: Any,
     ) -> str:
         """
-        Translate the Entra userType value into a canonical account type.
+        Translate Entra userType into canonical account type.
         """
 
         normalized_user_type = str(
@@ -803,18 +1177,17 @@ class EntraProvider(BaseConnector):
         return "User"
 
     @staticmethod
-    def _principal_type_from_graph_member(
-        member: dict[str, Any],
+    def _principal_type_from_graph_object(
+        graph_object: dict[str, Any],
     ) -> PrincipalType | None:
         """
-        Translate a Microsoft Graph directory object type into a canonical
-        PrincipalType.
+        Translate a Graph directory object type into PrincipalType.
 
         Unknown directory object types are intentionally not guessed.
         """
 
         odata_type = str(
-            member.get("@odata.type") or ""
+            graph_object.get("@odata.type") or ""
         ).strip().lower()
 
         if odata_type.endswith(".user"):
@@ -839,7 +1212,7 @@ class EntraProvider(BaseConnector):
         group: dict[str, Any],
     ) -> str:
         """
-        Translate Microsoft Graph group properties into a canonical type.
+        Translate Microsoft Graph group properties into canonical type.
         """
 
         group_types = group.get("groupTypes") or []
