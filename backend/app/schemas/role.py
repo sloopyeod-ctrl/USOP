@@ -2,12 +2,18 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.domain.role_type import RoleType
+
 
 class RoleCreate(BaseModel):
+    """
+    Request schema for a canonical authorization role.
+    """
+
     name: str
     display_name: str | None = None
 
-    role_type: str = "Access"
+    role_type: RoleType = RoleType.ACCESS
     status: str = "Active"
 
     system_name: str
@@ -17,7 +23,11 @@ class RoleCreate(BaseModel):
     description: str | None = None
     privilege_level: str | None = None
 
-    confidence_score: int = Field(default=100, ge=0, le=100)
+    confidence_score: int = Field(
+        default=100,
+        ge=0,
+        le=100,
+    )
 
 
 class RoleRead(RoleCreate):

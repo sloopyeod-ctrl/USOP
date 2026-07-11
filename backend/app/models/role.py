@@ -1,10 +1,18 @@
 from sqlalchemy import String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.domain.role_type import RoleType
 from app.models.base import BaseSourceModel
 
 
 class Role(BaseSourceModel):
+    """
+    Canonical authorization role.
+
+    role_type is stored as a string for database flexibility while its values
+    are governed by the shared RoleType domain vocabulary.
+    """
+
     __tablename__ = "roles"
 
     name: Mapped[str] = mapped_column(
@@ -21,7 +29,7 @@ class Role(BaseSourceModel):
     role_type: Mapped[str] = mapped_column(
         String(100),
         nullable=False,
-        default="Access",
+        default=RoleType.ACCESS.value,
     )
 
     status: Mapped[str] = mapped_column(
