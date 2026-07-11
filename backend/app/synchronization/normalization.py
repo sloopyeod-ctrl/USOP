@@ -1,3 +1,6 @@
+from app.domain.role_type import RoleType
+
+
 class NormalizationEngine:
     """
     Translate provider collection records into canonical USOP structures.
@@ -322,27 +325,80 @@ class NormalizationEngine:
         connector_name,
         roles,
     ):
+        """
+        Normalize provider-neutral authorization roles.
+
+        Stable provider identity and descriptive role metadata are preserved
+        so reconciliation can distinguish roles with similar names across
+        providers and systems.
+        """
+
         normalized = []
+
+        valid_role_types = {
+            role_type.value
+            for role_type in RoleType
+        }
 
         for role in roles:
             name = self.clean_string(
                 role.get("name")
             )
             system_name = self.clean_string(
+                role.get("system_name")
+            )
+            role_type = self.clean_string(
                 role.get(
-                    "system_name",
-                    "Entra ID",
+                    "role_type",
+                    RoleType.ACCESS.value,
                 )
             )
 
-            if not name or not system_name:
+            if (
+                not name
+                or not system_name
+                or role_type not in valid_role_types
+            ):
                 continue
 
             normalized.append(
                 {
                     "name": name,
                     "name_key": self.canonical_key(name),
+                    "display_name": self.clean_string(
+                        role.get("display_name")
+                    ),
+                    "role_type": role_type,
+                    "status": self.clean_string(
+                        role.get(
+                            "status",
+                            "Active",
+                        )
+                    ),
                     "system_name": system_name,
+                    "description": self.clean_string(
+                        role.get("description")
+                    ),
+                    "privilege_level": self.clean_string(
+                        role.get("privilege_level")
+                    ),
+                    "source_system": self.clean_string(
+                        role.get(
+                            "source_system",
+                            connector_name,
+                        )
+                    ),
+                    "source_identifier": self.clean_string(
+                        role.get("source_identifier")
+                    ),
+                    "confidence_score": (
+                        self.normalize_confidence_score(
+                            role.get(
+                                "confidence_score",
+                                100,
+                            )
+                        )
+                    ),
                     "source": connector_name,
                 }
             )
@@ -503,6 +559,14 @@ class NormalizationEngine:
         connector_name,
         assignments,
     ):
+        """
+        Preserve legacy role-assignment records until canonical role
+        assignment persistence is introduced in the next milestone.
+
+        Current live provider-reference assignments are intentionally skipped
+        here so role definitions can be persisted independently.
+        """
+
         normalized = []
 
         for assignment in assignments:

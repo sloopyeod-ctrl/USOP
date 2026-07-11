@@ -2,6 +2,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.domain.principal_type import PrincipalType
+from app.domain.role_type import RoleType
 from app.models.account import Account
 from app.models.group import Group
 from app.models.identity import Identity
@@ -537,35 +538,147 @@ class ReconciliationEngine:
         roles: list[dict],
         summary: dict,
     ) -> None:
+        """
+        Reconcile canonical authorization roles.
+
+        Stable source-system and source-identifier values are preferred.
+        Name and system are retained only as a controlled fallback for legacy
+        or manually created role records.
+        """
+
         for role in roles:
-            existing = (
-                self.db.query(Role)
-                .filter(
-                    func.lower(Role.name)
-                    == role["name"].lower(),
-                    Role.system_name
-                    == role["system_name"],
-                )
-                .first()
+            name = role.get("name")
+            system_name = role.get("system_name")
+            source_system = role.get(
+                "source_system"
+            )
+            source_identifier = role.get(
+                "source_identifier"
+            )
+
+            if not name or not system_name:
+                continue
+
+            existing = self._find_existing_role(
+                source_system=source_system,
+                source_identifier=source_identifier,
+                system_name=system_name,
+                name=name,
             )
 
             if existing:
+                self._update_role(
+                    existing=existing,
+                    role=role,
+                )
+
                 summary["roles_updated"] += 1
                 continue
 
             self.db.add(
                 Role(
-                    name=role["name"],
-                    display_name=role["name"],
-                    system_name=role["system_name"],
-                    source_system=role["source"],
-                    source_identifier=role["name"],
+                    name=name,
+                    display_name=role.get(
+                        "display_name"
+                    ),
+                    role_type=role.get(
+                        "role_type",
+                        RoleType.ACCESS.value,
+                    ),
+                    status=role.get(
+                        "status",
+                        "Active",
+                    ),
+                    system_name=system_name,
+                    description=role.get(
+                        "description"
+                    ),
+                    privilege_level=role.get(
+                        "privilege_level"
+                    ),
+                    source_system=source_system,
+                    source_identifier=source_identifier,
+                    confidence_score=role.get(
+                        "confidence_score",
+                        100,
+                    ),
                 )
             )
 
             summary["roles_created"] += 1
 
         self.db.flush()
+
+    def _find_existing_role(
+        self,
+        source_system: str | None,
+        source_identifier: str | None,
+        system_name: str,
+        name: str,
+    ) -> Role | None:
+        if source_system and source_identifier:
+            existing = (
+                self.db.query(Role)
+                .filter(
+                    Role.source_system
+                    == source_system,
+                    Role.source_identifier
+                    == source_identifier,
+                )
+                .first()
+            )
+
+            if existing:
+                return existing
+
+        return (
+            self.db.query(Role)
+            .filter(
+                func.lower(Role.name)
+                == name.lower(),
+                Role.system_name
+                == system_name,
+            )
+            .first()
+        )
+
+    @staticmethod
+    def _update_role(
+        existing: Role,
+        role: dict,
+    ) -> None:
+        existing.name = role["name"]
+        existing.display_name = role.get(
+            "display_name"
+        )
+        existing.role_type = role.get(
+            "role_type",
+            existing.role_type,
+        )
+        existing.status = role.get(
+            "status",
+            existing.status,
+        )
+        existing.system_name = role[
+            "system_name"
+        ]
+        existing.description = role.get(
+            "description"
+        )
+        existing.privilege_level = role.get(
+            "privilege_level"
+        )
+        existing.source_system = role.get(
+            "source_system"
+        )
+        existing.source_identifier = role.get(
+            "source_identifier"
+        )
+        existing.confidence_score = role.get(
+            "confidence_score",
+            existing.confidence_score,
+        )
+        existing.is_active = True
 
     def _reconcile_memberships(
         self,
@@ -870,14 +983,23 @@ class ReconciliationEngine:
         assignments: list[dict],
         summary: dict,
     ) -> None:
+        """
+        Preserve the legacy role-assignment path until provider-reference
+        role-assignment persistence is implemented in the next milestone.
+        """
+
         for assignment in assignments:
+            username = assignment.get("username")
+            role_name = assignment.get("role_name")
+
+            if not username or not role_name:
+                continue
+
             account = (
                 self.db.query(Account)
                 .filter(
                     func.lower(Account.username)
-                    == assignment[
-                        "username"
-                    ].lower()
+                    == username.lower()
                 )
                 .first()
             )
@@ -886,9 +1008,7 @@ class ReconciliationEngine:
                 self.db.query(Role)
                 .filter(
                     func.lower(Role.name)
-                    == assignment[
-                        "role_name"
-                    ].lower()
+                    == role_name.lower()
                 )
                 .first()
             )
