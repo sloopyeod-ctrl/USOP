@@ -765,11 +765,91 @@ class ReconciliationEngine:
 
         self.db.flush()
 
+    def _resolve_account_reference(
+        self,
+        source_system: str | None,
+        source_identifier: str | None,
+    ) -> Account | None:
+        """
+        Resolve an active canonical account from a provider reference.
+        """
+
+        if not source_system or not source_identifier:
+            return None
+
+        return (
+            self.db.query(Account)
+            .filter(
+                Account.source_system == source_system,
+                Account.source_identifier
+                == source_identifier,
+                Account.is_active.is_(True),
+            )
+            .first()
+        )
+
+    def _resolve_group_reference(
+        self,
+        source_system: str | None,
+        source_identifier: str | None,
+    ) -> Group | None:
+        """
+        Resolve an active canonical group from a provider reference.
+        """
+
+        if not source_system or not source_identifier:
+            return None
+
+        return (
+            self.db.query(Group)
+            .filter(
+                Group.source_system == source_system,
+                Group.source_identifier
+                == source_identifier,
+                Group.is_active.is_(True),
+            )
+            .first()
+        )
+
+    def _resolve_role_reference(
+        self,
+        source_system: str | None,
+        source_identifier: str | None,
+    ) -> Role | None:
+        """
+        Resolve an active canonical role from a provider reference.
+
+        Role-assignment persistence will consume this helper in the next
+        focused implementation milestone.
+        """
+
+        if not source_system or not source_identifier:
+            return None
+
+        return (
+            self.db.query(Role)
+            .filter(
+                Role.source_system == source_system,
+                Role.source_identifier
+                == source_identifier,
+                Role.is_active.is_(True),
+            )
+            .first()
+        )
+
     def _resolve_membership_subject(
         self,
         membership: dict,
         subject_type: str,
     ) -> str | None:
+        """
+        Resolve the canonical subject for a membership relationship.
+
+        Explicit canonical IDs are accepted for internal callers. Provider
+        references are preferred for synchronized records, with username
+        lookup retained only as a controlled legacy fallback.
+        """
+
         explicit_subject_id = membership.get(
             "subject_id"
         )
@@ -777,34 +857,19 @@ class ReconciliationEngine:
         if explicit_subject_id:
             return explicit_subject_id
 
-        subject_source_system = membership.get(
-            "subject_source_system"
-        )
-        subject_source_identifier = membership.get(
-            "subject_source_identifier"
-        )
-
-        if (
-            subject_type == PrincipalType.ACCOUNT.value
-            and subject_source_system
-            and subject_source_identifier
-        ):
-            account = (
-                self.db.query(Account)
-                .filter(
-                    Account.source_system
-                    == subject_source_system,
-                    Account.source_identifier
-                    == subject_source_identifier,
-                    Account.is_active.is_(True),
-                )
-                .first()
+        if subject_type == PrincipalType.ACCOUNT.value:
+            account = self._resolve_account_reference(
+                source_system=membership.get(
+                    "subject_source_system"
+                ),
+                source_identifier=membership.get(
+                    "subject_source_identifier"
+                ),
             )
 
             if account:
                 return account.id
 
-        if subject_type == PrincipalType.ACCOUNT.value:
             account = self._resolve_membership_account_by_username(
                 membership
             )
@@ -818,6 +883,10 @@ class ReconciliationEngine:
         self,
         membership: dict,
     ) -> str | None:
+        """
+        Resolve the canonical group target for a membership relationship.
+        """
+
         explicit_group_id = membership.get(
             "group_id"
         )
@@ -825,31 +894,17 @@ class ReconciliationEngine:
         if explicit_group_id:
             return explicit_group_id
 
-        group_source_system = membership.get(
-            "group_source_system"
-        )
-        group_source_identifier = membership.get(
-            "group_source_identifier"
+        group = self._resolve_group_reference(
+            source_system=membership.get(
+                "group_source_system"
+            ),
+            source_identifier=membership.get(
+                "group_source_identifier"
+            ),
         )
 
-        if (
-            group_source_system
-            and group_source_identifier
-        ):
-            group = (
-                self.db.query(Group)
-                .filter(
-                    Group.source_system
-                    == group_source_system,
-                    Group.source_identifier
-                    == group_source_identifier,
-                    Group.is_active.is_(True),
-                )
-                .first()
-            )
-
-            if group:
-                return group.id
+        if group:
+            return group.id
 
         group = self._resolve_membership_group_by_name(
             membership
