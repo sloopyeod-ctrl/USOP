@@ -8,10 +8,6 @@ from app.domain.principal_type import PrincipalType
 class RoleAssignmentCreate(BaseModel):
     """
     Request schema for a canonical principal-to-role relationship.
-
-    The external field name remains subject_type for compatibility with the
-    existing API and persistence model. Its value is validated using the
-    canonical PrincipalType vocabulary.
     """
 
     role_id: str
@@ -21,6 +17,9 @@ class RoleAssignmentCreate(BaseModel):
 
     assignment_type: str = "Direct"
     status: str = "Active"
+
+    directory_scope: str | None = None
+    application_scope: str | None = None
 
     source_system: str | None = None
     source_identifier: str | None = None

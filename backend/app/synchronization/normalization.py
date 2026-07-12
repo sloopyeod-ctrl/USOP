@@ -1,3 +1,4 @@
+from app.domain.principal_type import PrincipalType
 from app.domain.role_type import RoleType
 
 
@@ -560,30 +561,157 @@ class NormalizationEngine:
         assignments,
     ):
         """
-        Preserve legacy role-assignment records until canonical role
-        assignment persistence is introduced in the next milestone.
+        Normalize canonical principal-to-role relationships.
 
-        Current live provider-reference assignments are intentionally skipped
-        here so role definitions can be persisted independently.
+        Provider references are preserved so reconciliation can resolve stable
+        canonical account and role IDs. Explicit canonical IDs remain
+        supported for internal callers, while username and role-name values
+        remain controlled compatibility fallbacks.
+
+        Directory and application scopes are preserved because the same
+        principal may hold the same role at different authorization scopes.
         """
 
         normalized = []
 
+        valid_principal_types = {
+            principal_type.value
+            for principal_type in PrincipalType
+        }
+
         for assignment in assignments:
+            subject_type = self.clean_string(
+                assignment.get(
+                    "subject_type",
+                    PrincipalType.ACCOUNT.value,
+                )
+            )
+
+            subject_id = self.clean_string(
+                assignment.get("subject_id")
+            )
+            subject_source_system = self.clean_string(
+                assignment.get(
+                    "subject_source_system"
+                )
+            )
+            subject_source_identifier = self.clean_string(
+                assignment.get(
+                    "subject_source_identifier"
+                )
+            )
             username = self.clean_string(
                 assignment.get("username")
+            )
+
+            role_id = self.clean_string(
+                assignment.get("role_id")
+            )
+            role_source_system = self.clean_string(
+                assignment.get(
+                    "role_source_system"
+                )
+            )
+            role_source_identifier = self.clean_string(
+                assignment.get(
+                    "role_source_identifier"
+                )
             )
             role_name = self.clean_string(
                 assignment.get("role_name")
             )
 
-            if not username or not role_name:
+            has_subject_reference = bool(
+                subject_id
+                or (
+                    subject_source_system
+                    and subject_source_identifier
+                )
+                or username
+            )
+
+            has_role_reference = bool(
+                role_id
+                or (
+                    role_source_system
+                    and role_source_identifier
+                )
+                or role_name
+            )
+
+            if (
+                subject_type not in valid_principal_types
+                or not has_subject_reference
+                or not has_role_reference
+            ):
                 continue
 
             normalized.append(
                 {
+                    "subject_type": subject_type,
+                    "subject_id": subject_id,
+                    "subject_source_system": (
+                        subject_source_system
+                    ),
+                    "subject_source_identifier": (
+                        subject_source_identifier
+                    ),
                     "username": username,
+                    "role_id": role_id,
+                    "role_source_system": (
+                        role_source_system
+                    ),
+                    "role_source_identifier": (
+                        role_source_identifier
+                    ),
                     "role_name": role_name,
+                    "assignment_type": self.clean_string(
+                        assignment.get(
+                            "assignment_type",
+                            "Direct",
+                        )
+                    ),
+                    "status": self.clean_string(
+                        assignment.get(
+                            "status",
+                            "Active",
+                        )
+                    ),
+                    "directory_scope": self.clean_string(
+                        assignment.get(
+                            "directory_scope"
+                        )
+                    ),
+                    "application_scope": self.clean_string(
+                        assignment.get(
+                            "application_scope"
+                        )
+                    ),
+                    "source_system": self.clean_string(
+                        assignment.get(
+                            "source_system",
+                            connector_name,
+                        )
+                    ),
+                    "source_identifier": self.clean_string(
+                        assignment.get(
+                            "source_identifier"
+                        )
+                    ),
+                    "first_seen_at": assignment.get(
+                        "first_seen_at"
+                    ),
+                    "last_seen_at": assignment.get(
+                        "last_seen_at"
+                    ),
+                    "confidence_score": (
+                        self.normalize_confidence_score(
+                            assignment.get(
+                                "confidence_score",
+                                100,
+                            )
+                        )
+                    ),
                     "source": connector_name,
                 }
             )

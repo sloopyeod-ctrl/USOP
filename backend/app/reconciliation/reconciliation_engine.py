@@ -43,6 +43,7 @@ class ReconciliationEngine:
             "memberships_skipped": 0,
             "role_assignments_created": 0,
             "role_assignments_updated": 0,
+            "role_assignments_skipped": 0,
         }
 
         self._reconcile_identities(
@@ -1039,67 +1040,279 @@ class ReconciliationEngine:
         summary: dict,
     ) -> None:
         """
-        Preserve the legacy role-assignment path until provider-reference
-        role-assignment persistence is implemented in the next milestone.
+        Reconcile canonical principal-to-role relationships.
+
+        Stable provider references are resolved into canonical IDs. Explicit
+        IDs remain supported for internal callers, while username and role
+        name lookups remain controlled compatibility fallbacks.
+
+        Scope is part of relationship identity because one principal may hold
+        the same role at multiple directory or application scopes.
         """
 
         for assignment in assignments:
-            username = assignment.get("username")
-            role_name = assignment.get("role_name")
-
-            if not username or not role_name:
-                continue
-
-            account = (
-                self.db.query(Account)
-                .filter(
-                    func.lower(Account.username)
-                    == username.lower()
-                )
-                .first()
+            subject_type = assignment.get(
+                "subject_type",
+                PrincipalType.ACCOUNT.value,
             )
 
+            subject_id = self._resolve_role_assignment_subject(
+                assignment=assignment,
+                subject_type=subject_type,
+            )
+            role_id = self._resolve_role_assignment_role_id(
+                assignment
+            )
+
+            if not subject_id or not role_id:
+                summary["role_assignments_skipped"] += 1
+                continue
+
+            existing = self._find_existing_role_assignment(
+                assignment=assignment,
+                subject_type=subject_type,
+                subject_id=subject_id,
+                role_id=role_id,
+            )
+
+            if existing:
+                self._update_role_assignment(
+                    existing=existing,
+                    assignment=assignment,
+                )
+
+                summary["role_assignments_updated"] += 1
+                continue
+
+            self.db.add(
+                RoleAssignment(
+                    subject_type=subject_type,
+                    subject_id=subject_id,
+                    role_id=role_id,
+                    assignment_type=assignment.get(
+                        "assignment_type",
+                        "Direct",
+                    ),
+                    status=assignment.get(
+                        "status",
+                        "Active",
+                    ),
+                    directory_scope=assignment.get(
+                        "directory_scope"
+                    ),
+                    application_scope=assignment.get(
+                        "application_scope"
+                    ),
+                    source_system=assignment.get(
+                        "source_system",
+                        assignment.get("source"),
+                    ),
+                    source_identifier=assignment.get(
+                        "source_identifier"
+                    ),
+                    first_seen_at=assignment.get(
+                        "first_seen_at"
+                    ),
+                    last_seen_at=assignment.get(
+                        "last_seen_at"
+                    ),
+                    confidence_score=assignment.get(
+                        "confidence_score",
+                        100,
+                    ),
+                )
+            )
+
+            summary["role_assignments_created"] += 1
+
+        self.db.flush()
+
+    def _resolve_role_assignment_subject(
+        self,
+        assignment: dict,
+        subject_type: str,
+    ) -> str | None:
+        """
+        Resolve the canonical principal for a role assignment.
+        """
+
+        explicit_subject_id = assignment.get(
+            "subject_id"
+        )
+
+        if explicit_subject_id:
+            return explicit_subject_id
+
+        if subject_type == PrincipalType.ACCOUNT.value:
+            account = self._resolve_account_reference(
+                source_system=assignment.get(
+                    "subject_source_system"
+                ),
+                source_identifier=assignment.get(
+                    "subject_source_identifier"
+                ),
+            )
+
+            if account:
+                return account.id
+
+            username = assignment.get("username")
+
+            if username:
+                account = (
+                    self.db.query(Account)
+                    .filter(
+                        func.lower(Account.username)
+                        == username.lower(),
+                        Account.is_active.is_(True),
+                    )
+                    .first()
+                )
+
+                if account:
+                    return account.id
+
+        return None
+
+    def _resolve_role_assignment_role_id(
+        self,
+        assignment: dict,
+    ) -> str | None:
+        """
+        Resolve the canonical role target for a role assignment.
+        """
+
+        explicit_role_id = assignment.get(
+            "role_id"
+        )
+
+        if explicit_role_id:
+            return explicit_role_id
+
+        role = self._resolve_role_reference(
+            source_system=assignment.get(
+                "role_source_system"
+            ),
+            source_identifier=assignment.get(
+                "role_source_identifier"
+            ),
+        )
+
+        if role:
+            return role.id
+
+        role_name = assignment.get("role_name")
+
+        if role_name:
             role = (
                 self.db.query(Role)
                 .filter(
                     func.lower(Role.name)
-                    == role_name.lower()
+                    == role_name.lower(),
+                    Role.is_active.is_(True),
                 )
                 .first()
             )
 
-            if not account or not role:
-                continue
+            if role:
+                return role.id
 
+        return None
+
+    def _find_existing_role_assignment(
+        self,
+        assignment: dict,
+        subject_type: str,
+        subject_id: str,
+        role_id: str,
+    ) -> RoleAssignment | None:
+        """
+        Find an existing role assignment by provider identity first.
+        """
+
+        source_system = assignment.get(
+            "source_system"
+        )
+        source_identifier = assignment.get(
+            "source_identifier"
+        )
+
+        if source_system and source_identifier:
             existing = (
                 self.db.query(RoleAssignment)
                 .filter(
-                    RoleAssignment.subject_type
-                    == PrincipalType.ACCOUNT.value,
-                    RoleAssignment.subject_id
-                    == account.id,
-                    RoleAssignment.role_id
-                    == role.id,
+                    RoleAssignment.source_system
+                    == source_system,
+                    RoleAssignment.source_identifier
+                    == source_identifier,
                 )
                 .first()
             )
 
             if existing:
-                summary[
-                    "role_assignments_updated"
-                ] += 1
-                continue
+                return existing
 
-            self.db.add(
-                RoleAssignment(
-                    subject_type=(
-                        PrincipalType.ACCOUNT.value
-                    ),
-                    subject_id=account.id,
-                    role_id=role.id,
-                )
+        return (
+            self.db.query(RoleAssignment)
+            .filter(
+                RoleAssignment.subject_type
+                == subject_type,
+                RoleAssignment.subject_id
+                == subject_id,
+                RoleAssignment.role_id
+                == role_id,
+                RoleAssignment.directory_scope
+                == assignment.get("directory_scope"),
+                RoleAssignment.application_scope
+                == assignment.get("application_scope"),
             )
+            .first()
+        )
 
-            summary[
-                "role_assignments_created"
-            ] += 1
+    @staticmethod
+    def _update_role_assignment(
+        existing: RoleAssignment,
+        assignment: dict,
+    ) -> None:
+        """
+        Refresh a canonical role assignment from normalized provider data.
+        """
+
+        existing.assignment_type = assignment.get(
+            "assignment_type",
+            existing.assignment_type,
+        )
+        existing.status = assignment.get(
+            "status",
+            existing.status,
+        )
+        existing.directory_scope = assignment.get(
+            "directory_scope"
+        )
+        existing.application_scope = assignment.get(
+            "application_scope"
+        )
+        existing.source_system = assignment.get(
+            "source_system",
+            assignment.get(
+                "source",
+                existing.source_system,
+            ),
+        )
+        existing.source_identifier = assignment.get(
+            "source_identifier",
+            existing.source_identifier,
+        )
+        existing.first_seen_at = assignment.get(
+            "first_seen_at",
+            existing.first_seen_at,
+        )
+        existing.last_seen_at = assignment.get(
+            "last_seen_at",
+            existing.last_seen_at,
+        )
+        existing.confidence_score = assignment.get(
+            "confidence_score",
+            existing.confidence_score,
+        )
+        existing.is_active = True

@@ -15,8 +15,11 @@ class RoleAssignment(BaseSourceModel):
     compatibility. PrincipalType provides the canonical application vocabulary
     used to populate and validate subject_type values.
 
-    The database stores the principal type as a string so future providers and
-    principal categories do not require PostgreSQL enum migrations.
+    Directory and application scopes are stored explicitly because the same
+    principal may hold the same role at multiple authorization scopes.
+
+    The database stores principal and assignment types as strings so future
+    providers and domain evolution do not require PostgreSQL enum migrations.
     """
 
     __tablename__ = "role_assignments"
@@ -50,6 +53,18 @@ class RoleAssignment(BaseSourceModel):
         String(100),
         nullable=False,
         default="Active",
+    )
+
+    directory_scope: Mapped[str | None] = mapped_column(
+        String(1024),
+        nullable=True,
+        index=True,
+    )
+
+    application_scope: Mapped[str | None] = mapped_column(
+        String(1024),
+        nullable=True,
+        index=True,
     )
 
     first_seen_at: Mapped[datetime | None] = mapped_column(
