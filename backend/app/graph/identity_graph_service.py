@@ -147,6 +147,15 @@ class IdentityGraphService:
                             "privilege_level": (
                                 role.privilege_level
                             ),
+                            "assignment_type": (
+                                assignment.assignment_type
+                            ),
+                            "directory_scope": (
+                                assignment.directory_scope
+                            ),
+                            "application_scope": (
+                                assignment.application_scope
+                            ),
                         }
                     )
 
