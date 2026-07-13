@@ -46,8 +46,14 @@ class IdentityDecisionService:
         identity_risk: dict[str, Any] | None,
         exposure: dict[str, Any],
         recommendations: list[dict[str, Any]],
+        role_classifications: (
+            list[dict[str, Any]] | None
+        ) = None,
     ) -> dict[str, Any]:
-        role_classifications = [
+        role_classifications = (
+            role_classifications
+            if role_classifications is not None
+            else [
             {
                 "role": role,
                 "classification": (
@@ -56,8 +62,9 @@ class IdentityDecisionService:
                     )
                 ),
             }
-            for role in graph.get("roles", [])
-        ]
+                for role in graph.get("roles", [])
+            ]
+        )
 
         priority = self._priority(
             identity_risk=identity_risk,

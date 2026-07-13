@@ -13,6 +13,9 @@ from app.intelligence.identity_decision_service import (
 from app.recommendations.recommendation_engine import (
     RecommendationEngine,
 )
+from app.security.authorization import (
+    AuthorizationClassificationService,
+)
 from app.timeline.identity_timeline_builder import (
     IdentityTimelineBuilder,
 )
@@ -26,6 +29,9 @@ class IdentityIntelligenceService:
         self.timeline_builder = IdentityTimelineBuilder(db)
         self.recommendation_engine = RecommendationEngine()
         self.exposure_engine = ExposureScoreEngine()
+        self.authorization_classifier = (
+            AuthorizationClassificationService()
+        )
         self.decision_service = IdentityDecisionService()
 
     def get_identity_intelligence(
@@ -60,20 +66,41 @@ class IdentityIntelligenceService:
             identity_risk,
         )
 
-        recommendations = []
+        authorization_classifications = [
+            {
+                "role": role,
+                "classification": (
+                    self.authorization_classifier.classify(
+                        role
+                    )
+                ),
+            }
+            for role in graph.get("roles", [])
+        ]
 
-        if identity_risk:
-            recommendations = (
-                self.recommendation_engine.generate(
-                    identity_risk["findings"]
-                )
+        findings = (
+            identity_risk["findings"]
+            if identity_risk
+            else []
+        )
+
+        recommendations = (
+            self.recommendation_engine.generate(
+                findings=findings,
+                authorization_classifications=(
+                    authorization_classifications
+                ),
             )
+        )
 
         decision = self.decision_service.build(
             graph=graph,
             identity_risk=identity_risk,
             exposure=exposure,
             recommendations=recommendations,
+            role_classifications=(
+                authorization_classifications
+            ),
         )
 
         return {
@@ -89,11 +116,7 @@ class IdentityIntelligenceService:
                     if identity_risk
                     else "Low"
                 ),
-                "findings": (
-                    identity_risk["findings"]
-                    if identity_risk
-                    else []
-                ),
+                "findings": findings,
             },
             "exposure": exposure,
             "access": {
