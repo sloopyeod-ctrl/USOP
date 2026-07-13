@@ -3,6 +3,7 @@ import json
 
 from sqlalchemy.orm import Session
 
+from app.domain.principal_type import PrincipalType
 from app.models.account import Account
 from app.models.group import Group
 from app.models.identity import Identity
@@ -62,8 +63,10 @@ class SnapshotBuilder:
             memberships = (
                 self.db.query(Membership)
                 .filter(
-                    Membership.account_id == account.id,
-                    Membership.is_active == True,
+                    Membership.subject_type
+                    == PrincipalType.ACCOUNT.value,
+                    Membership.subject_id == account.id,
+                    Membership.is_active.is_(True),
                 )
                 .all()
             )

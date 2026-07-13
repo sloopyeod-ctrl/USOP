@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 
+from app.domain.principal_type import PrincipalType
 from app.models.account import Account
 from app.models.group import Group
 from app.models.identity import Identity
@@ -25,7 +26,12 @@ class AccessSummaryService:
 
         memberships = (
             self.db.query(Membership)
-            .filter(Membership.account_id.in_(account_ids))
+            .filter(
+                Membership.subject_type
+                == PrincipalType.ACCOUNT.value,
+                Membership.subject_id.in_(account_ids),
+                Membership.is_active.is_(True),
+            )
             .all()
             if account_ids
             else []
