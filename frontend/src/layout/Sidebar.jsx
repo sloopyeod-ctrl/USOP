@@ -1,4 +1,7 @@
-import { NavLink } from "react-router-dom";
+﻿import {
+  NavLink,
+  useLocation,
+} from "react-router-dom";
 
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import HubIcon from "@mui/icons-material/Hub";
@@ -21,66 +24,42 @@ import {
   Typography,
 } from "@mui/material";
 
-const workspaceItems = [
-  {
-    label: "Executive Dashboard",
-    icon: <DashboardIcon />,
-    to: "/",
-  },
-  {
-    label: "Identity Explorer",
-    icon: <HubIcon />,
-    to: "/identity",
-  },
-  {
-    label: "Analyst Workspace",
-    icon: <PsychologyIcon />,
-    to: "/workspace/ed8b8386-22fe-4d95-bf82-7071163bb4d0",
-  },
-  {
-    label: "Attack Simulation",
-    icon: <ScienceIcon />,
-    to: "/workspace/ed8b8386-22fe-4d95-bf82-7071163bb4d0",
-  },
-];
 
-const operationsItems = [
-  {
-    label: "Investigations",
-    icon: <FolderIcon />,
-    to: "#",
-  },
-  {
-    label: "Executive Risk",
-    icon: <AssessmentIcon />,
-    to: "#",
-  },
-];
+function resolveActiveIdentityId(pathname) {
+  const workspaceMatch = pathname.match(
+    /^\/workspace\/([^/]+)/,
+  );
 
-const platformItems = [
-  {
-    label: "Administration",
-    icon: <SettingsIcon />,
-    to: "#",
-  },
-  {
-    label: "Connectors",
-    icon: <StorageIcon />,
-    to: "#",
-  },
-  {
-    label: "Policies",
-    icon: <PolicyIcon />,
-    to: "#",
-  },
-  {
-    label: "Audit Logs",
-    icon: <HistoryIcon />,
-    to: "#",
-  },
-];
+  if (workspaceMatch?.[1]) {
+    return workspaceMatch[1];
+  }
 
-function SidebarSection(title, items) {
+  const identityMatch = pathname.match(
+    /^\/identity\/([^/]+)/,
+  );
+
+  if (identityMatch?.[1]) {
+    return identityMatch[1];
+  }
+
+  const explorerMatch = pathname.match(
+    /^\/explorer\/([^/]+)/,
+  );
+
+  if (explorerMatch?.[1]) {
+    return explorerMatch[1];
+  }
+
+  return localStorage.getItem(
+    "usop.activeInvestigationIdentityId",
+  );
+}
+
+
+function SidebarSection({
+  title,
+  items,
+}) {
   return (
     <>
       <Typography
@@ -102,13 +81,21 @@ function SidebarSection(title, items) {
         {items.map((item) => (
           <ListItemButton
             key={item.label}
-            component={item.to === "#" ? "div" : NavLink}
-            to={item.to === "#" ? undefined : item.to}
+            component={
+              item.disabled
+                ? "div"
+                : NavLink
+            }
+            to={
+              item.disabled
+                ? undefined
+                : item.to
+            }
+            disabled={item.disabled}
             sx={{
               mx: 1,
               mb: 0.5,
               borderRadius: 2,
-
               color: "#E5E7EB",
 
               "& .MuiListItemIcon-root": {
@@ -117,11 +104,13 @@ function SidebarSection(title, items) {
               },
 
               "&:hover": {
-                backgroundColor: "rgba(34,211,238,.08)",
+                backgroundColor:
+                  "rgba(34,211,238,.08)",
               },
 
               "&.active": {
-                backgroundColor: "rgba(34,211,238,.16)",
+                backgroundColor:
+                  "rgba(34,211,238,.16)",
 
                 "& .MuiListItemIcon-root": {
                   color: "#22D3EE",
@@ -132,15 +121,27 @@ function SidebarSection(title, items) {
                   fontWeight: 700,
                 },
               },
+
+              "&.Mui-disabled": {
+                opacity: 0.45,
+                color: "#94A3B8",
+              },
             }}
           >
-            <ListItemIcon>{item.icon}</ListItemIcon>
+            <ListItemIcon>
+              {item.icon}
+            </ListItemIcon>
 
             <ListItemText
               primary={item.label}
+              secondary={item.secondary}
               primaryTypographyProps={{
                 fontWeight: 600,
                 color: "inherit",
+              }}
+              secondaryTypographyProps={{
+                color: "#64748B",
+                fontSize: 11,
               }}
             />
           </ListItemButton>
@@ -150,7 +151,87 @@ function SidebarSection(title, items) {
   );
 }
 
+
 export default function Sidebar() {
+  const location = useLocation();
+
+  const activeIdentityId = resolveActiveIdentityId(
+    location.pathname,
+  );
+
+  const investigationRoute = activeIdentityId
+    ? `/workspace/${activeIdentityId}`
+    : "/";
+
+  const workspaceItems = [
+    {
+      label: "Executive Dashboard",
+      icon: <DashboardIcon />,
+      to: "/",
+    },
+    {
+      label: "Select Identity",
+      icon: <HubIcon />,
+      to: "/",
+      secondary:
+        "Choose from exposed identities",
+    },
+    {
+      label: activeIdentityId
+        ? "Resume Investigation"
+        : "Analyst Workspace",
+      icon: <PsychologyIcon />,
+      to: investigationRoute,
+      secondary: activeIdentityId
+        ? "Return to active identity"
+        : "Select an identity first",
+    },
+    {
+      label: "Attack Simulation",
+      icon: <ScienceIcon />,
+      to: investigationRoute,
+      secondary: activeIdentityId
+        ? "Continue active investigation"
+        : "Select an identity first",
+    },
+  ];
+
+  const operationsItems = [
+    {
+      label: "Investigations",
+      icon: <FolderIcon />,
+      disabled: true,
+    },
+    {
+      label: "Executive Risk",
+      icon: <AssessmentIcon />,
+      disabled: true,
+    },
+  ];
+
+  const platformItems = [
+    {
+      label: "Administration",
+      icon: <SettingsIcon />,
+      disabled: true,
+    },
+    {
+      label: "Connectors",
+      icon: <StorageIcon />,
+      disabled: true,
+    },
+    {
+      label: "Policies",
+      icon: <PolicyIcon />,
+      disabled: true,
+    },
+    {
+      label: "Audit Logs",
+      icon: <HistoryIcon />,
+      disabled: true,
+    },
+  ];
+
   return (
     <Box
       sx={{
@@ -158,19 +239,41 @@ export default function Sidebar() {
         height: "100%",
         backgroundColor: "#111827",
         color: "#E5E7EB",
-        borderRight: "1px solid rgba(255,255,255,.08)",
+        borderRight:
+          "1px solid rgba(255,255,255,.08)",
         overflowY: "auto",
       }}
     >
-      {SidebarSection("WORKSPACE", workspaceItems)}
+      <SidebarSection
+        title="WORKSPACE"
+        items={workspaceItems}
+      />
 
-      <Divider sx={{ my: 2, borderColor: "rgba(255,255,255,.08)" }} />
+      <Divider
+        sx={{
+          my: 2,
+          borderColor:
+            "rgba(255,255,255,.08)",
+        }}
+      />
 
-      {SidebarSection("OPERATIONS", operationsItems)}
+      <SidebarSection
+        title="OPERATIONS"
+        items={operationsItems}
+      />
 
-      <Divider sx={{ my: 2, borderColor: "rgba(255,255,255,.08)" }} />
+      <Divider
+        sx={{
+          my: 2,
+          borderColor:
+            "rgba(255,255,255,.08)",
+        }}
+      />
 
-      {SidebarSection("PLATFORM", platformItems)}
+      <SidebarSection
+        title="PLATFORM"
+        items={platformItems}
+      />
     </Box>
   );
 }

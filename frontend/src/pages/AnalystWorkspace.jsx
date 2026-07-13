@@ -41,6 +41,16 @@ export default function AnalystWorkspace() {
   const decisionIntelligence = workspace.decision.intelligence;
 
   useEffect(() => {
+    if (!identityId) {
+      setError("No identity was selected.");
+      return;
+    }
+
+    localStorage.setItem(
+      "usop.activeInvestigationIdentityId",
+      identityId,
+    );
+
     Promise.all([
       api.get(`/identity-intelligence/${identityId}`),
       api.get(`/attack-path/${identityId}`),
