@@ -143,6 +143,16 @@ class IdentityGraphService:
                             "username": account.username,
                             "role_id": role.id,
                             "role_name": role.name,
+                            "role_display_name": (
+                                role.display_name
+                            ),
+                            "role_type": role.role_type,
+                            "role_description": (
+                                role.description
+                            ),
+                            "role_source_identifier": (
+                                role.source_identifier
+                            ),
                             "system_name": role.system_name,
                             "privilege_level": (
                                 role.privilege_level
