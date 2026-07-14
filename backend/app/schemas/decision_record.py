@@ -90,3 +90,47 @@ class DecisionRecordRead(DecisionRecordCreate):
 
     class Config:
         from_attributes = True
+
+
+class DecisionRecordAction(BaseModel):
+    """
+    Analyst-controlled input for recording an organizational decision.
+
+    Risk, recommendation, identity, confidence, and evidence are populated
+    by USOP from current decision intelligence.
+    """
+
+    decision_type: DecisionType
+
+    justification: str | None = Field(
+        default=None,
+        max_length=10000,
+    )
+
+    notes: str | None = Field(
+        default=None,
+        max_length=10000,
+    )
+
+    acceptance_type: AcceptanceType | None = None
+    review_due_at: datetime | None = None
+
+    action_taken: str | None = Field(
+        default=None,
+        max_length=10000,
+    )
+
+    escalated_to: str | None = Field(
+        default=None,
+        max_length=255,
+    )
+
+    external_ticket_reference: str | None = Field(
+        default=None,
+        max_length=255,
+    )
+
+    actor: str | None = Field(
+        default=None,
+        max_length=255,
+    )
