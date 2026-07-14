@@ -6,6 +6,7 @@ import api from "../api/usopApi";
 import useWorkspaceState from "../hooks/useWorkspaceState";
 
 import WorkspaceHeader from "../components/workspace/WorkspaceHeader";
+import { DecisionWorkspace } from "../components/decision";
 import MissionStatusCard from "../components/workspace/MissionStatusCard";
 import RiskSummaryCard from "../components/workspace/RiskSummaryCard";
 import RemediationImpactCard from "../components/workspace/RemediationImpactCard";
@@ -121,7 +122,15 @@ export default function AnalystWorkspace() {
     return <CircularProgress />;
   }
 
-  const { identity, exposure, risk, access, recommendations, timeline } = data;
+  const {
+    identity,
+    exposure,
+    risk,
+    access,
+    recommendations,
+    timeline,
+    decision,
+  } = data;
 
   const riskMetrics = {
     riskScore: risk?.score || risk?.overall_score || exposure?.risk_score || 0,
@@ -132,7 +141,18 @@ export default function AnalystWorkspace() {
 
   return (
     <Box>
-      <WorkspaceHeader identity={identity} exposure={exposure} />
+      <WorkspaceHeader
+        identity={identity}
+        exposure={exposure}
+      />
+
+      <Box sx={{ mb: 3 }}>
+        <DecisionWorkspace
+          decision={decision}
+          recommendations={recommendations}
+          showDetails={false}
+        />
+      </Box>
 
       <Box
         sx={{

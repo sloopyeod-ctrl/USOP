@@ -5,6 +5,7 @@ import {
 } from "react-router-dom";
 
 import api from "../api/usopApi";
+import { DecisionWorkspace } from "../components/decision";
 
 import {
   Accordion,
@@ -134,6 +135,7 @@ export default function IdentityIntelligence() {
     access,
     recommendations,
     timeline,
+    decision,
   } = intelligence;
 
   const latestTimeline = timeline.slice(0, 10);
@@ -264,6 +266,13 @@ export default function IdentityIntelligence() {
           </Stack>
         </CardContent>
       </Card>
+
+      <Box sx={{ mb: 3 }}>
+        <DecisionWorkspace
+          decision={decision}
+          recommendations={recommendations}
+        />
+      </Box>
 
       <Stack
         direction="row"
