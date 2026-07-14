@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -29,6 +29,7 @@ def main():
         "identities",
         "identity_attributes",
         "memberships",
+        "organizations",
         "permissions",
         "review_campaigns",
         "role_assignments",
