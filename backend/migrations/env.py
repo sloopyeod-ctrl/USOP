@@ -16,6 +16,7 @@ from app.models.audit_event import AuditEvent
 from app.models.review_campaign import ReviewCampaign
 from app.models.governance_policy import GovernancePolicy
 from app.models.organization import Organization
+from app.models.license import License
 
 from alembic import context
 

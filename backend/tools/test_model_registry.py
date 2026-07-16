@@ -30,6 +30,7 @@ def main():
         "identity_attributes",
         "memberships",
         "organizations",
+        "licenses",
         "permissions",
         "review_campaigns",
         "role_assignments",

@@ -16,6 +16,7 @@ from app.models.identity import Identity
 from app.models.identity_attribute import IdentityAttribute
 from app.models.membership import Membership
 from app.models.organization import Organization
+from app.models.license import License
 from app.models.permission import Permission
 from app.models.review_campaign import ReviewCampaign
 from app.models.role import Role
@@ -34,6 +35,7 @@ __all__ = [
     "IdentityAttribute",
     "Membership",
     "Organization",
+    "License",
     "Permission",
     "ReviewCampaign",
     "Role",
