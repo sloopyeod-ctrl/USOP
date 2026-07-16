@@ -1,0 +1,989 @@
+========================================================
+
+USOP
+
+Open Secure Operations Platform
+
+Project Bedrock
+
+========================================================
+
+SPEC-001
+
+Commercial Licensing Architecture
+
+========================================================
+
+Version:
+1.0
+
+Status:
+Foundational Architecture
+
+Classification:
+Core Product Specification
+
+Architecture Version:
+2.0
+
+Project:
+Project Bedrock
+
+Engineering Methodology:
+Project Bedrock v1.0
+
+========================================================
+Section 1 Mission
+Purpose
+
+The USOP Commercial Licensing Architecture establishes a trustworthy commercial relationship between the Open Secure Operations Platform (USOP) and its customers while preserving complete customer ownership of identities, infrastructure, governance, operational security data, secrets, audit history, and institutional knowledge.
+
+Commercial licensing validates software entitlement.
+
+Commercial licensing does not establish operational trust.
+
+Commercial licensing does not authenticate users.
+
+Commercial licensing does not authorize actions.
+
+Commercial licensing does not replace enterprise identity providers.
+
+Commercial licensing does not define governance policy.
+
+Commercial licensing does not require privileged vendor access.
+
+Instead, commercial licensing provides a cryptographically verifiable statement describing the commercial capabilities a customer is entitled to operate while remaining entirely independent of operational security.
+
+USOP customers own their security environment.
+
+USOP provides software, commercial entitlement, documentation, updates, and support.
+
+The Commercial Licensing Architecture exists to preserve that separation for the lifetime of the platform.
+
+Section 2 Product Vision
+
+USOP is an Enterprise Security Decision Platform.
+
+Its purpose is not to replace existing security technologies.
+
+Its purpose is to transform evidence produced by those technologies into organizational knowledge that enables faster, more consistent, and better-informed security decisions.
+
+Commercial licensing exists solely to establish commercial entitlement for that platform.
+
+Operational security remains entirely under customer control.
+
+Customers should never be required to surrender ownership of identities, infrastructure, governance, secrets, or operational data in order to validate commercial licensing.
+
+Section 3 Product Philosophy
+
+USOP is built upon four foundational beliefs.
+
+Customer Ownership
+
+Customers own:
+
+Enterprise identity
+Infrastructure
+Databases
+Secrets
+Governance
+Security data
+Audit history
+Decision history
+Institutional knowledge
+
+USOP consumes this information.
+
+It never attempts to replace ownership of it.
+
+Section 4 Enterprise Integration
+
+USOP integrates with existing enterprise platforms.
+
+Examples include:
+
+Microsoft Entra ID
+AWS IAM
+GitHub
+Okta
+Sentinel
+ServiceNow
+Future security providers
+
+USOP interprets provider evidence.
+
+It does not become the system of record for provider-managed data.
+
+Section 5 Security Decisions
+
+USOP exists to transform:
+
+Evidence
+
+↓
+
+Context
+
+↓
+
+Recommendations
+
+↓
+
+Organizational Decisions
+
+↓
+
+Governance
+
+↓
+
+Section 6 Institutional Knowledge
+
+Commercial licensing exists only to enable operation of this platform.
+
+It does not participate in the security decision process itself.
+
+Section 7 Long-Term Trust
+
+Enterprise customers should be able to deploy USOP with confidence that:
+
+They retain ownership of their environment.
+They remain operational during vendor outages.
+They control their own identities.
+They control their own governance.
+Their institutional knowledge remains theirs.
+
+Commercial licensing must reinforce this confidence rather than diminish it.
+
+Guiding Principles
+
+The Commercial Licensing Architecture is governed by the following immutable principles.
+
+Principle 1
+
+Commercial trust must never compromise operational trust.
+
+Principle 2
+
+Customer ownership always supersedes vendor convenience.
+
+Principle 3
+
+Commercial licensing validates entitlement.
+
+Operational security validates trust.
+
+These responsibilities must never be combined.
+
+Principle 4
+
+Every customer deployment remains independently operable.
+
+Commercial licensing must not require continuous communication with vendor-operated infrastructure.
+
+Principle 5
+
+Security architecture must never depend upon commercial architecture.
+
+Historical decisions, governance records, audit history, and organizational knowledge must survive changes to commercial licensing.
+
+Principle 6
+
+Customers own security.
+
+USOP owns software.
+
+These ownership boundaries remain explicit throughout the architecture.
+
+Principle 7
+
+Backend systems enforce commercial entitlement.
+
+Frontend systems present commercial state.
+
+Commercial authorization decisions are never delegated to client-side code.
+
+Principle 8
+
+Commercial architecture must scale with the platform.
+
+Future capabilities should be introduced through modular commercial entitlements rather than redesigning the licensing model.
+
+The Defining Principle
+
+Everything in this specification derives from one architectural statement:
+
+Commercial trust must never compromise operational trust.
+
+This principle governs every future licensing decision within USOP.
+
+Whenever commercial convenience conflicts with customer ownership, operational security, or long-term customer trust, the architecture must favor customer trust.
+
+Product Boundary
+
+The Commercial Licensing Architecture establishes a permanent separation between operational ownership and commercial ownership.
+
+                    CUSTOMER
+
+Owns
+
+────────────────────────────────────────────
+
+Identity
+
+Infrastructure
+
+Database
+
+Secrets
+
+Governance
+
+Security Data
+
+Decision History
+
+Audit History
+
+Institutional Knowledge
+
+────────────────────────────────────────────
+
+                 USOP
+
+Provides
+
+────────────────────────────────────────────
+
+Software
+
+Commercial Licensing
+
+Updates
+
+Documentation
+
+Support
+
+Architecture
+
+────────────────────────────────────────────
+
+              PROVIDERS
+
+Own
+
+────────────────────────────────────────────
+
+Microsoft Entra ID
+
+AWS IAM
+
+GitHub
+
+Okta
+
+Sentinel
+
+ServiceNow
+
+Future Security Providers
+
+This product boundary is considered fundamental to the architecture and should remain stable across future versions of USOP.
+
+The Vision Beyond Version 1
+
+This is where I want to add something we discovered together over the last several months.
+
+This isn't just a licensing statement.
+
+It's the product strategy.
+
+                    USOP PLATFORM
+
+                         │
+
+               ┌─────────┴─────────┐
+
+               │                   │
+
+          USOP Core          Commercial Modules
+
+               │                   │
+
+   ┌───────────┼───────────┐       │
+
+   │           │           │       │
+
+Identity   Decision   Administration
+
+Sync       Platform
+
+Governance Authentication
+
+Licensing Audit
+
+                           │
+
+        ┌──────────────────┼─────────────────────┐
+
+        │                  │                     │
+
+Threat Intelligence
+
+Compliance
+
+CIEM
+
+CIAM
+
+PAM
+
+Attack Path
+
+Executive Reporting
+
+Workflow Automation
+
+Future Platform Extensions
+
+Section 8
+Canonical Commercial Model
+
+The Commercial Licensing Architecture is composed of seven canonical commercial objects.
+
+Each object has one clearly defined responsibility.
+
+Commercial objects intentionally remain independent of operational security objects such as Identities, Accounts, Groups, Decision Records, Governance Policies, and Provider Connectors.
+
+This separation preserves architectural clarity while preventing commercial concerns from becoming intertwined with operational security.
+
+The canonical commercial objects are:
+
+Organization
+
+↓
+
+Deployment
+
+↓
+
+License
+
+↓
+
+Subscription State
+
+↓
+
+Seat
+
+↓
+
+Entitlement
+
+↓
+
+Commercial Module
+
+Each object represents a distinct architectural responsibility.
+
+No commercial object should duplicate or subsume another.
+
+8.1 Organization
+
+An Organization represents the canonical customer administrative boundary within USOP.
+
+Organizations own:
+
+• Platform Users
+
+• Governance Settings
+
+• Decision Records
+
+• Audit History
+
+• Commercial Entitlements
+
+• Connected Provider Environments
+
+Organizations do not represent:
+
+• Microsoft Entra Tenants
+
+• AWS Accounts
+
+• GitHub Organizations
+
+• Individual Connectors
+
+• Commercial Licenses
+
+• Deployments
+
+An Organization may connect to multiple external provider environments simultaneously.
+
+Organizations remain stable regardless of infrastructure changes, deployment migrations, licensing renewals, or provider reconfiguration.
+
+Organizations are considered permanent administrative boundaries.
+
+8.2 Deployment
+
+A Deployment represents one customer-operated installation of USOP.
+
+Examples include:
+
+• Docker Compose deployment
+
+• Kubernetes deployment
+
+• OpenShift deployment
+
+• Air-gapped deployment
+
+• High Availability deployment
+
+A Deployment is intentionally independent of:
+
+• Hostnames
+
+• Container IDs
+
+• MAC addresses
+
+• CPU serial numbers
+
+• Virtual machine identifiers
+
+• Kubernetes pod identifiers
+
+These infrastructure components may change without altering the Deployment.
+
+Deployments are identified by a stable Deployment Identifier generated and preserved by USOP.
+
+Deployment identifiers should survive:
+
+• Hardware replacement
+
+• Disaster recovery
+
+• Container recreation
+
+• Kubernetes scheduling
+
+• Platform upgrades
+
+The Deployment exists to identify the installed platform—not the underlying infrastructure.
+
+8.3 License
+
+A License is a cryptographically signed commercial entitlement issued by USOP.
+
+A License defines:
+
+• Commercial Edition
+
+• Commercial Purpose
+
+• Organization Binding
+
+• Optional Deployment Binding
+
+• Seat Entitlements
+
+• Feature Entitlements
+
+• Effective Date
+
+• Expiration Date
+
+• Issuance Timestamp
+
+• Signing Key Identifier
+
+• License Format Version
+
+Licenses are immutable.
+
+Any commercial change results in issuance of a new License rather than modification of an existing License.
+
+Licenses never contain:
+
+• Customer secrets
+
+• Provider credentials
+
+• Audit history
+
+• Decision history
+
+• Security evidence
+
+• Vendor private signing keys
+
+8.4 Subscription State
+
+Subscription State is the runtime interpretation of the currently installed License.
+
+Subscription State is derived.
+
+It is never the commercial source of truth.
+
+Subscription State contains:
+
+• Validation Status
+
+• Commercial Status
+
+• Effective Commercial Edition
+
+• Seat Availability
+
+• Active Seat Count
+
+• Enabled Commercial Modules
+
+• Enabled Feature Entitlements
+
+• Validation Timestamp
+
+• Expiration State
+
+• Grace Period State
+
+Subscription State may be recalculated at any time using:
+
+• Organization
+
+• Installed License
+
+• Current Time
+
+• Deployment Information
+
+Subscription State should never require manual modification.
+
+8.5 Seat
+
+A Seat represents one active commercial access allocation assigned to a Platform User.
+
+Seats exist independently from synchronized identities.
+
+A synchronized Microsoft Entra identity does not consume a Seat until access to USOP is granted.
+
+Seats are released when:
+
+• Platform User access is revoked
+
+• Platform User is disabled
+
+• Organization policy permits automatic seat release
+
+Historical attribution remains preserved after seat release.
+
+Seats never affect historical Decision Records or Audit Events.
+
+8.6 Entitlement
+
+An Entitlement represents one commercially licensed capability.
+
+Examples include:
+
+• Threat Intelligence
+
+• Executive Reporting
+
+• Attack Path Analysis
+
+• Compliance
+
+• Future Modules
+
+Entitlements are evaluated exclusively by the backend.
+
+Frontend applications may present entitlement information but never determine entitlement validity.
+
+8.7 Commercial Module
+
+A Commercial Module represents one independently licensable functional capability built upon USOP Core.
+
+USOP Core is always required.
+
+Commercial Modules extend the Core Platform without altering its architectural foundations.
+
+Examples include:
+
+• Threat Intelligence
+
+• Compliance
+
+• CIEM
+
+• CIAM
+
+• PAM
+
+• Executive Reporting
+
+• Workflow Automation
+
+• Future Platform Extensions
+
+Commercial Modules enable independent product evolution while preserving one consistent Core Platform.
+
+PART III
+License Lifecycle & Validation Architecture
+
+This section answers:
+
+How does a commercial license become runtime authorization?
+
+Notice...
+
+Not authentication.
+
+Not permissions.
+
+Commercial entitlement.
+
+Section 9
+License Lifecycle
+
+Every commercial license progresses through a predictable lifecycle.
+
+The lifecycle establishes commercial entitlement without compromising customer ownership or operational security.
+
+The canonical lifecycle is:
+
+Vendor Creates License
+            │
+            ▼
+Customer Receives License
+            │
+            ▼
+Customer Installs License
+            │
+            ▼
+USOP Validates License
+            │
+            ▼
+Subscription State Derived
+            │
+            ▼
+Seat Enforcement
+            │
+            ▼
+Feature Entitlement Evaluation
+            │
+            ▼
+Platform Operation
+            │
+            ▼
+Renewal or Replacement
+
+Every stage is deterministic.
+
+No stage should require manual modification of commercial runtime state.
+
+9.1 License Issuance
+
+Licenses are issued exclusively by the USOP License Authority.
+
+The License Authority is responsible for:
+
+• Creating canonical license payloads
+
+• Digitally signing licenses
+
+• Assigning license identifiers
+
+• Assigning commercial purpose
+
+• Assigning edition
+
+• Assigning commercial modules
+
+• Assigning commercial entitlements
+
+• Assigning expiration
+
+The private signing key never leaves the License Authority.
+
+9.2 License Distribution
+
+Customers receive licenses through approved commercial channels.
+
+Examples include:
+
+• Customer portal
+
+• Secure download
+
+• Commercial onboarding
+
+• Support-assisted replacement
+
+The distribution mechanism is independent of license validation.
+
+USOP validates licenses locally after installation.
+
+9.3 License Installation
+
+License installation is a customer-controlled administrative operation.
+
+Installation records:
+
+• Installation timestamp
+
+• Installing Platform User
+
+• Organization
+
+• Deployment
+
+• Previous License
+
+• Audit Event
+
+Installation never modifies historical commercial records.
+
+If a previous License exists, it becomes superseded.
+
+9.4 License Validation
+
+Validation confirms:
+
+• Signature integrity
+
+• Format version
+
+• Organization binding
+
+• Deployment binding (when applicable)
+
+• Effective date
+
+• Expiration
+
+• License purpose
+
+• Commercial edition
+
+• Commercial modules
+
+• Feature entitlements
+
+Validation never requires:
+
+• Internet connectivity
+
+• Vendor authentication
+
+• Cloud services
+
+• Customer identity transmission
+
+• Customer security data
+
+Validation is entirely local.
+
+9.5 Runtime Derivation
+
+A successfully validated License produces one Subscription State.
+
+Subscription State represents the operational interpretation of commercial entitlement.
+
+It is recreated whenever:
+
+• USOP starts
+
+• A License changes
+
+• Time-based commercial state changes
+
+• Administrative refresh occurs
+
+Runtime derivation is deterministic.
+
+No user should manually edit Subscription State.
+
+9.6 Renewal
+
+Renewal is the installation of a newly issued License.
+
+Renewal does not require:
+
+• Database migration
+
+• User recreation
+
+• Provider reconfiguration
+
+• Governance recreation
+
+• Decision migration
+
+• Audit modification
+
+Only the active License changes.
+
+Subscription State is recalculated.
+
+9.7 Replacement
+
+Replacement occurs when an existing License must be superseded before expiration.
+
+Examples include:
+
+• Commercial changes
+
+• Administrative correction
+
+• Organization changes
+
+• Deployment replacement
+
+• Disaster recovery
+
+Replacement preserves:
+
+• Historical audit
+
+• Historical licensing events
+
+• Historical commercial attribution
+
+9.8 Expiration
+
+License expiration changes commercial entitlement.
+
+License expiration must never:
+
+Delete Decisions
+
+Delete Audit History
+
+Delete Governance
+
+Delete Platform Users
+
+Delete Organizations
+
+Delete Security Data
+
+Delete Institutional Knowledge
+
+Commercial expiration affects operation—not ownership.
+
+Section 10
+Validation Architecture
+
+Validation exists to establish commercial trust.
+
+Validation never establishes operational trust.
+
+Operational trust is established separately through enterprise authentication and backend authorization.
+
+Validation answers one question:
+
+Is this Organization commercially entitled to operate this capability?
+
+Nothing more.
+
+10.1 Trust Chain
+
+The canonical trust chain is:
+
+USOP License Authority
+
+Private Signing Key
+
+↓
+
+Signed License
+
+↓
+
+Customer Installation
+
+↓
+
+Public Key Validation
+
+↓
+
+Validated License
+
+↓
+
+Subscription State
+
+↓
+
+Commercial Entitlements
+
+Operational security is intentionally absent from this chain.
+
+10.2 Offline Validation
+
+Offline validation is a foundational architectural requirement.
+
+Every supported deployment should validate commercial entitlement without requiring continuous Internet connectivity.
+
+Offline validation supports:
+
+• Government
+
+• Defense
+
+• Air-gapped
+
+• Critical Infrastructure
+
+• Restricted Enterprise Networks
+
+Internet connectivity may enhance licensing operations but must never become a prerequisite for platform operation.
+
+10.3 Validation Failures
+
+Validation failures should produce deterministic runtime states.
+
+Examples include:
+
+• Invalid Signature
+
+• Expired License
+
+• Unsupported Format
+
+• Organization Mismatch
+
+• Deployment Mismatch
+
+• Corrupted Payload
+
+• Unknown Signing Key
+
+Validation failures produce:
+
+• Audit Event
+
+• Subscription State Update
+
+• Administrative Visibility
+
+Validation failures never destroy customer information.
+
+10.4 Architect's Review
+
+The Commercial Validation Architecture intentionally separates commercial trust from operational trust.
+
+Customers authenticate through enterprise identity providers.
+
+USOP authorizes operations.
+
+Commercial licensing validates entitlement.
+
+These responsibilities remain independent to preserve customer ownership, support offline operation, and eliminate unnecessary trust in vendor-operated infrastructure.
