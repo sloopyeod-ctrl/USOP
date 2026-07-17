@@ -308,7 +308,7 @@ class PlatformAuthorizationService:
                 "the assignment time."
             )
 
-    def assign_role(
+    def _assign_role_pending(
         self,
         *,
         organization_id: str,
@@ -316,13 +316,13 @@ class PlatformAuthorizationService:
         platform_role_id: str,
         expires_at: datetime | None = None,
         assigned_at: datetime | None = None,
-    ) -> PlatformRoleAssignment:
+    ):
         """
-        Assign one active Platform Role to an eligible Platform User.
+        Create one audited Platform Role assignment without committing.
 
-        Invited users are eligible so the initial bootstrap administrator may
-        receive authority before completing first authentication. Suspended
-        and Disabled users cannot receive new authority.
+        This internal operation participates in a transaction owned by the
+        calling service. It performs the same validation as assign_role but
+        does not commit, refresh, or roll back the database session.
         """
 
         organization = self._require_active_organization(
@@ -414,19 +414,45 @@ class PlatformAuthorizationService:
                 },
             )
 
+            return assignment, audit_event
+
+        except IntegrityError as error:
+            raise PlatformAuthorizationAssignmentConflictError(
+                "The Platform Role assignment could not be created "
+                "because an equivalent assignment already exists."
+            ) from error
+
+    def assign_role(
+        self,
+        *,
+        organization_id: str,
+        platform_user_id: str,
+        platform_role_id: str,
+        expires_at: datetime | None = None,
+        assigned_at: datetime | None = None,
+    ) -> PlatformRoleAssignment:
+        """
+        Assign one active Platform Role to an eligible Platform User.
+
+        Invited users are eligible so the initial bootstrap administrator may
+        receive authority before completing first authentication. Suspended
+        and Disabled users cannot receive new authority.
+        """
+
+        try:
+            assignment, audit_event = self._assign_role_pending(
+                organization_id=organization_id,
+                platform_user_id=platform_user_id,
+                platform_role_id=platform_role_id,
+                expires_at=expires_at,
+                assigned_at=assigned_at,
+            )
+
             self.db.commit()
             self.db.refresh(assignment)
             self.db.refresh(audit_event)
 
             return assignment
-
-        except IntegrityError as error:
-            self.db.rollback()
-
-            raise PlatformAuthorizationAssignmentConflictError(
-                "The Platform Role assignment could not be created "
-                "because an equivalent assignment already exists."
-            ) from error
 
         except Exception:
             self.db.rollback()
@@ -513,15 +539,19 @@ class PlatformAuthorizationService:
             self.db.rollback()
             raise
 
-    def grant_permission(
+    def _grant_permission_pending(
         self,
         *,
         organization_id: str,
         platform_role_id: str,
         platform_permission_id: str,
-    ) -> PlatformRolePermission:
+    ):
         """
-        Grant one global Platform Permission to an active Organization role.
+        Create one audited Platform Permission mapping without committing.
+
+        This internal operation participates in a transaction owned by the
+        calling service. It performs the same validation as grant_permission
+        but does not commit, refresh, or roll back the database session.
         """
 
         organization = self._require_active_organization(
@@ -564,7 +594,9 @@ class PlatformAuthorizationService:
         )
 
         try:
-            mapping = self.mapping_repository.create(mapping)
+            mapping = self.mapping_repository.create(
+                mapping
+            )
 
             audit_event = self.audit_service.record_pending(
                 event_type="PlatformPermissionGranted",
@@ -591,19 +623,37 @@ class PlatformAuthorizationService:
                 },
             )
 
+            return mapping, audit_event
+
+        except IntegrityError as error:
+            raise PlatformAuthorizationMappingConflictError(
+                "The Platform Permission grant could not be created "
+                "because an equivalent mapping already exists."
+            ) from error
+
+    def grant_permission(
+        self,
+        *,
+        organization_id: str,
+        platform_role_id: str,
+        platform_permission_id: str,
+    ) -> PlatformRolePermission:
+        """
+        Grant one global Platform Permission to an active Organization role.
+        """
+
+        try:
+            mapping, audit_event = self._grant_permission_pending(
+                organization_id=organization_id,
+                platform_role_id=platform_role_id,
+                platform_permission_id=platform_permission_id,
+            )
+
             self.db.commit()
             self.db.refresh(mapping)
             self.db.refresh(audit_event)
 
             return mapping
-
-        except IntegrityError as error:
-            self.db.rollback()
-
-            raise PlatformAuthorizationMappingConflictError(
-                "The Platform Permission grant could not be created "
-                "because an equivalent mapping already exists."
-            ) from error
 
         except Exception:
             self.db.rollback()
