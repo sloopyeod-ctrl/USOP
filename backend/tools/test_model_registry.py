@@ -1,6 +1,13 @@
 import sys
 from pathlib import Path
 
+
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(BACKEND_ROOT))
+
+import sys
+from pathlib import Path
+
 from dotenv import load_dotenv
 
 
@@ -31,7 +38,8 @@ def main():
         "memberships",
         "organizations",
         "licenses",
-        "permissions",
+        "platform_users",
+    "permissions",
         "review_campaigns",
         "role_assignments",
         "role_permissions",
