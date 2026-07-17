@@ -67,3 +67,23 @@ class OrganizationRepository:
             )
             .one_or_none()
         )
+
+    def get_by_id_for_update(
+        self,
+        organization_id: str,
+    ) -> Organization | None:
+        """
+        Retrieve and lock one Organization for a caller-owned transaction.
+
+        Bootstrap uses this row lock to serialize concurrent first-user
+        creation attempts for the same Organization.
+        """
+
+        return (
+            self.db.query(Organization)
+            .filter(
+                Organization.id == organization_id,
+            )
+            .with_for_update()
+            .one_or_none()
+        )

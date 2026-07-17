@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy.orm import Session
 
 from app.domain.license_status import LicenseStatus
@@ -103,4 +105,49 @@ class LicenseRepository:
                 License.id.desc(),
             )
             .all()
+        )
+
+    def get_bootstrap_eligible_license(
+        self,
+        organization_id: str,
+        *,
+        evaluated_at: datetime,
+    ) -> License | None:
+        """
+        Return the newest structurally eligible License for bootstrap.
+
+        Bootstrap eligibility is intentionally narrower than future effective
+        Subscription State. It requires only:
+
+        - persisted lifecycle status is Issued;
+        - effective_at is not later than evaluated_at; and
+        - expires_at is null or later than evaluated_at.
+
+        This method does not verify signatures, calculate grace periods,
+        allocate Seats, or derive general runtime authorization.
+        """
+
+        return (
+            self.db.query(License)
+            .filter(
+                License.organization_id
+                == organization_id,
+                License.status
+                == LicenseStatus.ISSUED.value,
+                License.effective_at
+                <= evaluated_at,
+                (
+                    License.expires_at.is_(None)
+                    | (
+                        License.expires_at
+                        > evaluated_at
+                    )
+                ),
+            )
+            .order_by(
+                License.issued_at.desc(),
+                License.created_at.desc(),
+                License.id.desc(),
+            )
+            .first()
         )
