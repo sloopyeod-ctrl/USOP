@@ -70,7 +70,7 @@ class PlatformUserService:
         self.platform_user_repository = PlatformUserRepository(db)
         self.audit_service = AuditService(db)
 
-    def bootstrap_first_administrator(
+    def _bootstrap_first_administrator_pending(
         self,
         *,
         organization_id: str,
@@ -82,12 +82,14 @@ class PlatformUserService:
         identity_issuer: str | None = None,
         actor: str = SYSTEM_PLATFORM_BOOTSTRAP_ACTOR,
         evaluated_at: datetime | None = None,
-    ) -> PlatformUser:
+        authorization_granted: bool = False,
+    ):
         """
-        Create the first Platform User for one eligible Organization.
+        Create the first audited Platform User without committing.
 
-        The Organization row is locked for the transaction so concurrent
-        bootstrap attempts for the same Organization are serialized.
+        The Organization row is locked so concurrent bootstrap attempts for
+        the same Organization are serialized. The calling service owns the
+        database commit, refresh, and rollback operations.
         """
 
         now = evaluated_at or datetime.now(UTC)
@@ -132,13 +134,17 @@ class PlatformUserService:
                 "been completed for this Organization."
             )
 
+        normalized_identity_provider = identity_provider.strip()
+        normalized_external_tenant_id = external_tenant_id.strip()
+        normalized_external_subject_id = external_subject_id.strip()
+
         existing_identity = (
             self.platform_user_repository
             .get_by_external_identity(
                 organization_id=organization.id,
-                identity_provider=identity_provider.strip(),
-                external_tenant_id=external_tenant_id.strip(),
-                external_subject_id=external_subject_id.strip(),
+                identity_provider=normalized_identity_provider,
+                external_tenant_id=normalized_external_tenant_id,
+                external_subject_id=normalized_external_subject_id,
             )
         )
 
@@ -153,9 +159,9 @@ class PlatformUserService:
             display_name=display_name.strip(),
             email=email.strip().lower(),
             status=PlatformUserStatus.INVITED.value,
-            identity_provider=identity_provider.strip(),
-            external_tenant_id=external_tenant_id.strip(),
-            external_subject_id=external_subject_id.strip(),
+            identity_provider=normalized_identity_provider,
+            external_tenant_id=normalized_external_tenant_id,
+            external_subject_id=normalized_external_subject_id,
             identity_issuer=(
                 identity_issuer.strip()
                 if identity_issuer
@@ -208,7 +214,9 @@ class PlatformUserService:
                             .external_tenant_id
                         ),
                         "created_via_bootstrap": True,
-                        "authorization_granted": False,
+                        "authorization_granted": (
+                            authorization_granted
+                        ),
                         "seat_allocated": False,
                         "authentication_completed": False,
                         "actor_trust": (
@@ -218,28 +226,20 @@ class PlatformUserService:
                 )
             )
 
-            self.db.commit()
-            self.db.refresh(platform_user)
-            self.db.refresh(audit_event)
-
-            return platform_user
+            return (
+                platform_user,
+                audit_event,
+                eligible_license,
+            )
 
         except IntegrityError as error:
-            self.db.rollback()
-
             existing_identity = (
                 self.platform_user_repository
                 .get_by_external_identity(
                     organization_id=organization.id,
-                    identity_provider=(
-                        identity_provider.strip()
-                    ),
-                    external_tenant_id=(
-                        external_tenant_id.strip()
-                    ),
-                    external_subject_id=(
-                        external_subject_id.strip()
-                    ),
+                    identity_provider=normalized_identity_provider,
+                    external_tenant_id=normalized_external_tenant_id,
+                    external_subject_id=normalized_external_subject_id,
                 )
             )
 
@@ -253,6 +253,49 @@ class PlatformUserService:
                 "Platform Administrator bootstrap could not complete "
                 "because the Organization changed concurrently."
             ) from error
+
+    def bootstrap_first_administrator(
+        self,
+        *,
+        organization_id: str,
+        display_name: str,
+        email: str,
+        identity_provider: str,
+        external_tenant_id: str,
+        external_subject_id: str,
+        identity_issuer: str | None = None,
+        actor: str = SYSTEM_PLATFORM_BOOTSTRAP_ACTOR,
+        evaluated_at: datetime | None = None,
+    ) -> PlatformUser:
+        """
+        Create the first Platform User for one eligible Organization.
+
+        The public operation owns its standalone database transaction.
+        """
+
+        try:
+            (
+                platform_user,
+                audit_event,
+                _eligible_license,
+            ) = self._bootstrap_first_administrator_pending(
+                organization_id=organization_id,
+                display_name=display_name,
+                email=email,
+                identity_provider=identity_provider,
+                external_tenant_id=external_tenant_id,
+                external_subject_id=external_subject_id,
+                identity_issuer=identity_issuer,
+                actor=actor,
+                evaluated_at=evaluated_at,
+                authorization_granted=False,
+            )
+
+            self.db.commit()
+            self.db.refresh(platform_user)
+            self.db.refresh(audit_event)
+
+            return platform_user
 
         except Exception:
             self.db.rollback()
