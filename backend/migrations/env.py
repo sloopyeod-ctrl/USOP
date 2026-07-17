@@ -9,6 +9,10 @@ from app.models.group import Group
 from app.models.membership import Membership
 from app.models.role import Role
 from app.models.role_assignment import RoleAssignment
+from app.models.platform_permission import PlatformPermission
+from app.models.platform_role import PlatformRole
+from app.models.platform_role_assignment import PlatformRoleAssignment
+from app.models.platform_role_permission import PlatformRolePermission
 from app.models.platform_user import PlatformUser
 from app.models.permission import Permission
 from app.models.role_permission import RolePermission

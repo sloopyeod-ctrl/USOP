@@ -17,6 +17,10 @@ from app.models.identity_attribute import IdentityAttribute
 from app.models.membership import Membership
 from app.models.organization import Organization
 from app.models.license import License
+from app.models.platform_permission import PlatformPermission
+from app.models.platform_role import PlatformRole
+from app.models.platform_role_assignment import PlatformRoleAssignment
+from app.models.platform_role_permission import PlatformRolePermission
 from app.models.platform_user import PlatformUser
 from app.models.permission import Permission
 from app.models.review_campaign import ReviewCampaign
@@ -37,6 +41,10 @@ __all__ = [
     "Membership",
     "Organization",
     "License",
+    "PlatformPermission",
+    "PlatformRole",
+    "PlatformRoleAssignment",
+    "PlatformRolePermission",
     "PlatformUser",
     "Permission",
     "ReviewCampaign",
