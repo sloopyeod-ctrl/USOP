@@ -62,6 +62,11 @@ export default function PlatformAdministration() {
     useState(true);
   const [organizationError, setOrganizationError] =
     useState(null);
+  const [platformUsers, setPlatformUsers] = useState([]);
+  const [isLoadingPlatformUsers, setIsLoadingPlatformUsers] =
+    useState(false);
+  const [platformUserError, setPlatformUserError] =
+    useState(null);
 
   useEffect(() => {
     let isCurrent = true;
@@ -105,6 +110,63 @@ export default function PlatformAdministration() {
       isCurrent = false;
     };
   }, []);
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    async function loadPlatformUsers() {
+      if (!selectedOrganizationId) {
+        return;
+      }
+
+      await Promise.resolve();
+
+      if (!isCurrent) return;
+
+      setPlatformUsers([]);
+      setPlatformUserError(null);
+      setIsLoadingPlatformUsers(true);
+
+      try {
+        const response = await api.get(
+          (
+            "/api/v1/organizations/"
+            + selectedOrganizationId
+            + "/platform-users/"
+          ),
+        );
+
+        if (!isCurrent) return;
+
+        setPlatformUsers(
+          Array.isArray(response.data)
+            ? response.data
+            : [],
+        );
+      } catch (error) {
+        if (!isCurrent) return;
+
+        console.error(
+          "Platform User load failed:",
+          error,
+        );
+
+        setPlatformUserError(
+          "Could not load Platform Users.",
+        );
+      } finally {
+        if (isCurrent) {
+          setIsLoadingPlatformUsers(false);
+        }
+      }
+    }
+
+    loadPlatformUsers();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [selectedOrganizationId]);
 
   const selectedOrganization = useMemo(
     () =>
@@ -383,7 +445,7 @@ export default function PlatformAdministration() {
               </Stack>
 
               <Chip
-                label="0 USERS"
+                label={`${platformUsers.length} USERS`}
                 size="small"
                 variant="outlined"
               />
@@ -391,41 +453,196 @@ export default function PlatformAdministration() {
 
             <Divider sx={{ mb: 2 }} />
 
-            <Box
-              sx={{
-                minHeight: 220,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                textAlign: "center",
-                border: "1px dashed #334155",
-                borderRadius: 2,
-                p: 3,
-              }}
-            >
-              <Box>
-                <Typography
-                  fontWeight={800}
-                  sx={{ mb: 1 }}
-                >
-                  {selectedOrganization
-                    ? "Platform Users Not Yet Loaded"
-                    : "Organization Required"}
-                </Typography>
+            {!selectedOrganization && (
+              <Box
+                sx={{
+                  minHeight: 220,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textAlign: "center",
+                  border: "1px dashed #334155",
+                  borderRadius: 2,
+                  p: 3,
+                }}
+              >
+                <Box>
+                  <Typography
+                    fontWeight={800}
+                    sx={{ mb: 1 }}
+                  >
+                    Organization Required
+                  </Typography>
+
+                  <Typography color="text.secondary">
+                    Configure or select an Organization before
+                    loading Platform Users.
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+
+            {selectedOrganization
+              && isLoadingPlatformUsers && (
+              <Stack
+                alignItems="center"
+                spacing={2}
+                sx={{ py: 7 }}
+              >
+                <CircularProgress size={32} />
 
                 <Typography color="text.secondary">
-                  {selectedOrganization
-                    ? (
-                      "The next increment will load "
-                      + "Organization-scoped Platform Users."
-                    )
-                    : (
-                      "Configure or select an Organization "
-                      + "before loading Platform Users."
-                    )}
+                  Loading Platform Users...
                 </Typography>
+              </Stack>
+            )}
+
+            {selectedOrganization
+              && !isLoadingPlatformUsers
+              && platformUserError && (
+              <Alert severity="error">
+                {platformUserError}
+              </Alert>
+            )}
+
+            {selectedOrganization
+              && !isLoadingPlatformUsers
+              && !platformUserError
+              && platformUsers.length === 0 && (
+              <Box
+                sx={{
+                  minHeight: 220,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textAlign: "center",
+                  border: "1px dashed #334155",
+                  borderRadius: 2,
+                  p: 3,
+                }}
+              >
+                <Box>
+                  <Typography
+                    fontWeight={800}
+                    sx={{ mb: 1 }}
+                  >
+                    No Platform Users Found
+                  </Typography>
+
+                  <Typography color="text.secondary">
+                    This Organization has no Platform Users.
+                    The first administrator bootstrap has not
+                    yet been completed.
+                  </Typography>
+                </Box>
               </Box>
-            </Box>
+            )}
+
+            {selectedOrganization
+              && !isLoadingPlatformUsers
+              && !platformUserError
+              && platformUsers.length > 0 && (
+              <Stack spacing={2}>
+                {platformUsers.map(
+                  (platformUser) => (
+                    <Card
+                      key={platformUser.id}
+                      variant="outlined"
+                    >
+                      <CardContent>
+                        <Stack
+                          direction={{
+                            xs: "column",
+                            sm: "row",
+                          }}
+                          justifyContent="space-between"
+                          spacing={2}
+                        >
+                          <Box>
+                            <Typography
+                              variant="h6"
+                              fontWeight={900}
+                            >
+                              {platformUser.display_name}
+                            </Typography>
+
+                            <Typography color="text.secondary">
+                              {platformUser.email}
+                            </Typography>
+                          </Box>
+
+                          <Chip
+                            label={platformUser.status}
+                            color={
+                              platformUser.status === "Active"
+                                ? "success"
+                                : "info"
+                            }
+                            size="small"
+                          />
+                        </Stack>
+
+                        <Divider sx={{ my: 2 }} />
+
+                        <Stack spacing={1}>
+                          <DetailRow
+                            label="Identity Provider"
+                            value={
+                              platformUser.identity_provider
+                            }
+                          />
+
+                          <DetailRow
+                            label="Bootstrap User"
+                            value={
+                              platformUser
+                                .created_via_bootstrap
+                                ? "Yes"
+                                : "No"
+                            }
+                          />
+
+                          <DetailRow
+                            label="Invited"
+                            value={
+                              platformUser.invited_at
+                                ? new Date(
+                                  platformUser.invited_at,
+                                ).toLocaleString()
+                                : "Never"
+                            }
+                          />
+
+                          <DetailRow
+                            label="Activated"
+                            value={
+                              platformUser.activated_at
+                                ? new Date(
+                                  platformUser.activated_at,
+                                ).toLocaleString()
+                                : "Not activated"
+                            }
+                          />
+
+                          <DetailRow
+                            label="Last Authentication"
+                            value={
+                              platformUser
+                                .last_authenticated_at
+                                ? new Date(
+                                  platformUser
+                                    .last_authenticated_at,
+                                ).toLocaleString()
+                                : "Never"
+                            }
+                          />
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  ),
+                )}
+              </Stack>
+            )}
           </CardContent>
         </Card>
       </Box>
