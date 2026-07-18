@@ -213,7 +213,7 @@ export default function Sidebar() {
     {
       label: "Administration",
       icon: <SettingsIcon />,
-      disabled: true,
+      to: "/platform/administration",
     },
     {
       label: "Connectors",
