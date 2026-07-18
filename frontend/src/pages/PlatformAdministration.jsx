@@ -1,10 +1,21 @@
 import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
   Alert,
   Box,
   Card,
   CardContent,
   Chip,
+  CircularProgress,
   Divider,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
   Stack,
   Typography,
 } from "@mui/material";
@@ -13,8 +24,104 @@ import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import BusinessIcon from "@mui/icons-material/Business";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 
+import api from "../api/usopApi";
+
+
+function DetailRow({
+  label,
+  value,
+}) {
+  return (
+    <Stack
+      direction="row"
+      justifyContent="space-between"
+      spacing={2}
+    >
+      <Typography color="text.secondary">
+        {label}
+      </Typography>
+
+      <Typography
+        fontWeight={700}
+        textAlign="right"
+      >
+        {value || "Not configured"}
+      </Typography>
+    </Stack>
+  );
+}
+
 
 export default function PlatformAdministration() {
+  const [organizations, setOrganizations] = useState([]);
+  const [
+    selectedOrganizationId,
+    setSelectedOrganizationId,
+  ] = useState("");
+  const [isLoadingOrganizations, setIsLoadingOrganizations] =
+    useState(true);
+  const [organizationError, setOrganizationError] =
+    useState(null);
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    api
+      .get("/api/v1/organizations/")
+      .then((response) => {
+        if (!isCurrent) return;
+
+        const records = Array.isArray(response.data)
+          ? response.data
+          : [];
+
+        setOrganizations(records);
+
+        if (records.length === 1) {
+          setSelectedOrganizationId(
+            records[0].id,
+          );
+        }
+      })
+      .catch((error) => {
+        if (!isCurrent) return;
+
+        console.error(
+          "Organization context load failed:",
+          error,
+        );
+
+        setOrganizationError(
+          "Could not load Organization context.",
+        );
+      })
+      .finally(() => {
+        if (isCurrent) {
+          setIsLoadingOrganizations(false);
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
+
+  const selectedOrganization = useMemo(
+    () =>
+      organizations.find(
+        (organization) =>
+          organization.id
+          === selectedOrganizationId,
+      ) || null,
+    [
+      organizations,
+      selectedOrganizationId,
+    ],
+  );
+
+  const organizationCount =
+    organizations.length;
+
   return (
     <Box>
       <Card
@@ -87,7 +194,7 @@ export default function PlatformAdministration() {
           display: "grid",
           gridTemplateColumns: {
             xs: "1fr",
-            lg: "minmax(280px, 360px) 1fr",
+            lg: "minmax(320px, 420px) 1fr",
           },
           gap: 3,
         }}
@@ -108,21 +215,140 @@ export default function PlatformAdministration() {
               >
                 Organization
               </Typography>
+
+              {!isLoadingOrganizations && (
+                <Chip
+                  label={`${organizationCount} FOUND`}
+                  size="small"
+                  variant="outlined"
+                />
+              )}
             </Stack>
 
             <Divider sx={{ mb: 2 }} />
 
-            <Typography
-              color="text.secondary"
-              sx={{ mb: 1 }}
-            >
-              Organization context has not been loaded.
-            </Typography>
+            {isLoadingOrganizations && (
+              <Stack
+                alignItems="center"
+                spacing={2}
+                sx={{ py: 5 }}
+              >
+                <CircularProgress size={32} />
 
-            <Typography variant="body2">
-              The next increment will resolve the current
-              Organization through the existing Organization API.
-            </Typography>
+                <Typography color="text.secondary">
+                  Loading Organization context...
+                </Typography>
+              </Stack>
+            )}
+
+            {!isLoadingOrganizations
+              && organizationError && (
+              <Alert severity="error">
+                {organizationError}
+              </Alert>
+            )}
+
+            {!isLoadingOrganizations
+              && !organizationError
+              && organizationCount === 0 && (
+              <Alert severity="warning">
+                No USOP Organizations are configured.
+                Create the initial Organization before
+                Platform Users can be administered.
+              </Alert>
+            )}
+
+            {!isLoadingOrganizations
+              && !organizationError
+              && organizationCount > 1 && (
+              <FormControl
+                fullWidth
+                size="small"
+                sx={{ mb: 3 }}
+              >
+                <InputLabel id="organization-select-label">
+                  Organization
+                </InputLabel>
+
+                <Select
+                  labelId="organization-select-label"
+                  value={selectedOrganizationId}
+                  label="Organization"
+                  onChange={(event) =>
+                    setSelectedOrganizationId(
+                      event.target.value,
+                    )
+                  }
+                >
+                  {organizations.map(
+                    (organization) => (
+                      <MenuItem
+                        key={organization.id}
+                        value={organization.id}
+                      >
+                        {organization.name}
+                      </MenuItem>
+                    ),
+                  )}
+                </Select>
+              </FormControl>
+            )}
+
+            {selectedOrganization && (
+              <Stack spacing={1.5}>
+                <Box>
+                  <Typography
+                    variant="h6"
+                    fontWeight={900}
+                  >
+                    {selectedOrganization.name}
+                  </Typography>
+
+                  <Typography color="text.secondary">
+                    {selectedOrganization.slug}
+                  </Typography>
+                </Box>
+
+                <Divider />
+
+                <DetailRow
+                  label="Status"
+                  value={selectedOrganization.status}
+                />
+
+                <DetailRow
+                  label="Type"
+                  value={
+                    selectedOrganization
+                      .organization_type
+                  }
+                />
+
+                <DetailRow
+                  label="Primary Domain"
+                  value={
+                    selectedOrganization
+                      .primary_domain
+                  }
+                />
+
+                <DetailRow
+                  label="Time Zone"
+                  value={
+                    selectedOrganization
+                      .time_zone
+                  }
+                />
+
+                <DetailRow
+                  label="Deployment"
+                  value={
+                    selectedOrganization
+                      .deployment_identifier
+                  }
+                />
+              </Stack>
+            )}
           </CardContent>
         </Card>
 
@@ -182,12 +408,21 @@ export default function PlatformAdministration() {
                   fontWeight={800}
                   sx={{ mb: 1 }}
                 >
-                  No Platform Users Loaded
+                  {selectedOrganization
+                    ? "Platform Users Not Yet Loaded"
+                    : "Organization Required"}
                 </Typography>
 
                 <Typography color="text.secondary">
-                  Platform Users will appear after an
-                  Organization context is resolved.
+                  {selectedOrganization
+                    ? (
+                      "The next increment will load "
+                      + "Organization-scoped Platform Users."
+                    )
+                    : (
+                      "Configure or select an Organization "
+                      + "before loading Platform Users."
+                    )}
                 </Typography>
               </Box>
             </Box>
