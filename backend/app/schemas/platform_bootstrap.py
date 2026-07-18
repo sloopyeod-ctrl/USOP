@@ -1,4 +1,71 @@
-﻿from pydantic import BaseModel, ConfigDict
+﻿from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    field_validator,
+)
+
+
+class PlatformBootstrapRequest(BaseModel):
+    """
+    Client-supplied identity facts for the initial Platform Administrator.
+
+    Organization scope, actor attribution, authorization, role assignment,
+    licensing, audit data, and transaction control remain server-owned.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+
+    display_name: str = Field(
+        min_length=1,
+        max_length=255,
+    )
+
+    email: EmailStr
+
+    identity_provider: str = Field(
+        min_length=1,
+        max_length=255,
+    )
+
+    external_tenant_id: str = Field(
+        min_length=1,
+        max_length=255,
+    )
+
+    external_subject_id: str = Field(
+        min_length=1,
+        max_length=255,
+    )
+
+    identity_issuer: str | None = Field(
+        default=None,
+        max_length=2048,
+    )
+
+    @field_validator(
+        "display_name",
+        "identity_provider",
+        "external_tenant_id",
+        "external_subject_id",
+        "identity_issuer",
+        mode="before",
+    )
+    @classmethod
+    def normalize_string(
+        cls,
+        value,
+    ):
+        if value is None:
+            return None
+
+        if not isinstance(value, str):
+            return value
+
+        return value.strip()
 
 
 class PlatformBootstrapResult(BaseModel):
