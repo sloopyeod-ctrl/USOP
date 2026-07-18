@@ -5,6 +5,7 @@ import ExecutiveDashboard from "./pages/ExecutiveDashboard";
 import IdentityIntelligence from "./pages/IdentityIntelligence";
 import IdentityExplorer from "./pages/IdentityExplorer";
 import AnalystWorkspace from "./pages/AnalystWorkspace";
+import PlatformAdministration from "./pages/PlatformAdministration";
 
 export default function App() {
   return (
@@ -14,6 +15,10 @@ export default function App() {
         <Route path="/identity/:id" element={<IdentityIntelligence />} />
         <Route path="/explorer/:identityId" element={<IdentityExplorer />} />
         <Route path="/workspace/:identityId" element={<AnalystWorkspace />} />
+        <Route
+          path="/platform/administration"
+          element={<PlatformAdministration />}
+        />
       </Routes>
     </Layout>
   );
