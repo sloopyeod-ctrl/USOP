@@ -254,6 +254,76 @@ class PlatformUserService:
                 "because the Organization changed concurrently."
             ) from error
 
+    def list_for_organization(
+        self,
+        organization_id: str,
+    ) -> list[PlatformUser]:
+        """
+        Return Platform Users belonging to one known Organization.
+
+        This read operation does not authenticate the caller, grant
+        authorization, allocate Seats, or manage a transaction.
+        """
+
+        organization = (
+            self.organization_repository.get_by_id(
+                organization_id
+            )
+        )
+
+        if organization is None:
+            raise PlatformUserOrganizationNotFoundError(
+                "The Platform User query references "
+                "an unknown Organization."
+            )
+
+        return (
+            self.platform_user_repository
+            .list_for_organization(
+                organization.id
+            )
+        )
+
+    def get_by_id(
+        self,
+        *,
+        organization_id: str,
+        platform_user_id: str,
+    ) -> PlatformUser | None:
+        """
+        Return one Platform User only within the requested Organization.
+
+        A Platform User from another Organization is treated as not found so
+        the service does not disclose cross-Organization record existence.
+        """
+
+        organization = (
+            self.organization_repository.get_by_id(
+                organization_id
+            )
+        )
+
+        if organization is None:
+            raise PlatformUserOrganizationNotFoundError(
+                "The Platform User query references "
+                "an unknown Organization."
+            )
+
+        platform_user = (
+            self.platform_user_repository.get_by_id(
+                platform_user_id
+            )
+        )
+
+        if (
+            platform_user is None
+            or platform_user.organization_id
+            != organization.id
+        ):
+            return None
+
+        return platform_user
+
     def bootstrap_first_administrator(
         self,
         *,
