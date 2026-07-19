@@ -1,4 +1,4 @@
-﻿from app.domain.acceptance_type import AcceptanceType
+from app.domain.acceptance_type import AcceptanceType
 from app.domain.approval_status import ApprovalStatus
 from app.domain.authorization_risk_level import (
     AuthorizationRiskLevel,
@@ -22,3 +22,11 @@ __all__ = [
     "RoleType",
     "VerificationStatus",
 ]
+
+from app.domain.knowledge_article_status import (
+    KnowledgeArticleStatus,
+)
+
+from app.domain.knowledge_category import (
+    KnowledgeCategory,
+)
