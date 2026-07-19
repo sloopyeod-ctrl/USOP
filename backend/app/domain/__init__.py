@@ -23,8 +23,8 @@ __all__ = [
     "VerificationStatus",
 ]
 
-from app.domain.knowledge_article_status import (
-    KnowledgeArticleStatus,
+from app.domain.knowledge_asset_status import (
+    KnowledgeAssetStatus,
 )
 
 from app.domain.knowledge_category import (

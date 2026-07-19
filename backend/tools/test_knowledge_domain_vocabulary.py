@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 from pathlib import Path
 
 
@@ -7,7 +7,7 @@ sys.path.insert(0, str(BACKEND_ROOT))
 
 
 from app.domain import (
-    KnowledgeArticleStatus,
+    KnowledgeAssetStatus,
     KnowledgeCategory,
 )
 
@@ -22,14 +22,14 @@ def main() -> int:
     print("-------------------------------------------")
 
     checks = {
-        "KnowledgeArticleStatus unique": (
-            validate_unique(KnowledgeArticleStatus)
+        "KnowledgeAssetStatus unique": (
+            validate_unique(KnowledgeAssetStatus)
         ),
         "KnowledgeCategory unique": (
             validate_unique(KnowledgeCategory)
         ),
         "Draft lifecycle exists": (
-            KnowledgeArticleStatus.DRAFT.value
+            KnowledgeAssetStatus.DRAFT.value
             == "Draft"
         ),
         "Identity Resolution exists": (
