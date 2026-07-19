@@ -22,3 +22,4 @@
 | ADR-016 | Continuous Access Reviews | Accepted |
 | ADR-017 | Evolution Before Replacement | Accepted |
 | ADR-018 | Canonical Relationship Model | Accepted |
+| ADR-019 | Organizational Memory and Evidence Architecture | Accepted |
