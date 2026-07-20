@@ -281,4 +281,14 @@ USOP represents my vision for a modern, intelligence-driven security operations 
 
 # License
 
-MIT License
+## License and Ownership
+
+© 2026 Marvin Dewitt. All rights reserved.
+
+This repository contains the public artifacts of the Marvin Security Platform.
+The core backend and associated services are licensed separately and are
+not open source.
+
+Use of this platform, including its backend services and APIs, is governed
+by the proprietary Marvin Security Platform License. For licensing inquiries,
+contact: mgeoffdewitt@gmail.com
