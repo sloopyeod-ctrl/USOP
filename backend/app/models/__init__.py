@@ -14,6 +14,7 @@ from app.models.governance_policy import GovernancePolicy
 from app.models.group import Group
 from app.models.identity import Identity
 from app.models.identity_attribute import IdentityAttribute
+from app.models.knowledge_asset import KnowledgeAsset
 from app.models.membership import Membership
 from app.models.organization import Organization
 from app.models.license import License
@@ -38,6 +39,7 @@ __all__ = [
     "Group",
     "Identity",
     "IdentityAttribute",
+    "KnowledgeAsset",
     "Membership",
     "Organization",
     "License",
