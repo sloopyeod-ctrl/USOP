@@ -1,4 +1,4 @@
-﻿from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.domain import (
@@ -12,6 +12,7 @@ from app.repositories.knowledge_asset_repository import (
 from app.repositories.organization_repository import (
     OrganizationRepository,
 )
+from app.services.audit_service import AuditService
 
 
 class KnowledgeAssetServiceError(ValueError):
@@ -60,6 +61,7 @@ class KnowledgeAssetService:
         self.db = db
         self.organization_repository = OrganizationRepository(db)
         self.repository = KnowledgeAssetRepository(db)
+        self.audit_service = AuditService(db)
 
     def _require_organization(
         self,
@@ -266,9 +268,45 @@ class KnowledgeAssetService:
         )
 
         try:
-            return self.repository.create(
+            knowledge_asset = self.repository.create(
                 knowledge_asset
             )
+
+            self.audit_service.record_pending(
+                event_type="KnowledgeAssetCreated",
+                entity_type="KnowledgeAsset",
+                entity_id=knowledge_asset.id,
+                actor=actor,
+                message=(
+                    f"Knowledge Asset '{knowledge_asset.title}' "
+                    f"version {knowledge_asset.version} was created."
+                ),
+                metadata={
+                    "organization_id": organization.id,
+                    "knowledge_asset_id": knowledge_asset.id,
+                    "title": knowledge_asset.title,
+                    "version": knowledge_asset.version,
+                    "category": knowledge_asset.category,
+                    "status": knowledge_asset.status,
+                    "source_system": (
+                        knowledge_asset.source_system
+                    ),
+                    "source_identifier": (
+                        knowledge_asset.source_identifier
+                    ),
+                    "confidence_score": (
+                        knowledge_asset.confidence_score
+                    ),
+                    "transaction_mode": "CallerOwned",
+                    "actor_trust": (
+                        "CallerSupplied"
+                        if actor
+                        else "Unattributed"
+                    ),
+                },
+            )
+
+            return knowledge_asset
 
         except IntegrityError as error:
             raise KnowledgeAssetDuplicateVersionError(
