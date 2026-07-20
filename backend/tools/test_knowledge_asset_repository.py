@@ -135,8 +135,8 @@ def main() -> int:
         secondary_asset = repository.create(
             build_knowledge_asset(
                 organization_id=secondary_organization.id,
-                title="Secondary Organization Guidance",
-                version=1,
+                title="Snowflake Naming Convention",
+                version=7,
                 category=KnowledgeCategory.IDENTITY_RESOLUTION,
                 status=KnowledgeAssetStatus.ACTIVE,
             )
@@ -164,6 +164,52 @@ def main() -> int:
         if cross_organization_lookup is not None:
             errors.append(
                 "Lookup by ID crossed the Organization boundary."
+            )
+
+        latest_version = repository.get_latest_version(
+            organization_id=primary_organization.id,
+            title="Snowflake Naming Convention",
+        )
+
+        if latest_version is None:
+            errors.append(
+                "Latest-version lookup returned no record."
+            )
+        elif latest_version.id != naming_v2.id:
+            errors.append(
+                "Latest-version lookup did not return the "
+                "highest primary-Organization version."
+            )
+
+        latest_version_wrong_organization = (
+            repository.get_latest_version(
+                organization_id=secondary_organization.id,
+                title="Snowflake Naming Convention",
+            )
+        )
+
+        if latest_version_wrong_organization is None:
+            errors.append(
+                "Secondary Organization latest-version lookup "
+                "returned no record."
+            )
+        elif (
+            latest_version_wrong_organization.id
+            != secondary_asset.id
+        ):
+            errors.append(
+                "Latest-version lookup crossed the Organization boundary."
+            )
+
+        missing_latest_version = repository.get_latest_version(
+            organization_id=primary_organization.id,
+            title="Unknown Knowledge Asset",
+        )
+
+        if missing_latest_version is not None:
+            errors.append(
+                "Latest-version lookup returned a record for an "
+                "unknown title."
             )
 
         organization_assets = repository.list_for_organization(
@@ -349,6 +395,18 @@ def main() -> int:
             f"{cross_organization_lookup is None}"
         )
         print(
+            "Latest primary version selected: "
+            f"{latest_version.id == naming_v2.id}"
+        )
+        print(
+            "Latest-version Organization isolation: "
+            f"{latest_version_wrong_organization.id == secondary_asset.id}"
+        )
+        print(
+            "Unknown title returns no latest version: "
+            f"{missing_latest_version is None}"
+        )
+        print(
             "Organization listing deterministic: "
             f"{organization_asset_ids == expected_organization_asset_ids}"
         )
@@ -377,10 +435,10 @@ def main() -> int:
         print("Validation: PASSED")
         print(
             "KnowledgeAssetRepository provides deterministic, "
-            "Organization-scoped persistence and retrieval while preserving "
-            "service-layer transaction ownership and separation from "
-            "lifecycle rules, version calculation, authorization, workflow, "
-            "and relationship management."
+            "Organization-scoped persistence, retrieval, and latest-version "
+            "selection while preserving service-layer transaction ownership "
+            "and separation from lifecycle rules, version allocation, "
+            "authorization, workflow, and relationship management."
         )
 
         return 0

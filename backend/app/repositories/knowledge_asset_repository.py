@@ -1,4 +1,4 @@
-﻿from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session
 
 from app.models.knowledge_asset import KnowledgeAsset
 
@@ -52,6 +52,35 @@ class KnowledgeAssetRepository:
             .one_or_none()
         )
 
+    def get_latest_version(
+        self,
+        *,
+        organization_id: str,
+        title: str,
+    ) -> KnowledgeAsset | None:
+        """
+        Return the highest stored version for one title within one
+        Organization.
+
+        This method retrieves persisted version history only. Version
+        allocation remains a KnowledgeAssetService responsibility.
+        """
+
+        return (
+            self.db.query(KnowledgeAsset)
+            .filter(
+                KnowledgeAsset.organization_id
+                == organization_id,
+                KnowledgeAsset.title
+                == title,
+            )
+            .order_by(
+                KnowledgeAsset.version.desc(),
+                KnowledgeAsset.created_at.desc(),
+                KnowledgeAsset.id.desc(),
+            )
+            .first()
+        )
     def list_for_organization(
         self,
         organization_id: str,
