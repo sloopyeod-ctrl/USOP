@@ -10,7 +10,9 @@ from app.domain.role_type import RoleType
 from app.domain.verification_status import (
     VerificationStatus,
 )
-
+from app.domain.knowledge_relationship_type import (
+    KnowledgeRelationshipType,
+)
 
 __all__ = [
     "AcceptanceType",
