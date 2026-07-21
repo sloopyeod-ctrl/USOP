@@ -230,7 +230,6 @@ def main() -> int:
             )
 
         prohibited_methods = {
-            "create",
             "create_version",
             "allocate_version",
             "approve",
@@ -254,7 +253,7 @@ def main() -> int:
 
         if exposed_prohibited_methods:
             errors.append(
-                "Read-only KnowledgeAssetService exposes prohibited methods: "
+                "KnowledgeAssetService exposes prohibited methods: "
                 + ", ".join(exposed_prohibited_methods)
             )
 
@@ -294,19 +293,19 @@ def main() -> int:
 
         if persisted_primary_organization is not None:
             errors.append(
-                "Read-only service unexpectedly committed "
+                "KnowledgeAssetService unexpectedly committed "
                 "the primary Organization."
             )
 
         if persisted_secondary_organization is not None:
             errors.append(
-                "Read-only service unexpectedly committed "
+                "KnowledgeAssetService unexpectedly committed "
                 "the secondary Organization."
             )
 
         if persisted_asset_count != 0:
             errors.append(
-                "Read-only service unexpectedly committed "
+                "KnowledgeAssetService unexpectedly committed "
                 "KnowledgeAsset records."
             )
 
@@ -356,17 +355,18 @@ def main() -> int:
             f"{bool(exposed_prohibited_methods)}"
         )
         print(
-            "Read service committed transaction: "
+            "Service unexpectedly committed transaction: "
             f"{persisted_asset_count != 0}"
         )
 
         print()
         print("Validation: PASSED")
         print(
-            "KnowledgeAssetService provides read-only, deterministic, "
-            "Organization-scoped Organizational Memory access while "
-            "preserving confidentiality, repository boundaries, and "
-            "caller-owned transaction state."
+            "KnowledgeAssetService provides deterministic, "
+            "Organization-scoped Organizational Memory services "
+            "while preserving confidentiality, repository "
+            "boundaries, and caller-owned transaction behavior "
+            "for pending workflows."
         )
 
         return 0

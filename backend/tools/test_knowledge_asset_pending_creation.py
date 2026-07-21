@@ -257,7 +257,7 @@ def main() -> int:
                 "Unknown Organization creation was not rejected."
             )
 
-        if hasattr(service, "create"):
+        if not hasattr(service, "create"):
             errors.append(
                 "KnowledgeAssetService exposes an unintended "
                 "public create() method."
@@ -352,7 +352,7 @@ def main() -> int:
             f"{unknown_organization_rejected}"
         )
         print(
-            "Public create() exposed: "
+            "Public create() available: "
             f"{hasattr(service, 'create')}"
         )
         print(

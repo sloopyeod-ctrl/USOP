@@ -314,6 +314,52 @@ class KnowledgeAssetService:
                 "because the Organization, title, and version "
                 "combination already exists."
             ) from error
+    def create(
+        self,
+        *,
+        organization_id: str,
+        title: str,
+        guidance: str,
+        category: KnowledgeCategory | str,
+        status: KnowledgeAssetStatus | str = (
+            KnowledgeAssetStatus.DRAFT
+        ),
+        summary: str | None = None,
+        source_system: str | None = None,
+        source_identifier: str | None = None,
+        confidence_score: int = 100,
+        actor: str | None = None,
+    ) -> KnowledgeAsset:
+        """
+        Public committed KnowledgeAsset creation workflow.
+
+        This method owns the transaction while delegating all
+        validation, normalization, version allocation, repository
+        persistence, and pending audit creation to create_pending().
+        """
+
+        try:
+            knowledge_asset = self.create_pending(
+                organization_id=organization_id,
+                title=title,
+                guidance=guidance,
+                category=category,
+                status=status,
+                summary=summary,
+                source_system=source_system,
+                source_identifier=source_identifier,
+                confidence_score=confidence_score,
+                actor=actor,
+            )
+
+            self.db.commit()
+            self.db.refresh(knowledge_asset)
+
+            return knowledge_asset
+
+        except Exception:
+            self.db.rollback()
+            raise
 
     def list_for_organization(
         self,
