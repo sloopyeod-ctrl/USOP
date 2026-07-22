@@ -76,6 +76,30 @@ def test_list_for_knowledge_asset_uses_active_deterministic_query():
 
     assert result == expected
 
+def test_get_relationship_returns_exact_match_without_side_effects():
+    db = MagicMock()
+    query = db.query.return_value
+    filtered_query = query.filter.return_value
+    expected = MagicMock(spec=DecisionKnowledge)
+
+    filtered_query.one_or_none.return_value = expected
+
+    repository = DecisionKnowledgeRepository(db)
+
+    result = repository.get_relationship(
+        decision_record_id="decision-1",
+        knowledge_asset_id="knowledge-1",
+        relationship_type="Reference",
+    )
+
+    db.query.assert_called_once_with(DecisionKnowledge)
+    query.filter.assert_called_once()
+    filtered_query.one_or_none.assert_called_once_with()
+
+    db.commit.assert_not_called()
+    db.rollback.assert_not_called()
+
+    assert result is expected
 
 def test_repository_exposes_only_expected_public_operations():
     public_operations = {
@@ -86,6 +110,7 @@ def test_repository_exposes_only_expected_public_operations():
 
     assert public_operations == {
         "create",
+        "get_relationship",
         "list_for_decision",
         "list_for_knowledge_asset",
     }

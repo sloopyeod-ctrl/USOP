@@ -32,6 +32,30 @@ class DecisionKnowledgeRepository:
 
         return relationship
 
+    def get_relationship(
+        self,
+        *,
+        decision_record_id: str,
+        knowledge_asset_id: str,
+        relationship_type: str,
+    ) -> DecisionKnowledge | None:
+        """
+        Return one canonical DecisionKnowledge relationship if it exists.
+        """
+
+        return (
+            self.db.query(DecisionKnowledge)
+            .filter(
+                DecisionKnowledge.decision_record_id
+                == decision_record_id,
+                DecisionKnowledge.knowledge_asset_id
+                == knowledge_asset_id,
+                DecisionKnowledge.relationship_type
+                == relationship_type,
+            )
+            .one_or_none()
+        )    
+
     def list_for_decision(
         self,
         decision_record_id: str,
