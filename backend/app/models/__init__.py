@@ -28,6 +28,7 @@ from app.models.review_campaign import ReviewCampaign
 from app.models.role import Role
 from app.models.role_assignment import RoleAssignment
 from app.models.role_permission import RolePermission
+from app.models.decision_knowledge import DecisionKnowledge
 
 
 __all__ = [
@@ -35,6 +36,7 @@ __all__ = [
     "Account",
     "AuditEvent",
     "DecisionRecord",
+    "DecisionKnowledge",
     "GovernancePolicy",
     "Group",
     "Identity",
