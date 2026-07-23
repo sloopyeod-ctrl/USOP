@@ -13,6 +13,7 @@ from app.domain import (
 
 class DecisionRecordCreate(BaseModel):
     identity_id: str
+    organization_id: str
 
     decision_type: DecisionType
     status: DecisionStatus = DecisionStatus.DRAFT

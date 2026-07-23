@@ -1,4 +1,4 @@
-﻿from typing import Any
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -23,7 +23,7 @@ from app.services.audit_service import AuditService
 
 class DecisionRecordService:
     """
-    Create authoritative DecisionRecords from current USOP intelligence.
+    Create and retrieve authoritative organization-scoped DecisionRecords.
 
     Client input supplies organizational judgment only. Technical context is
     retrieved and populated by the backend.
@@ -45,17 +45,40 @@ class DecisionRecordService:
             IdentityIntelligenceService(db)
         )
 
-    def list_all(self):
-        return self.repository.list_all()
+    def list_for_organization(
+        self,
+        organization_id: str,
+    ) -> list:
+        return self.repository.list_for_organization(
+            organization_id
+        )
 
-    def get_by_id(self, decision_id: str):
-        return self.repository.get_by_id(decision_id)
+    def get_by_id(
+        self,
+        *,
+        organization_id: str,
+        decision_id: str,
+    ):
+        return self.repository.get_by_id_for_organization(
+            organization_id=organization_id,
+            decision_id=decision_id,
+        )
 
-    def by_identity(self, identity_id: str):
-        return self.repository.by_identity(identity_id)
+    def by_identity(
+        self,
+        *,
+        organization_id: str,
+        identity_id: str,
+    ) -> list:
+        return self.repository.by_identity(
+            organization_id=organization_id,
+            identity_id=identity_id,
+        )
 
     def create_from_recommendation(
         self,
+        *,
+        organization_id: str,
         identity_id: str,
         recommendation_index: int,
         action: DecisionRecordAction,
@@ -66,7 +89,9 @@ class DecisionRecordService:
         )
 
         if intelligence is None:
-            raise ValueError("Identity intelligence was not found.")
+            raise ValueError(
+                "Identity intelligence was not found."
+            )
 
         recommendations = intelligence.get(
             "recommendations",
@@ -95,6 +120,7 @@ class DecisionRecordService:
         ]
 
         payload = DecisionRecordCreate(
+            organization_id=organization_id,
             identity_id=identity_id,
             decision_type=action.decision_type,
             status=status,
@@ -157,9 +183,11 @@ class DecisionRecordService:
             actor=action.actor,
             message=(
                 f"{action.decision_type.value} decision "
-                f"recorded for {identity.get('display_name') or identity_id}."
+                f"recorded for "
+                f"{identity.get('display_name') or identity_id}."
             ),
             metadata={
+                "organization_id": organization_id,
                 "identity_id": identity_id,
                 "decision_type": (
                     action.decision_type.value

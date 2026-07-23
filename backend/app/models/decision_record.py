@@ -1,4 +1,4 @@
-﻿from datetime import datetime
+from datetime import datetime
 
 from sqlalchemy import (
     DateTime,
@@ -27,6 +27,13 @@ class DecisionRecord(BaseSourceModel):
     """
 
     __tablename__ = "decision_records"
+
+    organization_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("organizations.id"),
+        nullable=False,
+        index=True,
+    )
 
     identity_id: Mapped[str] = mapped_column(
         String(36),
