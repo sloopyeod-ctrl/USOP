@@ -157,3 +157,35 @@ class KnowledgeAssetRepository:
             )
             .all()
         )
+
+    def list_by_ids(
+        self,
+        *,
+        organization_id: str,
+        knowledge_asset_ids: list[str],
+    ) -> list[KnowledgeAsset]:
+        """
+        Return KnowledgeAssets matching the requested IDs inside one
+        Organization boundary.
+
+        This bulk lookup supports intelligence projections without creating
+        one database query per relationship.
+        """
+
+        if not knowledge_asset_ids:
+            return []
+
+        return (
+            self.db.query(KnowledgeAsset)
+            .filter(
+                KnowledgeAsset.organization_id
+                == organization_id,
+                KnowledgeAsset.id.in_(
+                    knowledge_asset_ids
+                ),
+            )
+            .order_by(
+                KnowledgeAsset.id.asc(),
+            )
+            .all()
+        )

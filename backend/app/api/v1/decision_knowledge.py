@@ -7,8 +7,13 @@ from fastapi import (
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.intelligence.decision_knowledge_intelligence_service import (
+    DecisionKnowledgeIntelligenceIntegrityError,
+    DecisionKnowledgeIntelligenceService,
+)
 from app.schemas.decision_knowledge import (
     DecisionKnowledgeCreate,
+    DecisionKnowledgeIntelligenceRead,
     DecisionKnowledgeRead,
 )
 from app.services.decision_knowledge_service import (
@@ -82,7 +87,9 @@ def create_decision_knowledge(
 
 @router.get(
     "/",
-    response_model=list[DecisionKnowledgeRead],
+    response_model=list[
+        DecisionKnowledgeIntelligenceRead
+    ],
 )
 def list_decision_knowledge(
     organization_id: str,
@@ -90,13 +97,15 @@ def list_decision_knowledge(
     db: Session = Depends(get_db),
 ):
     """
-    Return active knowledge relationships for one DecisionRecord inside the
-    requested Organization.
+    Return analyst-ready Organizational Memory for one DecisionRecord.
+
+    The backend assembles relationship meaning and governed knowledge so
+    clients do not need additional KnowledgeAsset lookups.
     """
 
     try:
         return (
-            DecisionKnowledgeService(db)
+            DecisionKnowledgeIntelligenceService(db)
             .list_for_decision(
                 organization_id=organization_id,
                 decision_record_id=decision_record_id,
@@ -106,5 +115,13 @@ def list_decision_knowledge(
     except DecisionKnowledgeDecisionNotFoundError as error:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(error),
+        ) from error
+
+    except (
+        DecisionKnowledgeIntelligenceIntegrityError
+    ) as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
             detail=str(error),
         ) from error

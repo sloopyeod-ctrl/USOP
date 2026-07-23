@@ -6,6 +6,9 @@ import pytest
 from fastapi import HTTPException, status
 
 from app.api.v1 import decision_knowledge as api
+from app.intelligence.decision_knowledge_intelligence_service import (
+    DecisionKnowledgeIntelligenceIntegrityError,
+)
 from app.domain import KnowledgeRelationshipType
 from app.main import app
 from app.schemas.decision_knowledge import (
@@ -72,6 +75,23 @@ def install_service(
     return service_factory
 
 
+def install_intelligence_service(
+    monkeypatch,
+    service: Mock,
+):
+    service_factory = Mock(
+        return_value=service
+    )
+
+    monkeypatch.setattr(
+        api,
+        "DecisionKnowledgeIntelligenceService",
+        service_factory,
+    )
+
+    return service_factory
+
+
 def test_openapi_exposes_exact_decision_knowledge_methods():
     paths = app.openapi()["paths"]
 
@@ -100,7 +120,7 @@ def test_openapi_uses_canonical_response_models():
 
     assert list_schema["type"] == "array"
     assert list_schema["items"]["$ref"].endswith(
-        "/DecisionKnowledgeRead"
+        "/DecisionKnowledgeIntelligenceRead"
     )
 
 
@@ -222,7 +242,7 @@ def test_list_delegates_to_scoped_service(
     service = Mock()
     service.list_for_decision.return_value = expected
 
-    service_factory = install_service(
+    service_factory = install_intelligence_service(
         monkeypatch,
         service,
     )
@@ -255,7 +275,7 @@ def test_list_translates_missing_scoped_decision(
     service = Mock()
     service.list_for_decision.side_effect = error
 
-    install_service(
+    install_intelligence_service(
         monkeypatch,
         service,
     )
@@ -280,3 +300,36 @@ def test_router_does_not_expose_other_mutation_methods():
     assert "put" not in methods
     assert "patch" not in methods
     assert "delete" not in methods
+
+
+
+
+
+
+def test_list_translates_projection_integrity_error(
+    monkeypatch,
+):
+    error = DecisionKnowledgeIntelligenceIntegrityError(
+        "Knowledge projection could not be assembled."
+    )
+
+    service = Mock()
+    service.list_for_decision.side_effect = error
+
+    install_intelligence_service(
+        monkeypatch,
+        service,
+    )
+
+    with pytest.raises(HTTPException) as caught:
+        api.list_decision_knowledge(
+            organization_id="organization-001",
+            decision_record_id="decision-001",
+            db=object(),
+        )
+
+    assert (
+        caught.value.status_code
+        == status.HTTP_409_CONFLICT
+    )
+    assert caught.value.detail == str(error)
