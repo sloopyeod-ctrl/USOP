@@ -255,3 +255,45 @@ def test_list_for_decision_enforces_organization_boundary(
             DECISION_ID
         )
     )
+
+
+def test_create_commits_and_refreshes_relationship(
+    service: DecisionKnowledgeService,
+):
+    relationship = service.create(
+        organization_id=ORGANIZATION_ID,
+        decision_record_id=DECISION_ID,
+        knowledge_asset_id=KNOWLEDGE_ASSET_ID,
+        relationship_type="Reference",
+    )
+
+    assert relationship.id == RELATIONSHIP_ID
+
+    service.db.commit.assert_called_once_with()
+    service.db.refresh.assert_called_once_with(
+        relationship
+    )
+    service.db.rollback.assert_not_called()
+
+
+def test_create_rolls_back_when_pending_creation_fails(
+    service: DecisionKnowledgeService,
+):
+    service.relationship_repository.create.side_effect = (
+        RuntimeError("persistence failed")
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="persistence failed",
+    ):
+        service.create(
+            organization_id=ORGANIZATION_ID,
+            decision_record_id=DECISION_ID,
+            knowledge_asset_id=KNOWLEDGE_ASSET_ID,
+            relationship_type="Reference",
+        )
+
+    service.db.commit.assert_not_called()
+    service.db.refresh.assert_not_called()
+    service.db.rollback.assert_called_once_with()

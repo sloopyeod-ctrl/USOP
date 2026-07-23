@@ -272,3 +272,38 @@ class DecisionKnowledgeService:
                 decision.id
             )
         )
+
+    def create(
+        self,
+        *,
+        organization_id: str,
+        decision_record_id: str,
+        knowledge_asset_id: str,
+        relationship_type: KnowledgeRelationshipType | str,
+        actor: str | None = None,
+    ) -> DecisionKnowledge:
+        """
+        Public committed DecisionKnowledge creation workflow.
+
+        This method owns commit and rollback while delegating validation,
+        normalization, duplicate prevention, pending persistence, and audit
+        creation to create_pending().
+        """
+
+        try:
+            relationship = self.create_pending(
+                organization_id=organization_id,
+                decision_record_id=decision_record_id,
+                knowledge_asset_id=knowledge_asset_id,
+                relationship_type=relationship_type,
+                actor=actor,
+            )
+
+            self.db.commit()
+            self.db.refresh(relationship)
+
+            return relationship
+
+        except Exception:
+            self.db.rollback()
+            raise
