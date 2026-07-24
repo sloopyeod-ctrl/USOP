@@ -1,51 +1,98 @@
-import { useEffect, useMemo, useState } from "react";
-import { Alert, Box, CircularProgress } from "@mui/material";
-import { useParams } from "react-router-dom";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
+  Alert,
+  Box,
+  CircularProgress,
+} from "@mui/material";
+
+import {
+  useParams,
+} from "react-router-dom";
 
 import api from "../api/usopApi";
-import useWorkspaceState from "../hooks/useWorkspaceState";
+import useOrganizationContext from
+  "../hooks/useOrganizationContext";
+import useWorkspaceState from
+  "../hooks/useWorkspaceState";
 
-import WorkspaceHeader from "../components/workspace/WorkspaceHeader";
-import { DecisionWorkspace } from "../components/decision";
-import MissionStatusCard from "../components/workspace/MissionStatusCard";
-import RiskSummaryCard from "../components/workspace/RiskSummaryCard";
-import RemediationImpactCard from "../components/workspace/RemediationImpactCard";
-import AnimatedRiskMetrics from "../components/workspace/AnimatedRiskMetrics";
+import WorkspaceHeader from
+  "../components/workspace/WorkspaceHeader";
+import OrganizationContextBanner from
+  "../components/workspace/OrganizationContextBanner";
+import {
+  DecisionWorkspace,
+} from "../components/decision";
+import MissionStatusCard from
+  "../components/workspace/MissionStatusCard";
+import RiskSummaryCard from
+  "../components/workspace/RiskSummaryCard";
+import RemediationImpactCard from
+  "../components/workspace/RemediationImpactCard";
+import AnimatedRiskMetrics from
+  "../components/workspace/AnimatedRiskMetrics";
 
-import IdentityGraphPanel from "../components/workspace/IdentityGraphPanel";
-import MissionContextPanel from "../components/workspace/MissionContextPanel";
-import ImmediateActionsPanel from "../components/workspace/ImmediateActionsPanel";
-import RecentActivityPanel from "../components/workspace/RecentActivityPanel";
-import AttackSimulationPanel from "../components/workspace/AttackSimulationPanel";
+import IdentityGraphPanel from
+  "../components/workspace/IdentityGraphPanel";
+import MissionContextPanel from
+  "../components/workspace/MissionContextPanel";
+import ImmediateActionsPanel from
+  "../components/workspace/ImmediateActionsPanel";
+import RecentActivityPanel from
+  "../components/workspace/RecentActivityPanel";
+import AttackSimulationPanel from
+  "../components/workspace/AttackSimulationPanel";
 
-import DecisionRenderer from "../intelligence/DecisionRenderer";
+import DecisionRenderer from
+  "../intelligence/DecisionRenderer";
 
 import {
   applyGraphAnimationMetadata,
   GRAPH_ANIMATION_MODES,
 } from "../services/graphAnimationService";
 
+
 export default function AnalystWorkspace() {
   const { identityId } = useParams();
+
+  const {
+    activeOrganization,
+    activeOrganizationId,
+    isLoadingOrganizations,
+    organizationError,
+  } = useOrganizationContext();
 
   const workspace = useWorkspaceState();
 
   const [data, setData] = useState(null);
-  const [attackPath, setAttackPath] = useState(null);
+  const [attackPath, setAttackPath] =
+    useState(null);
   const [error, setError] = useState(null);
 
-  const selectedNode = workspace.selection.node;
-  const selectedPath = workspace.selection.path;
-  const simulationResult = workspace.simulation.result;
-  const isSimulating = workspace.simulation.running;
-  const activeGraph = workspace.graph.current;
-  const decisionIntelligence = workspace.decision.intelligence;
+  const selectedNode =
+    workspace.selection.node;
+  const selectedPath =
+    workspace.selection.path;
+  const simulationResult =
+    workspace.simulation.result;
+  const isSimulating =
+    workspace.simulation.running;
+  const activeGraph =
+    workspace.graph.current;
+  const decisionIntelligence =
+    workspace.decision.intelligence;
+
 
   useEffect(() => {
     if (!identityId) {
-      setError("No identity was selected.");
       return;
     }
+
+    let isCurrent = true;
 
     localStorage.setItem(
       "usop.activeInvestigationIdentityId",
@@ -53,26 +100,60 @@ export default function AnalystWorkspace() {
     );
 
     Promise.all([
-      api.get(`/identity-intelligence/${identityId}`),
-      api.get(`/attack-path/${identityId}`),
+      api.get(
+        `/identity-intelligence/${identityId}`,
+      ),
+      api.get(
+        `/attack-path/${identityId}`,
+      ),
     ])
       .then(([intel, attack]) => {
+        if (!isCurrent) {
+          return;
+        }
+
+        setError(null);
         setData(intel.data);
         setAttackPath(attack.data);
-        workspace.setBaselineGraph(attack.data);
+        workspace.setBaselineGraph(
+          attack.data,
+        );
 
-        if (attack.data.summary.ranked_paths.length) {
-          workspace.selectPath(attack.data.summary.ranked_paths[0]);
+        if (
+          attack.data.summary.ranked_paths.length
+        ) {
+          workspace.selectPath(
+            attack.data.summary.ranked_paths[0],
+          );
         }
       })
-      .catch((err) => {
-        console.error(err);
-        setError("Unable to load workspace.");
+      .catch((requestError) => {
+        if (!isCurrent) {
+          return;
+        }
+
+        console.error(requestError);
+
+        setError(
+          "Unable to load workspace.",
+        );
       });
+
+    return () => {
+      isCurrent = false;
+    };
+
+    // Workspace actions are intentionally excluded.
+    // Including the state-backed workspace object would
+    // refetch intelligence after every graph interaction.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [identityId]);
 
+
   const animatedGraph = useMemo(() => {
-    if (!activeGraph) return null;
+    if (!activeGraph) {
+      return null;
+    }
 
     const mode = simulationResult
       ? GRAPH_ANIMATION_MODES.SIMULATION
@@ -80,19 +161,32 @@ export default function AnalystWorkspace() {
 
     return {
       ...activeGraph,
-      nodes: applyGraphAnimationMetadata(activeGraph.nodes || [], mode),
+      nodes: applyGraphAnimationMetadata(
+        activeGraph.nodes || [],
+        mode,
+      ),
       animationMode: mode,
     };
-  }, [activeGraph, simulationResult]);
+  }, [
+    activeGraph,
+    simulationResult,
+  ]);
+
 
   async function runSimulation() {
-    if (!selectedPath) return;
+    if (!selectedPath) {
+      return;
+    }
 
-    const accountStep = selectedPath.steps.find(
-      (step) => step.node_type === "account"
-    );
+    const accountStep =
+      selectedPath.steps.find(
+        (step) =>
+          step.node_type === "account",
+      );
 
-    if (!accountStep) return;
+    if (!accountStep) {
+      return;
+    }
 
     const actions = [
       {
@@ -104,23 +198,52 @@ export default function AnalystWorkspace() {
     workspace.beginSimulation(actions);
 
     try {
-      const response = await api.post("/attack-path/simulate", {
-        identity_id: identityId,
-        actions,
-      });
+      const response = await api.post(
+        "/attack-path/simulate",
+        {
+          identity_id: identityId,
+          actions,
+        },
+      );
 
-      workspace.completeSimulation(response.data);
-    } catch (err) {
-      console.error(err);
-      workspace.failSimulation("Unable to run attack path simulation.");
+      workspace.completeSimulation(
+        response.data,
+      );
+    } catch (requestError) {
+      console.error(requestError);
+
+      workspace.failSimulation(
+        "Unable to run attack path simulation.",
+      );
     }
   }
 
-  if (error) return <Alert severity="error">{error}</Alert>;
 
-  if (!data || !attackPath || !activeGraph || !animatedGraph) {
+  if (!identityId) {
+    return (
+      <Alert severity="error">
+        No identity was selected.
+      </Alert>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert severity="error">
+        {error}
+      </Alert>
+    );
+  }
+
+  if (
+    !data
+    || !attackPath
+    || !activeGraph
+    || !animatedGraph
+  ) {
     return <CircularProgress />;
   }
+
 
   const {
     identity,
@@ -133,17 +256,47 @@ export default function AnalystWorkspace() {
   } = data;
 
   const riskMetrics = {
-    riskScore: risk?.score || risk?.overall_score || exposure?.risk_score || 0,
-    exposureScore: exposure?.score || exposure?.exposure_score || 0,
+    riskScore:
+      risk?.score
+      || risk?.overall_score
+      || exposure?.risk_score
+      || 0,
+
+    exposureScore:
+      exposure?.score
+      || exposure?.exposure_score
+      || 0,
+
     confidenceScore:
-      risk?.confidence || risk?.confidence_score || exposure?.confidence || 0,
+      risk?.confidence
+      || risk?.confidence_score
+      || exposure?.confidence
+      || 0,
   };
 
+
   return (
-    <Box>
+    <Box
+      data-organization-id={
+        activeOrganizationId || undefined
+      }
+      data-identity-id={identityId}
+    >
       <WorkspaceHeader
         identity={identity}
         exposure={exposure}
+      />
+
+      <OrganizationContextBanner
+        activeOrganization={
+          activeOrganization
+        }
+        isLoadingOrganizations={
+          isLoadingOrganizations
+        }
+        organizationError={
+          organizationError
+        }
       />
 
       <Box sx={{ mb: 3 }}>
@@ -167,16 +320,29 @@ export default function AnalystWorkspace() {
       >
         <MissionStatusCard
           exposure={exposure}
-          missingMfaCount={access.accounts.filter((a) => !a.mfa_enabled).length}
+          missingMfaCount={
+            access.accounts.filter(
+              (account) =>
+                !account.mfa_enabled,
+            ).length
+          }
           privilegedAccountCount={
-            access.accounts.filter((a) => a.privilege_level === "Privileged")
-              .length
+            access.accounts.filter(
+              (account) =>
+                account.privilege_level
+                === "Privileged",
+            ).length
           }
         />
 
-        <RiskSummaryCard risk={risk} access={access} />
+        <RiskSummaryCard
+          risk={risk}
+          access={access}
+        />
 
-        <RemediationImpactCard recommendations={recommendations} />
+        <RemediationImpactCard
+          recommendations={recommendations}
+        />
       </Box>
 
       <Box
@@ -194,20 +360,33 @@ export default function AnalystWorkspace() {
           attackPath={animatedGraph}
           selectedPath={selectedPath}
           selectedNode={selectedNode}
-          setSelectedNode={workspace.selectNode}
-          transition={workspace.graph.transition}
-          animationMode={workspace.graph.mode}
+          setSelectedNode={
+            workspace.selectNode
+          }
+          transition={
+            workspace.graph.transition
+          }
+          animationMode={
+            workspace.graph.mode
+          }
         />
 
         <Box>
-          <AnimatedRiskMetrics metrics={riskMetrics} />
-          <MissionContextPanel node={selectedNode} />
+          <AnimatedRiskMetrics
+            metrics={riskMetrics}
+          />
+
+          <MissionContextPanel
+            node={selectedNode}
+          />
         </Box>
       </Box>
 
       {decisionIntelligence && (
         <Box sx={{ mb: 3 }}>
-          <DecisionRenderer decision={decisionIntelligence} />
+          <DecisionRenderer
+            decision={decisionIntelligence}
+          />
         </Box>
       )}
 
@@ -222,12 +401,20 @@ export default function AnalystWorkspace() {
         }}
       >
         <AttackSimulationPanel
-          rankedPaths={attackPath.summary.ranked_paths}
+          rankedPaths={
+            attackPath.summary.ranked_paths
+          }
           selectedPath={selectedPath}
-          setSelectedPath={workspace.selectPath}
+          setSelectedPath={
+            workspace.selectPath
+          }
           runSimulation={runSimulation}
-          resetSimulation={workspace.resetSimulation}
-          simulationResult={simulationResult}
+          resetSimulation={
+            workspace.resetSimulation
+          }
+          simulationResult={
+            simulationResult
+          }
           isSimulating={isSimulating}
         />
 
@@ -236,7 +423,10 @@ export default function AnalystWorkspace() {
           selectedNode={selectedNode}
         />
 
-        <RecentActivityPanel events={timeline} selectedNode={selectedNode} />
+        <RecentActivityPanel
+          events={timeline}
+          selectedNode={selectedNode}
+        />
       </Box>
     </Box>
   );
