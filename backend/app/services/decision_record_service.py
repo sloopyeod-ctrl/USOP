@@ -1,4 +1,4 @@
-from typing import Any
+﻿from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -59,9 +59,12 @@ class DecisionRecordService:
         organization_id: str,
         decision_id: str,
     ):
-        return self.repository.get_by_id_for_organization(
-            organization_id=organization_id,
-            decision_id=decision_id,
+        return (
+            self.repository
+            .get_by_id_for_organization(
+                organization_id=organization_id,
+                decision_id=decision_id,
+            )
         )
 
     def by_identity(
@@ -75,17 +78,19 @@ class DecisionRecordService:
             identity_id=identity_id,
         )
 
-    def create_from_recommendation(
+    def create_decision_record(
         self,
         *,
         organization_id: str,
         identity_id: str,
-        recommendation_index: int,
+        recommendation_id: str,
         action: DecisionRecordAction,
     ):
         intelligence = (
             self.intelligence_service
-            .get_identity_intelligence(identity_id)
+            .get_identity_intelligence(
+                identity_id
+            )
         )
 
         if intelligence is None:
@@ -98,22 +103,35 @@ class DecisionRecordService:
             [],
         )
 
-        if (
-            recommendation_index < 0
-            or recommendation_index >= len(recommendations)
-        ):
-            raise IndexError(
-                "Recommendation index is outside the "
-                "available recommendation set."
+        recommendation = next(
+            (
+                item
+                for item in recommendations
+                if item.get("recommendation_id")
+                == recommendation_id
+            ),
+            None,
+        )
+
+        if recommendation is None:
+            raise ValueError(
+                "Recommendation was not found."
             )
 
-        recommendation = recommendations[
-            recommendation_index
-        ]
+        decision = intelligence.get(
+            "decision",
+            {},
+        )
 
-        decision = intelligence.get("decision", {})
-        risk = intelligence.get("risk", {})
-        identity = intelligence.get("identity", {})
+        risk = intelligence.get(
+            "risk",
+            {},
+        )
+
+        identity = intelligence.get(
+            "identity",
+            {},
+        )
 
         status = self.STATUS_BY_DECISION_TYPE[
             action.decision_type
@@ -156,7 +174,9 @@ class DecisionRecordService:
                     decision=decision,
                 )
             ),
-            acceptance_type=action.acceptance_type,
+            acceptance_type=(
+                action.acceptance_type
+            ),
             review_due_at=action.review_due_at,
             approval_status=(
                 ApprovalStatus.NOT_REQUIRED
@@ -170,11 +190,15 @@ class DecisionRecordService:
                 VerificationStatus.NOT_REQUIRED
             ),
             source_system="USOP",
-            source_identifier=None,
+            source_identifier=(
+                recommendation_id
+            ),
             confidence_score=100,
         )
 
-        record = self.repository.create(payload)
+        record = self.repository.create(
+            payload
+        )
 
         self.audit_service.record(
             event_type="DecisionCreated",
@@ -182,13 +206,16 @@ class DecisionRecordService:
             entity_id=record.id,
             actor=action.actor,
             message=(
-                f"{action.decision_type.value} decision "
-                f"recorded for "
+                f"{action.decision_type.value} "
+                "decision recorded for "
                 f"{identity.get('display_name') or identity_id}."
             ),
             metadata={
                 "organization_id": organization_id,
                 "identity_id": identity_id,
+                "recommendation_id": (
+                    recommendation_id
+                ),
                 "decision_type": (
                     action.decision_type.value
                 ),
@@ -211,6 +238,7 @@ class DecisionRecordService:
     ) -> dict[str, Any]:
         """
         Store the minimum reusable evidence needed to explain the decision.
+
         Avoid raw provider payloads and credentials.
         """
 
@@ -225,9 +253,18 @@ class DecisionRecordService:
                 ),
             },
             "recommendation": {
-                "title": recommendation.get("title"),
-                "description": recommendation.get(
-                    "description"
+                "recommendation_id": (
+                    recommendation.get(
+                        "recommendation_id"
+                    )
+                ),
+                "title": recommendation.get(
+                    "title"
+                ),
+                "description": (
+                    recommendation.get(
+                        "description"
+                    )
                 ),
                 "severity": recommendation.get(
                     "severity"
@@ -237,8 +274,10 @@ class DecisionRecordService:
                         "recommendation_type"
                     )
                 ),
-                "evidence_type": recommendation.get(
-                    "evidence_type"
+                "evidence_type": (
+                    recommendation.get(
+                        "evidence_type"
+                    )
                 ),
                 "role_name": recommendation.get(
                     "role_name"
@@ -258,8 +297,12 @@ class DecisionRecordService:
                 ),
             },
             "decision": {
-                "priority": decision.get("priority"),
-                "summary": decision.get("summary"),
+                "priority": decision.get(
+                    "priority"
+                ),
+                "summary": decision.get(
+                    "summary"
+                ),
                 "confidence": decision.get(
                     "confidence"
                 ),

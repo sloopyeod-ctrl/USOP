@@ -78,36 +78,34 @@ def get_decision_record(
 
 
 @router.post(
-    "/identity/{identity_id}/recommendation/"
-    "{recommendation_index}",
+    (
+        "/identity/{identity_id}/"
+        "recommendations/{recommendation_id}"
+    ),
     response_model=DecisionRecordRead,
     status_code=status.HTTP_201_CREATED,
 )
 def create_decision_record(
     organization_id: str,
     identity_id: str,
-    recommendation_index: int,
+    recommendation_id: str,
     action: DecisionRecordAction,
     db: Session = Depends(get_db),
 ):
     service = DecisionRecordService(db)
 
     try:
-        return service.create_from_recommendation(
+        return service.create_decision_record(
             organization_id=organization_id,
             identity_id=identity_id,
-            recommendation_index=recommendation_index,
+            recommendation_id=(
+                recommendation_id
+            ),
             action=action,
         )
 
     except ValueError as error:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(error),
-        ) from error
-
-    except IndexError as error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(error),
         ) from error

@@ -5,21 +5,29 @@ from dotenv import load_dotenv
 
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(BACKEND_ROOT))
+sys.path.insert(
+    0,
+    str(BACKEND_ROOT),
+)
 
 load_dotenv(
     dotenv_path=BACKEND_ROOT / ".env",
     override=False,
 )
 
+
 from app.database.session import SessionLocal
 from app.domain import (
     AcceptanceType,
     DecisionType,
 )
+from app.intelligence.identity_intelligence_service import (
+    IdentityIntelligenceService,
+)
 from app.models.audit_event import AuditEvent
 from app.models.decision_record import DecisionRecord
 from app.models.identity import Identity
+from app.models.organization import Organization
 from app.schemas.decision_record import (
     DecisionRecordAction,
 )
@@ -29,16 +37,41 @@ from app.services.decision_record_service import (
 
 
 def main() -> int:
-    print("USOP Decision Record Service Regression")
-    print("---------------------------------------")
+    print(
+        "USOP Decision Record Service Regression"
+    )
+    print(
+        "---------------------------------------"
+    )
 
     db = SessionLocal()
     decision_id = None
 
     try:
+        organization = (
+            db.query(Organization)
+            .filter(
+                Organization.is_active.is_(True)
+            )
+            .order_by(
+                Organization.created_at.asc(),
+                Organization.id.asc(),
+            )
+            .first()
+        )
+
+        if organization is None:
+            print("Validation: FAILED")
+            print(
+                "- No active Organization was found."
+            )
+            return 1
+
         identity = (
             db.query(Identity)
-            .filter(Identity.is_active.is_(True))
+            .filter(
+                Identity.is_active.is_(True)
+            )
             .filter(
                 Identity.display_name.ilike(
                     "%geoff%"
@@ -49,7 +82,48 @@ def main() -> int:
 
         if identity is None:
             print("Validation: FAILED")
-            print("- Geoff identity was not found.")
+            print(
+                "- Geoff identity was not found."
+            )
+            return 1
+
+        intelligence = (
+            IdentityIntelligenceService(db)
+            .get_identity_intelligence(
+                identity.id
+            )
+        )
+
+        recommendations = (
+            intelligence.get(
+                "recommendations",
+                [],
+            )
+            if intelligence
+            else []
+        )
+
+        if not recommendations:
+            print("Validation: FAILED")
+            print(
+                "- No recommendations were found."
+            )
+            return 1
+
+        recommendation = recommendations[0]
+
+        recommendation_id = (
+            recommendation.get(
+                "recommendation_id"
+            )
+        )
+
+        if not recommendation_id:
+            print("Validation: FAILED")
+            print(
+                "- Recommendation ID was not "
+                "generated."
+            )
             return 1
 
         service = DecisionRecordService(db)
@@ -72,10 +146,17 @@ def main() -> int:
             actor="Regression Test",
         )
 
-        record = service.create_from_recommendation(
-            identity_id=identity.id,
-            recommendation_index=0,
-            action=action,
+        record = (
+            service.create_decision_record(
+                organization_id=(
+                    organization.id
+                ),
+                identity_id=identity.id,
+                recommendation_id=(
+                    recommendation_id
+                ),
+                action=action,
+            )
         )
 
         decision_id = record.id
@@ -83,40 +164,78 @@ def main() -> int:
 
         if record.status != "Accepted":
             errors.append(
-                "AcceptRisk did not map to Accepted."
+                "AcceptRisk did not map to "
+                "Accepted."
             )
 
         if (
-            record.identity_id
-            != identity.id
+            record.organization_id
+            != organization.id
         ):
             errors.append(
-                "Identity context was not preserved."
+                "Organization context was not "
+                "preserved."
+            )
+
+        if record.identity_id != identity.id:
+            errors.append(
+                "Identity context was not "
+                "preserved."
+            )
+
+        if (
+            record.source_identifier
+            != recommendation_id
+        ):
+            errors.append(
+                "Stable recommendation identity "
+                "was not preserved."
             )
 
         if not record.recommendation_title:
             errors.append(
-                "Recommendation context was not populated."
+                "Recommendation context was not "
+                "populated."
             )
 
         if record.risk_level != "Critical":
             errors.append(
-                "Current backend risk priority was "
-                "not preserved."
+                "Current backend risk priority "
+                "was not preserved."
             )
 
         if record.decision_confidence != 100:
             errors.append(
-                "Decision confidence was not preserved."
+                "Decision confidence was not "
+                "preserved."
             )
 
         snapshot = (
             record.evidence_snapshot_json or {}
         )
 
-        if not snapshot.get("recommendation"):
+        snapshot_recommendation = (
+            snapshot.get(
+                "recommendation",
+                {},
+            )
+        )
+
+        if not snapshot_recommendation:
             errors.append(
-                "Recommendation evidence was not stored."
+                "Recommendation evidence was not "
+                "stored."
+            )
+
+        if (
+            snapshot_recommendation.get(
+                "recommendation_id"
+            )
+            != recommendation_id
+        ):
+            errors.append(
+                "Recommendation ID was not stored "
+                "in the evidence snapshot."
             )
 
         events = (
@@ -143,8 +262,13 @@ def main() -> int:
                 "Audit event type is incorrect."
             )
 
-        identity_records = service.by_identity(
-            identity.id
+        identity_records = (
+            service.by_identity(
+                organization_id=(
+                    organization.id
+                ),
+                identity_id=identity.id,
+            )
         )
 
         if not any(
@@ -166,13 +290,23 @@ def main() -> int:
             return 1
 
         print(
-            f"Identity: {identity.display_name}"
+            f"Organization: "
+            f"{organization.name}"
+        )
+        print(
+            f"Identity: "
+            f"{identity.display_name}"
+        )
+        print(
+            f"Recommendation ID: "
+            f"{recommendation_id}"
         )
         print(
             f"Decision ID: {record.id}"
         )
         print(
-            f"Decision type: {record.decision_type}"
+            f"Decision type: "
+            f"{record.decision_type}"
         )
         print(
             f"Status: {record.status}"
@@ -182,7 +316,8 @@ def main() -> int:
             f"{record.recommendation_title}"
         )
         print(
-            f"Risk level: {record.risk_level}"
+            f"Risk level: "
+            f"{record.risk_level}"
         )
         print(
             "Decision confidence: "
@@ -195,9 +330,11 @@ def main() -> int:
         print()
         print("Validation: PASSED")
         print(
-            "Decision records are hydrated from "
-            "current USOP intelligence and generate "
-            "an accountable audit event."
+            "Decision records resolve stable "
+            "recommendation identifiers, preserve "
+            "organization ownership, capture "
+            "evidence, and generate an accountable "
+            "audit event."
         )
 
         return 0
