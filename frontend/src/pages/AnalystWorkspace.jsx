@@ -303,7 +303,8 @@ export default function AnalystWorkspace() {
         <DecisionWorkspace
           decision={decision}
           recommendations={recommendations}
-          showDetails={false}
+          showEvidence={false}
+          enableDecisionWorkflow
         />
       </Box>
 

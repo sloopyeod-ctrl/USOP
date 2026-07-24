@@ -1,10 +1,8 @@
 import {
   Box,
-  Button,
   Card,
   CardContent,
   Chip,
-  Divider,
   LinearProgress,
   Stack,
   Typography,
@@ -114,22 +112,7 @@ export default function ImmediateActionsPanel({ recommendations, selectedNode })
                 <Typography variant="body2" color="text.secondary">
                   Estimated effort: {rec.estimated_effort}
                 </Typography>
-
-                <Divider sx={{ my: 2 }} />
-
-                <Stack direction="row" spacing={1}>
-                  <Button variant="contained" size="small">
-                    Investigate
-                  </Button>
-
-                  <Button variant="outlined" size="small">
-                    Approve
-                  </Button>
-
-                  <Button variant="outlined" size="small">
-                    Dismiss
-                  </Button>
-                </Stack>
+               
               </CardContent>
             </Card>
           ))}
