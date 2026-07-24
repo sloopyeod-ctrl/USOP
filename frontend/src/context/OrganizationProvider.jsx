@@ -6,7 +6,7 @@ import {
 } from "react";
 
 import api from "../api/usopApi";
-import OrganizationContext from "./organizationContext";
+import OrganizationContext from "./ActiveOrganizationContext";
 
 
 const ACTIVE_ORGANIZATION_STORAGE_KEY =

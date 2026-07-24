@@ -1,6 +1,5 @@
 import {
   useEffect,
-  useMemo,
   useState,
 } from "react";
 
@@ -20,11 +19,16 @@ import {
   Typography,
 } from "@mui/material";
 
-import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
-import BusinessIcon from "@mui/icons-material/Business";
-import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
+import AdminPanelSettingsIcon from
+  "@mui/icons-material/AdminPanelSettings";
+import BusinessIcon from
+  "@mui/icons-material/Business";
+import PeopleAltIcon from
+  "@mui/icons-material/PeopleAlt";
 
 import api from "../api/usopApi";
+import useOrganizationContext from
+  "../hooks/useOrganizationContext";
 
 
 function DetailRow({
@@ -53,75 +57,51 @@ function DetailRow({
 
 
 export default function PlatformAdministration() {
-  const [organizations, setOrganizations] = useState([]);
+  const {
+    organizations,
+    activeOrganization:
+      selectedOrganization,
+    activeOrganizationId:
+      selectedOrganizationId,
+    setActiveOrganizationId:
+      setSelectedOrganizationId,
+    isLoadingOrganizations,
+    organizationError,
+  } = useOrganizationContext();
+
   const [
-    selectedOrganizationId,
-    setSelectedOrganizationId,
-  ] = useState("");
-  const [isLoadingOrganizations, setIsLoadingOrganizations] =
-    useState(true);
-  const [organizationError, setOrganizationError] =
-    useState(null);
-  const [platformUsers, setPlatformUsers] = useState([]);
-  const [isLoadingPlatformUsers, setIsLoadingPlatformUsers] =
-    useState(false);
-  const [platformUserError, setPlatformUserError] =
-    useState(null);
+    platformUsers,
+    setPlatformUsers,
+  ] = useState([]);
 
-  useEffect(() => {
-    let isCurrent = true;
+  const [
+    isLoadingPlatformUsers,
+    setIsLoadingPlatformUsers,
+  ] = useState(false);
 
-    api
-      .get("/api/v1/organizations/")
-      .then((response) => {
-        if (!isCurrent) return;
+  const [
+    platformUserError,
+    setPlatformUserError,
+  ] = useState(null);
 
-        const records = Array.isArray(response.data)
-          ? response.data
-          : [];
-
-        setOrganizations(records);
-
-        if (records.length === 1) {
-          setSelectedOrganizationId(
-            records[0].id,
-          );
-        }
-      })
-      .catch((error) => {
-        if (!isCurrent) return;
-
-        console.error(
-          "Organization context load failed:",
-          error,
-        );
-
-        setOrganizationError(
-          "Could not load Organization context.",
-        );
-      })
-      .finally(() => {
-        if (isCurrent) {
-          setIsLoadingOrganizations(false);
-        }
-      });
-
-    return () => {
-      isCurrent = false;
-    };
-  }, []);
 
   useEffect(() => {
     let isCurrent = true;
 
     async function loadPlatformUsers() {
       if (!selectedOrganizationId) {
+        setPlatformUsers([]);
+        setPlatformUserError(null);
+        setIsLoadingPlatformUsers(false);
+
         return;
       }
 
       await Promise.resolve();
 
-      if (!isCurrent) return;
+      if (!isCurrent) {
+        return;
+      }
 
       setPlatformUsers([]);
       setPlatformUserError(null);
@@ -136,7 +116,9 @@ export default function PlatformAdministration() {
           ),
         );
 
-        if (!isCurrent) return;
+        if (!isCurrent) {
+          return;
+        }
 
         setPlatformUsers(
           Array.isArray(response.data)
@@ -144,7 +126,9 @@ export default function PlatformAdministration() {
             : [],
         );
       } catch (error) {
-        if (!isCurrent) return;
+        if (!isCurrent) {
+          return;
+        }
 
         console.error(
           "Platform User load failed:",
@@ -168,21 +152,10 @@ export default function PlatformAdministration() {
     };
   }, [selectedOrganizationId]);
 
-  const selectedOrganization = useMemo(
-    () =>
-      organizations.find(
-        (organization) =>
-          organization.id
-          === selectedOrganizationId,
-      ) || null,
-    [
-      organizations,
-      selectedOrganizationId,
-    ],
-  );
 
   const organizationCount =
     organizations.length;
+
 
   return (
     <Box>
@@ -190,7 +163,12 @@ export default function PlatformAdministration() {
         sx={{
           mb: 3,
           background:
-            "linear-gradient(135deg, #111827 0%, #0B1220 60%, #083344 100%)",
+            "linear-gradient("
+            + "135deg, "
+            + "#111827 0%, "
+            + "#0B1220 60%, "
+            + "#083344 100%"
+            + ")",
           border: "1px solid #164E63",
         }}
       >
@@ -246,9 +224,10 @@ export default function PlatformAdministration() {
         severity="info"
         sx={{ mb: 3 }}
       >
-        Administration is currently read-only. Authentication,
-        invitations, role management, and commercial Seat
-        allocation remain separate future capabilities.
+        Administration is currently read-only.
+        Authentication, invitations, role management,
+        and commercial Seat allocation remain separate
+        future capabilities.
       </Alert>
 
       <Box
@@ -328,7 +307,9 @@ export default function PlatformAdministration() {
                 size="small"
                 sx={{ mb: 3 }}
               >
-                <InputLabel id="organization-select-label">
+                <InputLabel
+                  id="organization-select-label"
+                >
                   Organization
                 </InputLabel>
 
@@ -375,7 +356,9 @@ export default function PlatformAdministration() {
 
                 <DetailRow
                   label="Status"
-                  value={selectedOrganization.status}
+                  value={
+                    selectedOrganization.status
+                  }
                 />
 
                 <DetailRow
@@ -445,7 +428,9 @@ export default function PlatformAdministration() {
               </Stack>
 
               <Chip
-                label={`${platformUsers.length} USERS`}
+                label={
+                  `${platformUsers.length} USERS`
+                }
                 size="small"
                 variant="outlined"
               />
@@ -475,8 +460,8 @@ export default function PlatformAdministration() {
                   </Typography>
 
                   <Typography color="text.secondary">
-                    Configure or select an Organization before
-                    loading Platform Users.
+                    Configure or select an Organization
+                    before loading Platform Users.
                   </Typography>
                 </Box>
               </Box>
@@ -530,9 +515,9 @@ export default function PlatformAdministration() {
                   </Typography>
 
                   <Typography color="text.secondary">
-                    This Organization has no Platform Users.
-                    The first administrator bootstrap has not
-                    yet been completed.
+                    This Organization has no Platform
+                    Users. The first administrator
+                    bootstrap has not yet been completed.
                   </Typography>
                 </Box>
               </Box>
@@ -563,18 +548,26 @@ export default function PlatformAdministration() {
                               variant="h6"
                               fontWeight={900}
                             >
-                              {platformUser.display_name}
+                              {
+                                platformUser
+                                  .display_name
+                              }
                             </Typography>
 
-                            <Typography color="text.secondary">
+                            <Typography
+                              color="text.secondary"
+                            >
                               {platformUser.email}
                             </Typography>
                           </Box>
 
                           <Chip
-                            label={platformUser.status}
+                            label={
+                              platformUser.status
+                            }
                             color={
-                              platformUser.status === "Active"
+                              platformUser.status
+                              === "Active"
                                 ? "success"
                                 : "info"
                             }
@@ -588,7 +581,8 @@ export default function PlatformAdministration() {
                           <DetailRow
                             label="Identity Provider"
                             value={
-                              platformUser.identity_provider
+                              platformUser
+                                .identity_provider
                             }
                           />
 
@@ -607,7 +601,8 @@ export default function PlatformAdministration() {
                             value={
                               platformUser.invited_at
                                 ? new Date(
-                                  platformUser.invited_at,
+                                  platformUser
+                                    .invited_at,
                                 ).toLocaleString()
                                 : "Never"
                             }
@@ -618,7 +613,8 @@ export default function PlatformAdministration() {
                             value={
                               platformUser.activated_at
                                 ? new Date(
-                                  platformUser.activated_at,
+                                  platformUser
+                                    .activated_at,
                                 ).toLocaleString()
                                 : "Not activated"
                             }

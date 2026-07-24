@@ -9,7 +9,7 @@ import {
 
 import App from "./App";
 import OrganizationProvider from
-  "./context/OrganizationContext";
+  "./context/OrganizationProvider";
 import theme from "./theme/theme";
 
 

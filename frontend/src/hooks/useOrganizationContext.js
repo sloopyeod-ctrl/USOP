@@ -3,7 +3,7 @@ import {
 } from "react";
 
 import OrganizationContext from
-  "../context/organizationContext";
+  "../context/ActiveOrganizationContext";
 
 
 export default function useOrganizationContext() {
