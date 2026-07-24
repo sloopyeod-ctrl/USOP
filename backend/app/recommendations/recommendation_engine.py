@@ -1,4 +1,6 @@
-﻿from typing import Any
+﻿import hashlib
+import json
+from typing import Any
 
 
 class RecommendationEngine:
@@ -8,12 +10,20 @@ class RecommendationEngine:
 
     Authorization recommendations rely on classification output rather than
     loose role-name matching.
+
+    Every recommendation receives a deterministic backend-owned identifier.
+    The identifier remains stable across sorting and regeneration while the
+    recommendation's canonical security meaning remains unchanged.
     """
+
+    RECOMMENDATION_ID_VERSION = "rec_v1"
 
     def generate(
         self,
         findings: list[dict[str, Any]],
-        authorization_classifications: list[dict[str, Any]] | None = None,
+        authorization_classifications: (
+            list[dict[str, Any]] | None
+        ) = None,
     ) -> list[dict[str, Any]]:
         recommendations = []
 
@@ -27,15 +37,77 @@ class RecommendationEngine:
             )
         )
 
+        recommendations = [
+            self._with_recommendation_id(
+                recommendation
+            )
+            for recommendation in recommendations
+        ]
+
         recommendations.sort(
             key=lambda item: (
                 item.get("priority", 999),
                 -item.get("risk_reduction", 0),
                 item.get("title", ""),
+                item.get("recommendation_id", ""),
             )
         )
 
         return recommendations
+
+    def _with_recommendation_id(
+        self,
+        recommendation: dict[str, Any],
+    ) -> dict[str, Any]:
+        canonical_payload = {
+            "recommendation_type": (
+                recommendation.get(
+                    "recommendation_type"
+                )
+            ),
+            "evidence_type": recommendation.get(
+                "evidence_type"
+            ),
+            "title": recommendation.get("title"),
+            "description": recommendation.get(
+                "description"
+            ),
+            "role_name": recommendation.get(
+                "role_name"
+            ),
+            "capability": recommendation.get(
+                "capability"
+            ),
+            "scope_classification": (
+                recommendation.get(
+                    "scope_classification"
+                )
+            ),
+            "assignment_classification": (
+                recommendation.get(
+                    "assignment_classification"
+                )
+            ),
+        }
+
+        serialized_payload = json.dumps(
+            canonical_payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+        )
+
+        digest = hashlib.sha256(
+            serialized_payload.encode("utf-8")
+        ).hexdigest()[:24]
+
+        return {
+            **recommendation,
+            "recommendation_id": (
+                f"{self.RECOMMENDATION_ID_VERSION}_"
+                f"{digest}"
+            ),
+        }
 
     def _finding_recommendations(
         self,
@@ -57,7 +129,9 @@ class RecommendationEngine:
                     ),
                     "risk_reduction": 20,
                     "estimated_effort": "5 minutes",
-                    "recommendation_type": "Authentication",
+                    "recommendation_type": (
+                        "Authentication"
+                    ),
                     "evidence_type": finding["type"],
                 }
 
@@ -65,7 +139,9 @@ class RecommendationEngine:
                 recommendation = {
                     "priority": 1,
                     "severity": "Critical",
-                    "title": "Remediate Policy Violation",
+                    "title": (
+                        "Remediate Policy Violation"
+                    ),
                     "description": (
                         f"Resolve policy "
                         f"{finding['policy_name']}."
@@ -80,14 +156,18 @@ class RecommendationEngine:
                 recommendation = {
                     "priority": 2,
                     "severity": "High",
-                    "title": "Review Privileged Membership",
+                    "title": (
+                        "Review Privileged Membership"
+                    ),
                     "description": (
                         f"Validate membership in "
                         f"{finding['group_name']}."
                     ),
                     "risk_reduction": 25,
                     "estimated_effort": "10 minutes",
-                    "recommendation_type": "Authorization",
+                    "recommendation_type": (
+                        "Authorization"
+                    ),
                     "evidence_type": finding["type"],
                 }
 
@@ -102,12 +182,16 @@ class RecommendationEngine:
                     ),
                     "risk_reduction": 15,
                     "estimated_effort": "2 minutes",
-                    "recommendation_type": "AccountLifecycle",
+                    "recommendation_type": (
+                        "AccountLifecycle"
+                    ),
                     "evidence_type": finding["type"],
                 }
 
             if recommendation:
-                recommendations.append(recommendation)
+                recommendations.append(
+                    recommendation
+                )
 
         return recommendations
 
@@ -119,7 +203,10 @@ class RecommendationEngine:
 
         for item in classifications:
             role = item.get("role", {})
-            classification = item.get("classification", {})
+            classification = item.get(
+                "classification",
+                {},
+            )
 
             risk_level = classification.get(
                 "risk_level",
@@ -165,8 +252,12 @@ class RecommendationEngine:
 
             scope_text = {
                 "TenantWide": "tenant-wide",
-                "DirectoryScoped": "directory-scoped",
-                "ApplicationScoped": "application-scoped",
+                "DirectoryScoped": (
+                    "directory-scoped"
+                ),
+                "ApplicationScoped": (
+                    "application-scoped"
+                ),
                 "Unknown": "unconfirmed-scope",
             }.get(
                 scope,
@@ -181,20 +272,32 @@ class RecommendationEngine:
                         f"Review {role_name} Assignment"
                     ),
                     "description": (
-                        f"Validate the continued business need for the "
-                        f"{assignment.lower()} {scope_text} "
+                        "Validate the continued business "
+                        "need for the "
+                        f"{assignment.lower()} "
+                        f"{scope_text} "
                         f"{role_name} assignment."
                     ),
                     "risk_reduction": risk_reduction,
-                    "estimated_effort": estimated_effort,
-                    "recommendation_type": "Authorization",
-                    "evidence_type": "CanonicalRoleClassification",
+                    "estimated_effort": (
+                        estimated_effort
+                    ),
+                    "recommendation_type": (
+                        "Authorization"
+                    ),
+                    "evidence_type": (
+                        "CanonicalRoleClassification"
+                    ),
                     "role_name": role_name,
                     "capability": capability,
                     "scope_classification": scope,
-                    "assignment_classification": assignment,
-                    "classification_source": classification.get(
-                        "classification_source"
+                    "assignment_classification": (
+                        assignment
+                    ),
+                    "classification_source": (
+                        classification.get(
+                            "classification_source"
+                        )
                     ),
                 }
             )
