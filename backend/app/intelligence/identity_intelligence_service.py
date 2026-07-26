@@ -1,4 +1,4 @@
-﻿from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session
 
 from app.analytics.access_analyzer import AccessAnalyzer
 from app.exposure.exposure_score_engine import (
@@ -10,8 +10,14 @@ from app.graph.identity_graph_service import (
 from app.intelligence.identity_decision_service import (
     IdentityDecisionService,
 )
+from app.intelligence.recommendation_disposition_service import (
+    RecommendationDispositionService,
+)
 from app.recommendations.recommendation_engine import (
     RecommendationEngine,
+)
+from app.repositories.decision_record_repository import (
+    DecisionRecordRepository,
 )
 from app.security.authorization import (
     AuthorizationClassificationService,
@@ -33,10 +39,17 @@ class IdentityIntelligenceService:
             AuthorizationClassificationService()
         )
         self.decision_service = IdentityDecisionService()
+        self.decision_record_repository = (
+            DecisionRecordRepository(db)
+        )
+        self.disposition_service = (
+            RecommendationDispositionService()
+        )
 
     def get_identity_intelligence(
         self,
         identity_id: str,
+        organization_id: str | None = None,
     ):
         graph = self.graph_service.get_identity_graph(
             identity_id
@@ -92,6 +105,22 @@ class IdentityIntelligenceService:
                 ),
             )
         )
+
+        if organization_id:
+            decision_records = (
+                self.decision_record_repository
+                .by_identity(
+                    organization_id=organization_id,
+                    identity_id=identity_id,
+                )
+            )
+
+            recommendations = (
+                self.disposition_service.project(
+                    recommendations=recommendations,
+                    decision_records=decision_records,
+                )
+            )
 
         decision = self.decision_service.build(
             graph=graph,

@@ -1,4 +1,4 @@
-﻿import {
+import {
   useMemo,
   useState,
 } from "react";
@@ -18,11 +18,35 @@ import DecisionActionPanel from
   "./DecisionActionPanel";
 
 
+function firstActionableRecommendationId(
+  recommendations,
+) {
+  const actionable =
+    recommendations.find(
+      (recommendation) =>
+        recommendation
+          ?.organizational_disposition
+          ?.is_actionable
+        !== false,
+    );
+
+  return (
+    actionable?.recommendation_id
+    || recommendations[0]
+      ?.recommendation_id
+    || null
+  );
+}
+
+
 export default function DecisionWorkspace({
   decision,
   recommendations,
+  organizationId,
+  identityId,
   showEvidence = true,
   enableDecisionWorkflow = false,
+  onDecisionCreated = null,
 }) {
   const availableRecommendations =
     useMemo(
@@ -59,10 +83,8 @@ export default function DecisionWorkspace({
           return requestedRecommendationId;
         }
 
-        return (
-          availableRecommendations[0]
-            ?.recommendation_id
-          || null
+        return firstActionableRecommendationId(
+          availableRecommendations,
         );
       },
       [
@@ -85,6 +107,22 @@ export default function DecisionWorkspace({
         selectedRecommendationId,
       ],
     );
+
+
+  async function handleDecisionCreated(
+    record,
+  ) {
+    if (
+      typeof onDecisionCreated
+      === "function"
+    ) {
+      await onDecisionCreated(record);
+    }
+
+    setRequestedRecommendationId(
+      null,
+    );
+  }
 
 
   if (!decision) {
@@ -128,15 +166,28 @@ export default function DecisionWorkspace({
               }
               onSelectRecommendation={
                 enableDecisionWorkflow
-                  ? setRequestedRecommendationId
+                  ? (recommendationId) => {
+                    setRequestedRecommendationId(
+                      recommendationId,
+                    );
+                  }
                   : null
               }
             />
 
             {enableDecisionWorkflow && (
               <DecisionActionPanel
+                key={
+                  selectedRecommendationId
+                  || "no-recommendation"
+                }
+                organizationId={organizationId}
+                identityId={identityId}
                 recommendation={
                   selectedRecommendation
+                }
+                onDecisionCreated={
+                  handleDecisionCreated
                 }
               />
             )}

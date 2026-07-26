@@ -1,4 +1,6 @@
-import React from "react";
+import {
+  useState,
+} from "react";
 
 import {
   Alert,
@@ -7,6 +9,7 @@ import {
   Card,
   CardContent,
   Chip,
+  CircularProgress,
   FormControl,
   FormControlLabel,
   FormLabel,
@@ -21,6 +24,10 @@ import {
 
 import FactCheckIcon from
   "@mui/icons-material/FactCheck";
+
+import {
+  createDecisionRecord,
+} from "../../services/decisionRecordService";
 
 
 const DECISION_OPTIONS = [
@@ -47,27 +54,92 @@ const DECISION_OPTIONS = [
 ];
 
 
-export default function DecisionActionPanel({
-  recommendation,
-}) {
-  const [decisionType, setDecisionType] =
-    React.useState("CorrectRisk");
+function severityColor(value) {
+  if (value === "Critical") {
+    return "error";
+  }
 
-  const [justification, setJustification] =
-    React.useState("");
+  if (value === "High") {
+    return "warning";
+  }
+
+  if (
+    value === "Moderate"
+    || value === "Medium"
+  ) {
+    return "info";
+  }
+
+  if (value === "Low") {
+    return "success";
+  }
+
+  return "default";
+}
+
+
+function resolveErrorMessage(error) {
+  return (
+    error?.response?.data?.detail
+    || error?.message
+    || "Unable to record the decision."
+  );
+}
+
+
+export default function DecisionActionPanel({
+  organizationId,
+  identityId,
+  recommendation,
+  onDecisionCreated = null,
+}) {
+  const [
+    decisionType,
+    setDecisionType,
+  ] = useState("CorrectRisk");
+
+  const [
+    justification,
+    setJustification,
+  ] = useState("");
 
   const [notes, setNotes] =
-    React.useState("");
+    useState("");
 
-  const [acceptanceType, setAcceptanceType] =
-    React.useState("Temporary");
+  const [
+    acceptanceType,
+    setAcceptanceType,
+  ] = useState("Temporary");
 
-  const [reviewDueAt, setReviewDueAt] =
-    React.useState("");
+  const [
+    reviewDueAt,
+    setReviewDueAt,
+  ] = useState("");
 
-  const [escalatedTo, setEscalatedTo] =
-    React.useState("");
+  const [
+    escalatedTo,
+    setEscalatedTo,
+  ] = useState("");
 
+  const [
+    externalTicketReference,
+    setExternalTicketReference,
+  ] = useState("");
+
+  const [
+    isSubmitting,
+    setIsSubmitting,
+  ] = useState(false);
+
+  const [
+    submissionError,
+    setSubmissionError,
+  ] = useState(null);
+
+  const [
+    createdDecision,
+    setCreatedDecision,
+  ] = useState(null);
 
   if (!recommendation) {
     return (
@@ -76,6 +148,64 @@ export default function DecisionActionPanel({
         an organizational decision.
       </Alert>
     );
+  }
+
+
+  const canSubmit =
+    Boolean(organizationId)
+    && Boolean(identityId)
+    && Boolean(
+      recommendation.recommendation_id,
+    )
+    && !isSubmitting;
+
+
+  async function submitDecision() {
+    if (!canSubmit) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmissionError(null);
+    setCreatedDecision(null);
+
+    try {
+      const record =
+        await createDecisionRecord({
+          organizationId,
+          identityId,
+          recommendationId:
+            recommendation
+              .recommendation_id,
+          decisionType,
+          justification,
+          notes,
+          acceptanceType,
+          reviewDueAt,
+          escalatedTo,
+          externalTicketReference,
+        });
+
+      setCreatedDecision(record);
+
+      if (
+        typeof onDecisionCreated
+        === "function"
+      ) {
+        onDecisionCreated(record);
+      }
+    } catch (error) {
+      console.error(
+        "Decision creation failed:",
+        error,
+      );
+
+      setSubmissionError(
+        resolveErrorMessage(error),
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
 
@@ -126,23 +256,27 @@ export default function DecisionActionPanel({
             <Stack spacing={1}>
               <Typography
                 variant="caption"
-                color="text.secondary"
-                fontWeight={800}
                 sx={{
-                  textTransform: "uppercase",
+                  color: "#94A3B8",
+                  fontWeight: 800,
+                  textTransform:
+                    "uppercase",
                   letterSpacing: 0.8,
                 }}
               >
                 Selected Recommendation
               </Typography>
 
-              <Typography fontWeight={900}>
+              <Typography
+                fontWeight={900}
+                sx={{ color: "#E5E7EB" }}
+              >
                 {recommendation.title}
               </Typography>
 
               <Typography
                 variant="body2"
-                color="text.secondary"
+                sx={{ color: "#94A3B8" }}
               >
                 {recommendation.description}
               </Typography>
@@ -159,15 +293,9 @@ export default function DecisionActionPanel({
                     || "Unclassified"
                   }
                   size="small"
-                  color={
-                    recommendation.severity
-                    === "Critical"
-                      ? "error"
-                      : recommendation.severity
-                        === "High"
-                        ? "warning"
-                        : "info"
-                  }
+                  color={severityColor(
+                    recommendation.severity,
+                  )}
                 />
 
                 <Chip
@@ -178,10 +306,21 @@ export default function DecisionActionPanel({
                   }
                   size="small"
                   variant="outlined"
+                  sx={{
+                    color: "#E5E7EB",
+                    borderColor: "#475569",
+                  }}
                 />
               </Stack>
             </Stack>
           </Box>
+
+          {!organizationId && (
+            <Alert severity="warning">
+              An active Organization is required
+              before recording a decision.
+            </Alert>
+          )}
 
           <FormControl>
             <FormLabel>
@@ -236,7 +375,8 @@ export default function DecisionActionPanel({
             fullWidth
           />
 
-          {decisionType === "AcceptRisk" && (
+          {decisionType
+            === "AcceptRisk" && (
             <Stack spacing={2}>
               <FormControl fullWidth>
                 <FormLabel>
@@ -280,7 +420,8 @@ export default function DecisionActionPanel({
             </Stack>
           )}
 
-          {decisionType === "Escalate" && (
+          {decisionType
+            === "Escalate" && (
             <TextField
               label="Escalate To"
               value={escalatedTo}
@@ -293,19 +434,60 @@ export default function DecisionActionPanel({
             />
           )}
 
-          <Alert severity="info">
-            Decision submission will be connected to
-            the stable recommendation API in the next
-            slice.
-          </Alert>
+          <TextField
+            label="External Ticket Reference"
+            value={externalTicketReference}
+            onChange={(event) =>
+              setExternalTicketReference(
+                event.target.value,
+              )
+            }
+            fullWidth
+            helperText={
+              "Optional external case, change, or ticket ID."
+            }
+          />
+
+          {submissionError && (
+            <Alert severity="error">
+              {submissionError}
+            </Alert>
+          )}
+
+          {createdDecision && (
+            <Alert severity="success">
+              Decision recorded successfully.
+              Status:{" "}
+              <strong>
+                {createdDecision.status}
+              </strong>
+              . Decision ID:{" "}
+              <strong>
+                {createdDecision.id}
+              </strong>
+            </Alert>
+          )}
 
           <Button
             variant="contained"
             size="large"
-            disabled
+            disabled={!canSubmit}
             fullWidth
+            onClick={submitDecision}
+            startIcon={
+              isSubmitting
+                ? (
+                  <CircularProgress
+                    size={18}
+                    color="inherit"
+                  />
+                )
+                : undefined
+            }
           >
-            Save Organizational Decision
+            {isSubmitting
+              ? "Recording Decision..."
+              : "Save Organizational Decision"}
           </Button>
         </Stack>
       </CardContent>

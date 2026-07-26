@@ -56,6 +56,36 @@ import {
 } from "../services/graphAnimationService";
 
 
+async function fetchWorkspaceData({
+  identityId,
+  organizationId,
+}) {
+  const intelligenceUrl = (
+    "/api/v1/organizations/"
+    + encodeURIComponent(organizationId)
+    + "/identity-intelligence/"
+    + encodeURIComponent(identityId)
+  );
+
+  const [
+    intelligenceResponse,
+    attackPathResponse,
+  ] = await Promise.all([
+    api.get(intelligenceUrl),
+    api.get(
+      `/attack-path/${identityId}`,
+    ),
+  ]);
+
+  return {
+    intelligence:
+      intelligenceResponse.data,
+    attackPath:
+      attackPathResponse.data,
+  };
+}
+
+
 export default function AnalystWorkspace() {
   const { identityId } = useParams();
 
@@ -69,27 +99,76 @@ export default function AnalystWorkspace() {
   const workspace = useWorkspaceState();
 
   const [data, setData] = useState(null);
-  const [attackPath, setAttackPath] =
+
+  const [
+    attackPath,
+    setAttackPath,
+  ] = useState(null);
+
+  const [error, setError] =
     useState(null);
-  const [error, setError] = useState(null);
 
   const selectedNode =
     workspace.selection.node;
+
   const selectedPath =
     workspace.selection.path;
+
   const simulationResult =
     workspace.simulation.result;
+
   const isSimulating =
     workspace.simulation.running;
+
   const activeGraph =
     workspace.graph.current;
+
   const decisionIntelligence =
     workspace.decision.intelligence;
 
 
-  useEffect(() => {
-    if (!identityId) {
+  function applyWorkspaceData(
+    workspaceData,
+  ) {
+    if (!workspaceData) {
       return;
+    }
+
+    const {
+      intelligence,
+      attackPath: refreshedAttackPath,
+    } = workspaceData;
+
+    setError(null);
+    setData(intelligence);
+    setAttackPath(
+      refreshedAttackPath,
+    );
+
+    workspace.setBaselineGraph(
+      refreshedAttackPath,
+    );
+
+    const rankedPaths =
+      refreshedAttackPath
+        ?.summary
+        ?.ranked_paths
+      || [];
+
+    if (rankedPaths.length) {
+      workspace.selectPath(
+        rankedPaths[0],
+      );
+    }
+  }
+
+
+  useEffect(() => {
+    if (
+      !identityId
+      || !activeOrganizationId
+    ) {
+      return undefined;
     }
 
     let isCurrent = true;
@@ -99,33 +178,19 @@ export default function AnalystWorkspace() {
       identityId,
     );
 
-    Promise.all([
-      api.get(
-        `/identity-intelligence/${identityId}`,
-      ),
-      api.get(
-        `/attack-path/${identityId}`,
-      ),
-    ])
-      .then(([intel, attack]) => {
+    fetchWorkspaceData({
+      identityId,
+      organizationId:
+        activeOrganizationId,
+    })
+      .then((workspaceData) => {
         if (!isCurrent) {
           return;
         }
 
-        setError(null);
-        setData(intel.data);
-        setAttackPath(attack.data);
-        workspace.setBaselineGraph(
-          attack.data,
+        applyWorkspaceData(
+          workspaceData,
         );
-
-        if (
-          attack.data.summary.ranked_paths.length
-        ) {
-          workspace.selectPath(
-            attack.data.summary.ranked_paths[0],
-          );
-        }
       })
       .catch((requestError) => {
         if (!isCurrent) {
@@ -145,9 +210,12 @@ export default function AnalystWorkspace() {
 
     // Workspace actions are intentionally excluded.
     // Including the state-backed workspace object would
-    // refetch intelligence after every graph interaction.
+    // refetch intelligence after graph interactions.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [identityId]);
+  }, [
+    identityId,
+    activeOrganizationId,
+  ]);
 
 
   const animatedGraph = useMemo(() => {
@@ -219,12 +287,57 @@ export default function AnalystWorkspace() {
   }
 
 
+  async function handleDecisionCreated() {
+    if (
+      !identityId
+      || !activeOrganizationId
+    ) {
+      return;
+    }
+
+    try {
+      const workspaceData =
+        await fetchWorkspaceData({
+          identityId,
+          organizationId:
+            activeOrganizationId,
+        });
+
+      applyWorkspaceData(
+        workspaceData,
+      );
+    } catch (requestError) {
+      console.error(requestError);
+
+      setError(
+        "Decision recorded, but the workspace "
+        + "could not be refreshed.",
+      );
+    }
+  }
+
+
   if (!identityId) {
     return (
       <Alert severity="error">
         No identity was selected.
       </Alert>
     );
+  }
+
+  if (organizationError) {
+    return (
+      <Alert severity="error">
+        {organizationError}
+      </Alert>
+    );
+  }
+
+  if (
+    isLoadingOrganizations
+    || !activeOrganizationId
+  ) {
+    return <CircularProgress />;
   }
 
   if (error) {
@@ -255,6 +368,13 @@ export default function AnalystWorkspace() {
     decision,
   } = data;
 
+  const accounts =
+    access?.accounts || [];
+
+  const rankedPaths =
+    attackPath?.summary?.ranked_paths
+    || [];
+
   const riskMetrics = {
     riskScore:
       risk?.score
@@ -278,7 +398,7 @@ export default function AnalystWorkspace() {
   return (
     <Box
       data-organization-id={
-        activeOrganizationId || undefined
+        activeOrganizationId
       }
       data-identity-id={identityId}
     >
@@ -302,9 +422,18 @@ export default function AnalystWorkspace() {
       <Box sx={{ mb: 3 }}>
         <DecisionWorkspace
           decision={decision}
-          recommendations={recommendations}
+          recommendations={
+            recommendations
+          }
+          organizationId={
+            activeOrganizationId
+          }
+          identityId={identityId}
           showEvidence={false}
           enableDecisionWorkflow
+          onDecisionCreated={
+            handleDecisionCreated
+          }
         />
       </Box>
 
@@ -322,13 +451,13 @@ export default function AnalystWorkspace() {
         <MissionStatusCard
           exposure={exposure}
           missingMfaCount={
-            access.accounts.filter(
+            accounts.filter(
               (account) =>
                 !account.mfa_enabled,
             ).length
           }
           privilegedAccountCount={
-            access.accounts.filter(
+            accounts.filter(
               (account) =>
                 account.privilege_level
                 === "Privileged",
@@ -342,7 +471,9 @@ export default function AnalystWorkspace() {
         />
 
         <RemediationImpactCard
-          recommendations={recommendations}
+          recommendations={
+            recommendations
+          }
         />
       </Box>
 
@@ -386,7 +517,9 @@ export default function AnalystWorkspace() {
       {decisionIntelligence && (
         <Box sx={{ mb: 3 }}>
           <DecisionRenderer
-            decision={decisionIntelligence}
+            decision={
+              decisionIntelligence
+            }
           />
         </Box>
       )}
@@ -402,9 +535,7 @@ export default function AnalystWorkspace() {
         }}
       >
         <AttackSimulationPanel
-          rankedPaths={
-            attackPath.summary.ranked_paths
-          }
+          rankedPaths={rankedPaths}
           selectedPath={selectedPath}
           setSelectedPath={
             workspace.selectPath
@@ -420,7 +551,9 @@ export default function AnalystWorkspace() {
         />
 
         <ImmediateActionsPanel
-          recommendations={recommendations}
+          recommendations={
+            recommendations
+          }
           selectedNode={selectedNode}
         />
 
