@@ -1,294 +1,299 @@
 # USOP
+# Unified Security Operations Platform
 
-# USOP — Unified Security Operations Platform
+> **An intelligence-driven cybersecurity platform that transforms fragmented security data into explainable, organization-aware operational decisions.**
 
-> **An intelligence-driven cybersecurity platform that unifies identity, governance, attack-path analysis, risk analytics, and security operations into a single analyst workspace.**
+<p align="center">
 
 ![Status](https://img.shields.io/badge/Status-Active%20Development-brightgreen)
-![Version](https://img.shields.io/badge/Version-v1.0--alpha-blue)
-![Sprint](https://img.shields.io/badge/Sprint-10-orange)
-![License](https://img.shields.io/badge/License-MIT-success)
-![Python](https://img.shields.io/badge/Python-3.12-blue)
+![Version](https://img.shields.io/badge/Version-Alpha-blue)
+![Sprint](https://img.shields.io/badge/Sprint-14.10.5-orange)
+![Python](https://img.shields.io/badge/Python-3.11-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688)
 ![React](https://img.shields.io/badge/React-Frontend-61DAFB)
 
----
-
-# What is USOP?
-
-Modern security teams operate across dozens of disconnected security products.
-
-Identity lives in one platform.
-
-Endpoint telemetry lives in another.
-
-Vulnerability data lives somewhere else.
-
-Security alerts, cloud resources, governance workflows, ticketing systems, and compliance evidence are often scattered across multiple tools.
-
-USOP was created to solve that problem.
-
-Rather than treating security as a collection of disconnected technologies, USOP models the enterprise as a connected intelligence platform that enables analysts to investigate, visualize, simulate, prioritize, and understand security risk from a single workspace.
+</p>
 
 ---
 
-# Why USOP?
+# Analyst Workspace
 
-Security operations should answer questions—not create more of them.
-
-USOP is designed to help security teams answer questions such as:
-
-* Which identities present the greatest enterprise risk?
-* How can an attacker move through my environment?
-* Which remediation provides the greatest reduction in risk?
-* What changed after remediation?
-* Which vulnerabilities create exploitable attack paths?
-* How can technical findings be explained to leadership?
-
-The goal is to reduce investigation time while improving the quality of security decisions.
+> ![alt text](image.png)
+> ![alt text](image-1.png)
+> ![alt text](image-2.png)
+> ![alt text](image-3.png)
 
 ---
 
-# Current Platform Capabilities
+# The Problem
+
+Modern security teams rarely suffer from a lack of security tools.
+
+They suffer from a lack of **connected intelligence**.
+
+Identity data lives in one platform.
+
+Cloud resources live in another.
+
+Endpoint telemetry, vulnerability management, compliance evidence, attack paths, tickets, documentation, and organizational knowledge are often scattered across dozens of disconnected systems.
+
+Analysts spend far too much time collecting information before they can make an informed decision.
+
+**USOP was created to solve that problem.**
+
+---
+
+# The Mission
+
+USOP helps Identity & Access Management (IAM), Identity Governance(IGA), and Security Operations (SOC) teams reduce analyst workload whileimproving the quality, consistency, and explainability of securitydecisions.
+
+Rather than treating cybersecurity as disconnected alerts, USOP treatsevery recommendation as part of a living organizational decision system.
+
+---
+
+# Why USOP is Different
+
+Traditional security products identify problems.
+
+USOP helps organizations:
+
+Understand what should be done.
+
+Record why a decision was made.
+
+Preserve organizational knowledge.
+
+Schedule future reviews.
+
+Detect material changes that require new analyst decisions.
+
+Every recommendation can evolve into a living organizational objectcontaining technical evidence, organizational disposition, decisionhistory, review schedules, governance context, and knowledgerelationships.
+
+---
+
+# Core Platform Capabilities
 
 ## Identity Intelligence
 
-* Identity graph
-* Identity timeline
-* Exposure scoring
-* Risk analytics
-* Recommendation engine
+- Identity Graph
+- Authorization Intelligence
+- Exposure Scoring
+- Risk Analytics
+- Identity Timeline Reconstruction
+- Enterprise Identity Visibility
 
-## Identity Governance
-
-* Accounts
-* Groups
-* Roles
-* Permissions
-* Memberships
-* Access Reviews
-* Review Campaigns
-* Governance workflows
+---
 
 ## Attack Path Intelligence
 
-* Attack graph generation
-* Attack path ranking
-* Replay engine
-* Simulation engine
-* Transition engine
-* Graph visualization
+- Attack Graph Generation
+- Attack Path Ranking
+- Interactive Graph Visualization
+- Attack Replay
+- Simulation Engine
+- Risk Reduction Modeling
 
-## Decision Intelligence
+---
 
-* Decision Intelligence Engine
-* Simulation comparison
-* Remediation recommendations
-* Executive decision summaries
+## Organizational Decision Intelligence
+
+- Stable Recommendation Engine
+- Organizational Decision Recording
+- Decision-Aware Recommendations
+- Organizational Disposition Projection
+- Decision History
+- Review Scheduling
+- Governance Workflows
+
+---
+
+## Organizational Memory
+
+- Knowledge Assets
+- Decision Knowledge
+- Related Decisions
+- Architecture Decision Records (ADR)
+- Organizational Learning Foundation
+
+---
 
 ## Analyst Workspace
 
-* Interactive graph visualization
-* Mission context
-* Decision Intelligence panel
-* Animated graph rendering
-* Attack replay
-* Simulation reset
-* Animated risk metrics
+- Interactive Identity Graph
+- Mission Context
+- Risk Metrics
+- Recommendation Workspace
+- Decision History
+- Simulation Comparison
+- Executive Decision Support
 
 ---
 
-# Platform Architecture
+# Current Platform Architecture
 
-```text
+High-Level Architecture
+
 External Security Platforms
         │
-        ▼
 Synchronization Layer
         │
-        ▼
-Identity Graph
+Identity Intelligence
         │
-        ▼
-Workspace State Engine
+Recommendation Engine
         │
- ┌──────┼────────────┐
- ▼      ▼            ▼
-
-Graph  Decision  Transition
-Engine Engine     Engine
-
-        ▼
-Animation Pipeline
-
-        ▼
+Organizational Decision Projection
+        │
+Organizational Memory
+        │
 Analyst Workspace
-```
 
 ---
 
-# Engineering Principles
+# Engineering Philosophy
 
-USOP is engineered around several core principles.
+USOP is engineered around several core architectural principles.
 
-* Backend intelligence is the source of truth.
-* Engines produce intelligence.
-* Services coordinate workflows.
-* Adapters translate between architectural layers.
-* Renderers display intelligence.
-* Pages orchestrate user experiences.
-* One architectural responsibility per commit.
-* Documentation evolves with the platform.
+- Backend intelligence is the source of truth.
+- Deterministic recommendations before automation.
+- Explainable security decisions.
+- Organization-aware governance.
+- Modular, extensible architecture.
+- Small, verifiable engineering increments.
+- Regression-tested development.
+- Long-term maintainability over short-term convenience.
+
+---
+
+# Current Development Snapshot
+
+| Capability | Status |
+|------------|--------|
+| Identity Intelligence | ✅ Complete |
+| Identity Governance | ✅ Complete |
+| Attack Path Analysis | ✅ Complete |
+| Recommendation Engine | ✅ Complete |
+| Organizational Decisions | ✅ Complete |
+| Decision History | ✅ Complete |
+| Organizational Memory | 🚧 Foundation Complete |
+| Microsoft Entra ID Synchronization | ✅ Live |
+| Threat Intelligence Extensions | 📋 Planned |
+| AI Security Analyst | 📋 Planned |
 
 ---
 
 # Technology Stack
 
-### Backend
+## Backend
 
-* Python
-* FastAPI
-* PostgreSQL
-* SQLAlchemy
-* Alembic
-* Docker
+- Python
+- FastAPI
+- PostgreSQL
+- SQLAlchemy
+- Alembic
+- Docker
 
-### Frontend
+## Frontend
 
-* React
-* Material UI
-* React Flow
-* Recharts
-* Vite
-
----
-
-# Engineering Handbook
-
-Detailed engineering documentation is available in the `/docs` directory.
-
-Current documentation includes:
-
-* Vision
-* Platform Architecture
-* Engineering Standards
-* Architecture Decision Records (ADRs)
-* Roadmap
-* Release Notes
-* Sprint Documentation
+- React
+- Material UI
+- React Flow
+- Recharts
+- Vite
 
 ---
 
-# Getting Started
+# Engineering Process
 
-Clone the repository:
+USOP is intentionally developed using an architecture-first methodology.
 
-```bash
-git clone https://github.com/sloopyeod-ctrl/USOP.git
-```
+Every sprint includes:
 
-Start the platform:
+- Architecture Decision Records (ADR)
+- Engineering documentation
+- Regression testing
+- Incremental feature delivery
+- Production-quality commits
+- Sprint milestones
 
-```bash
-docker compose up
-```
-
-Run the backend locally:
-
-```bash
-cd backend
-
-python -m venv .venv
-
-# Windows
-.venv\Scripts\activate
-
-# Linux / macOS
-source .venv/bin/activate
-
-pip install -r requirements.txt
-
-uvicorn app.main:app --reload
-```
-
-Swagger UI:
-
-```
-http://127.0.0.1:8000/docs
-```
+The repository demonstrates not only implementation, but long-term software architecture and engineering methodology.
 
 ---
 
 # Roadmap
 
-## Completed
+## Foundation ✅
 
-* Platform Foundation
-* Identity Governance
-* Identity Intelligence
-* Analyst Workspace
-* Decision Intelligence
-* Attack Path Analysis
-* Simulation Engine
-* Transition Engine
-* Graph Animation Pipeline
-
-## In Progress
-
-* Productization
-* Engineering Handbook
-* Documentation
-* Repository modernization
-
-## Planned
-
-* Microsoft Entra ID connector
-* Microsoft Graph integration
-* Microsoft Sentinel ingestion
-* BloodHound integration
-* Tenable integration
-* AI Security Analyst
-* Investigation sessions
-* Timeline replay
-* Plugin architecture
-* Enterprise reporting
+- Identity Intelligence
+- Identity Governance
+- Decision Intelligence
+- Attack Path Analysis
+- Organizational Decision Recording
+- Organizational Memory Foundation
 
 ---
 
-# Current Status
+## Enterprise Integrations 🚧
 
-**Version:** v1.0-alpha
+- Microsoft Entra ID
+- Microsoft Graph
+- Microsoft Sentinel
+- BloodHound
+- Tenable
+- Additional Identity Providers
 
-**Current Sprint:** Sprint 10
+---
 
-**Theme:** Productization
+## Platform Expansion 📋
 
-USOP is under active development with a focus on modular architecture, intelligence-driven design, and enterprise security operations.
+- Threat Intelligence Extensions
+- CISA KEV Integration*
+- DISA STIG Integration*
+- CIAM Support
+- Enterprise Reporting
+- AI Security Analyst
+- Investigation Sessions
+- Timeline Replay
+- Plugin Architecture
+
+> *Delivered as optional licensed platform extensions.*
+
+---
+
+# Repository Maturity
+
+This repository represents an actively engineered cybersecurity platform.
+
+The repository intentionally includes:
+
+- Architecture Decision Records (ADR)
+- Engineering documentation
+- Sprint history
+- Regression testing
+- Incremental architectural evolution
+- Production-quality commits
+
+The goal is to demonstrate both software implementation and engineering methodology.
 
 ---
 
 # About the Author
 
-**Marvin G. Dewitt**
+**Marvin G. DeWitt**
 
-Retired U.S. Army Master Sergeant (EOD)
+Retired U.S. Army Master Sergeant (Explosive Ordnance Disposal)
 
-Cloud Security Engineer • Security Platform Engineer • Identity & Access Management • Enterprise Cybersecurity Architecture
+Cloud Security Engineer • Identity & Access Management • Enterprise Security Engineering • Security Platform Architecture
 
-USOP represents my vision for a modern, intelligence-driven security operations platform that unifies identity, governance, attack-path analysis, decision intelligence, and analyst workflows into a single operational experience.
+USOP reflects lessons learned from military operations, enterprise cybersecurity engineering, identity governance, cloud security architecture, and modern security operations.
+
+The platform is being built to help analysts spend less time collecting information and more time making informed, explainable security decisions.
 
 ---
 
 # License
 
-## License and Ownership
+© 2026 Marvin G. DeWitt
 
-© 2026 Marvin Dewitt. All rights reserved.
+All rights reserved.
 
-This repository contains the public artifacts of the Marvin Security Platform.
-The core backend and associated services are licensed separately and are
-not open source.
-
-Use of this platform, including its backend services and APIs, is governed
-by the proprietary Marvin Security Platform License. For licensing inquiries,
-contact: mgeoffdewitt@gmail.com
+USOP is an actively developed cybersecurity platform. The repository is intended to demonstrate engineering methodology, software architecture, and enterprise cybersecurity platform development.
