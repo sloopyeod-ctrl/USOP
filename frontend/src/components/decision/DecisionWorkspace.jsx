@@ -1,4 +1,4 @@
-import {
+﻿import {
   useMemo,
   useState,
 } from "react";
@@ -14,8 +14,8 @@ import DecisionEvidenceCard from
   "./DecisionEvidenceCard";
 import RecommendationPanel from
   "./RecommendationPanel";
-import DecisionActionPanel from
-  "./DecisionActionPanel";
+import RecommendationIntelligenceWorkspace from
+  "./RecommendationIntelligenceWorkspace";
 
 
 function firstActionableRecommendationId(
@@ -75,7 +75,8 @@ export default function DecisionWorkspace({
         const requestedSelectionExists =
           availableRecommendations.some(
             (recommendation) =>
-              recommendation.recommendation_id
+              recommendation
+                .recommendation_id
               === requestedRecommendationId,
           );
 
@@ -99,7 +100,8 @@ export default function DecisionWorkspace({
       () =>
         availableRecommendations.find(
           (recommendation) =>
-            recommendation.recommendation_id
+            recommendation
+              .recommendation_id
             === selectedRecommendationId,
         ) || null,
       [
@@ -119,9 +121,7 @@ export default function DecisionWorkspace({
       await onDecisionCreated(record);
     }
 
-    setRequestedRecommendationId(
-      null,
-    );
+    setRequestedRecommendationId(null);
   }
 
 
@@ -136,63 +136,61 @@ export default function DecisionWorkspace({
         decision={decision}
       />
 
-      {(showEvidence
-        || enableDecisionWorkflow) && (
+      {showEvidence && (
+        <DecisionEvidenceCard
+          decision={decision}
+        />
+      )}
+
+      {enableDecisionWorkflow && (
         <Box
           sx={{
             display: "grid",
             gridTemplateColumns: {
               xs: "1fr",
-              xl: showEvidence
-                ? "1fr 1fr"
-                : "1fr",
+              xl: "minmax(360px, 0.85fr) "
+                + "minmax(520px, 1.35fr)",
             },
             gap: 3,
+            alignItems: "start",
           }}
         >
-          {showEvidence && (
-            <DecisionEvidenceCard
-              decision={decision}
-            />
-          )}
+          <RecommendationPanel
+            recommendations={
+              availableRecommendations
+            }
+            selectedRecommendationId={
+              selectedRecommendationId
+            }
+            onSelectRecommendation={(
+              recommendationId,
+            ) => {
+              setRequestedRecommendationId(
+                recommendationId,
+              );
+            }}
+          />
 
-          <Stack spacing={3}>
-            <RecommendationPanel
-              recommendations={
-                availableRecommendations
-              }
-              selectedRecommendationId={
-                selectedRecommendationId
-              }
-              onSelectRecommendation={
-                enableDecisionWorkflow
-                  ? (recommendationId) => {
-                    setRequestedRecommendationId(
-                      recommendationId,
-                    );
-                  }
-                  : null
-              }
-            />
-
-            {enableDecisionWorkflow && (
-              <DecisionActionPanel
-                key={
-                  selectedRecommendationId
-                  || "no-recommendation"
-                }
-                organizationId={organizationId}
-                identityId={identityId}
-                recommendation={
-                  selectedRecommendation
-                }
-                onDecisionCreated={
-                  handleDecisionCreated
-                }
-              />
-            )}
-          </Stack>
+          <RecommendationIntelligenceWorkspace
+            organizationId={organizationId}
+            identityId={identityId}
+            recommendation={
+              selectedRecommendation
+            }
+            onDecisionCreated={
+              handleDecisionCreated
+            }
+          />
         </Box>
+      )}
+
+      {!enableDecisionWorkflow
+        && !showEvidence && (
+        <RecommendationPanel
+          recommendations={
+            availableRecommendations
+          }
+        />
       )}
     </Stack>
   );
