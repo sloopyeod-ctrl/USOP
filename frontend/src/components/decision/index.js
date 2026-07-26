@@ -1,4 +1,4 @@
-﻿export {
+export {
   default as DecisionWorkspace,
 } from "./DecisionWorkspace";
 
@@ -21,3 +21,7 @@ export {
 export {
   default as RecommendationIntelligenceWorkspace,
 } from "./RecommendationIntelligenceWorkspace";
+
+export {
+  default as DecisionTimelinePanel,
+} from "./DecisionTimelinePanel";

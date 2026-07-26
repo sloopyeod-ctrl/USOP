@@ -11,6 +11,8 @@ import {
 
 import DecisionActionPanel from
   "./DecisionActionPanel";
+import DecisionTimelinePanel from
+  "./DecisionTimelinePanel";
 
 
 function formatDateTime(value) {
@@ -238,9 +240,7 @@ function CurrentDecision({
       disposition?.created_at,
     );
 
-  if (
-    !disposition?.decision_id
-  ) {
+  if (!disposition?.decision_id) {
     return (
       <Stack spacing={1.5}>
         <Typography
@@ -349,15 +349,6 @@ function CurrentDecision({
         label="Analyst Notes"
         value={disposition.notes}
       />
-
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        fontWeight={800}
-      >
-        Decision History:{" "}
-        {disposition.history_count || 1}
-      </Typography>
     </Stack>
   );
 }
@@ -384,8 +375,12 @@ export default function RecommendationIntelligenceWorkspace({
     || {
       display_status: "Open",
       history_count: 0,
+      history: [],
       is_actionable: true,
     };
+
+  const history =
+    disposition.history || [];
 
   return (
     <Stack spacing={3}>
@@ -499,6 +494,46 @@ export default function RecommendationIntelligenceWorkspace({
             <CurrentDecision
               disposition={disposition}
             />
+
+            <Divider />
+
+            <Stack spacing={1.5}>
+              <Stack
+                direction={{
+                  xs: "column",
+                  sm: "row",
+                }}
+                justifyContent="space-between"
+                alignItems={{
+                  xs: "flex-start",
+                  sm: "center",
+                }}
+                spacing={1}
+              >
+                <Typography
+                  variant="h6"
+                  fontWeight={900}
+                >
+                  Decision Timeline
+                </Typography>
+
+                <Chip
+                  label={
+                    `${history.length} event${
+                      history.length === 1
+                        ? ""
+                        : "s"
+                    }`
+                  }
+                  size="small"
+                  variant="outlined"
+                />
+              </Stack>
+
+              <DecisionTimelinePanel
+                history={history}
+              />
+            </Stack>
           </Stack>
         </CardContent>
       </Card>
