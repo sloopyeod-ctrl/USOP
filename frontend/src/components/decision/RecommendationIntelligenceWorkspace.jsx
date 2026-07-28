@@ -13,6 +13,8 @@ import DecisionActionPanel from
   "./DecisionActionPanel";
 import DecisionTimelinePanel from
   "./DecisionTimelinePanel";
+import OrganizationGuidancePanel from
+  "./OrganizationGuidancePanel";
 
 
 function formatDateTime(value) {
@@ -534,6 +536,15 @@ export default function RecommendationIntelligenceWorkspace({
                 history={history}
               />
             </Stack>
+
+            <Divider />
+
+            <OrganizationGuidancePanel
+              organizationId={organizationId}
+              decisionRecordId={
+                disposition.decision_id
+              }
+            />
           </Stack>
         </CardContent>
       </Card>

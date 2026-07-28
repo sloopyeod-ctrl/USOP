@@ -136,3 +136,37 @@ export async function createDecisionRecord({
 
   return response.data;
 }
+
+
+export async function listDecisionKnowledge({
+  organizationId,
+  decisionRecordId,
+}) {
+  requireValue(
+    organizationId,
+    "Organization",
+  );
+
+  requireValue(
+    decisionRecordId,
+    "Decision record",
+  );
+
+  const response = await api.get(
+    (
+      "/api/v1/organizations/"
+      + encodeURIComponent(
+        organizationId,
+      )
+      + "/decision-records/"
+      + encodeURIComponent(
+        decisionRecordId,
+      )
+      + "/knowledge/"
+    ),
+  );
+
+  return Array.isArray(response.data)
+    ? response.data
+    : [];
+}
