@@ -6,6 +6,12 @@ from app.intelligence.drafting.decision_draft import (
     DecisionDraftEvidence,
     DecisionDraftSegment,
 )
+from app.intelligence.drafting.decision_draft_errors import (
+    DecisionDraftIdentityNotFoundError,
+    DecisionDraftIntelligenceError,
+    DecisionDraftIntelligenceValidationError,
+    DecisionDraftRecommendationNotFoundError,
+)
 from app.intelligence.drafting.draft_context import (
     DecisionDraftContext,
 )
@@ -34,6 +40,10 @@ from app.intelligence.drafting.recommendation_segment_builder import (
 
 __all__ = [
     "DecisionDraft",
+    "DecisionDraftIdentityNotFoundError",
+    "DecisionDraftIntelligenceError",
+    "DecisionDraftIntelligenceValidationError",
+    "DecisionDraftRecommendationNotFoundError",
     "DecisionDraftContext",
     "DecisionDraftContribution",
     "DecisionDraftEvidence",

@@ -11,6 +11,12 @@ from app.intelligence.decision_pattern_intelligence_service import (
 from app.intelligence.drafting.decision_draft import (
     DecisionDraft,
 )
+from app.intelligence.drafting.decision_draft_errors import (
+    DecisionDraftIdentityNotFoundError,
+    DecisionDraftIntelligenceError,
+    DecisionDraftIntelligenceValidationError,
+    DecisionDraftRecommendationNotFoundError,
+)
 from app.intelligence.drafting.draft_context import (
     DecisionDraftContext,
 )
@@ -32,38 +38,6 @@ from app.intelligence.drafting.recommendation_segment_builder import (
 from app.intelligence.identity_intelligence_service import (
     IdentityIntelligenceService,
 )
-
-
-class DecisionDraftIntelligenceError(
-    ValueError
-):
-    """
-    Base error for decision-draft intelligence operations.
-    """
-
-
-class DecisionDraftIntelligenceValidationError(
-    DecisionDraftIntelligenceError
-):
-    """
-    Raised when required draft scoping information is invalid.
-    """
-
-
-class DecisionDraftIdentityNotFoundError(
-    DecisionDraftIntelligenceError
-):
-    """
-    Raised when identity intelligence cannot be resolved.
-    """
-
-
-class DecisionDraftRecommendationNotFoundError(
-    DecisionDraftIntelligenceError
-):
-    """
-    Raised when the requested recommendation is unavailable.
-    """
 
 
 class DecisionDraftIntelligenceService:
