@@ -21,6 +21,9 @@ from app.intelligence.drafting.guidance_segment_builder import (
 from app.intelligence.drafting.history_segment_builder import (
     HistorySegmentBuilder,
 )
+from app.intelligence.drafting.decision_draft_intelligence_service import (
+    DecisionDraftIntelligenceService,
+)
 from app.intelligence.drafting.pattern_segment_builder import (
     PatternSegmentBuilder,
 )
@@ -39,6 +42,7 @@ __all__ = [
     "DecisionDraftSegmentBuilder",
     "GuidanceSegmentBuilder",
     "HistorySegmentBuilder",
+    "DecisionDraftIntelligenceService",
     "PatternSegmentBuilder",
     "RecommendationSegmentBuilder",
 ]
