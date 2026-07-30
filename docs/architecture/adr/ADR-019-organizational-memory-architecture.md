@@ -527,24 +527,31 @@ Policies do not replace analyst judgment.
 
 # Organizational Memory
 
-Organizational Memory is not a database table.
+Organizational Memory exposes two creation workflows.
 
-It is an architectural capability.
+create_pending()
 
-Organizational Memory emerges through the relationships among:
+• participates in caller-owned transactions
+• stages the KnowledgeAsset
+• stages the immutable audit event
+• performs no commit
+• performs no rollback
 
-- Evidence
-- Recommendations
-- Decisions
-- Knowledge
-- Policies
-- Audit History
+Used by orchestration workflows that combine Organizational Memory with other
+domain operations inside one atomic transaction.
 
-The result is a continuously expanding organizational understanding of
-security operations.
+create()
 
-USOP therefore preserves not only what happened, but why it happened and what
-future analysts should understand before making similar decisions.
+• delegates all business logic to create_pending()
+• commits the transaction
+• refreshes the persisted KnowledgeAsset
+• rolls back on failure
+
+Used by ordinary API workflows where Organizational Memory owns the
+transaction boundary.
+
+This separation preserves a single implementation of all business rules while
+supporting both orchestration and standalone service execution.
 
 ---
 
@@ -633,3 +640,4 @@ As a result, USOP becomes more valuable every day it is used.
 Security knowledge compounds.
 
 It never disappears.
+

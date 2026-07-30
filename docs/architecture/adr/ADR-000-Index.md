@@ -25,4 +25,5 @@
 | ADR-019 | Organizational Memory and Evidence Architecture | Accepted |
 | ADR-020 | Canonical Decision Knowledge Relationships | Accepted |
 | ADR-021 | Pipeline-Based Intelligence Architecture | Accepted |
-
+| ADR-022 | Tiered Evidence Retention and Customer-Controlled Archival | Accepted |
+| ADR-023 | Visual Intelligence Design Principles | Accepted |
