@@ -1,4 +1,6 @@
 import {
+  useEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -25,9 +27,16 @@ import {
 import FactCheckIcon from
   "@mui/icons-material/FactCheck";
 
+import DecisionDraftWorkspace from
+  "../workspace/DecisionDraftWorkspace";
+
 import {
   createDecisionRecord,
 } from "../../services/decisionRecordService";
+
+import {
+  createDecisionDraft,
+} from "../../services/decisionDraftService";
 
 
 const DECISION_OPTIONS = [
@@ -87,6 +96,15 @@ function resolveErrorMessage(error) {
 }
 
 
+function resolveDraftErrorMessage(error) {
+  return (
+    error?.response?.data?.detail
+    || error?.message
+    || "Unable to prepare the decision draft."
+  );
+}
+
+
 export default function DecisionActionPanel({
   organizationId,
   identityId,
@@ -105,6 +123,28 @@ export default function DecisionActionPanel({
 
   const [notes, setNotes] =
     useState("");
+
+
+  const [
+    decisionDraft,
+    setDecisionDraft,
+  ] = useState(null);
+
+  const [
+    isDraftLoading,
+    setIsDraftLoading,
+  ] = useState(false);
+
+  const [
+    draftError,
+    setDraftError,
+  ] = useState(null);
+
+  const justificationEditedRef =
+    useRef(false);
+
+  const notesEditedRef =
+    useRef(false);
 
   const [
     acceptanceType,
@@ -140,6 +180,122 @@ export default function DecisionActionPanel({
     createdDecision,
     setCreatedDecision,
   ] = useState(null);
+
+  useEffect(
+    () => {
+      let isCurrent = true;
+
+      const recommendationId =
+        recommendation
+          ?.recommendation_id;
+
+      if (
+        !organizationId
+        || !identityId
+        || !recommendationId
+        || !decisionType
+      ) {
+        return () => {
+          isCurrent = false;
+        };
+      }
+
+      Promise.resolve().then(
+        async () => {
+          if (!isCurrent) {
+            return;
+          }
+
+          setIsDraftLoading(true);
+          setDraftError(null);
+          setDecisionDraft(null);
+
+          /*
+           * Generated text may be refreshed when
+           * the analyst changes decision type.
+           *
+           * Analyst-edited fields are never
+           * cleared or replaced.
+           */
+          if (
+            !justificationEditedRef.current
+          ) {
+            setJustification("");
+          }
+
+          if (!notesEditedRef.current) {
+            setNotes("");
+          }
+
+          try {
+            const result =
+              await createDecisionDraft({
+                organizationId,
+                identityId,
+                recommendationId,
+                decisionType,
+                draftProfile: "default",
+              });
+
+            if (!isCurrent) {
+              return;
+            }
+
+            setDecisionDraft(result);
+
+            if (
+              !justificationEditedRef.current
+            ) {
+              setJustification(
+                result
+                  ?.suggested_justification
+                || "",
+              );
+            }
+
+            if (!notesEditedRef.current) {
+              setNotes(
+                result?.suggested_notes
+                || "",
+              );
+            }
+          } catch (error) {
+            if (!isCurrent) {
+              return;
+            }
+
+            console.error(
+              "Decision draft failed:",
+              error,
+            );
+
+            setDecisionDraft(null);
+            setDraftError(
+              resolveDraftErrorMessage(
+                error,
+              ),
+            );
+          } finally {
+            if (isCurrent) {
+              setIsDraftLoading(false);
+            }
+          }
+        },
+      );
+
+      return () => {
+        isCurrent = false;
+      };
+    },
+    [
+      organizationId,
+      identityId,
+      recommendation
+        ?.recommendation_id,
+      decisionType,
+    ],
+  );
+
 
   if (!recommendation) {
     return (
@@ -348,32 +504,21 @@ export default function DecisionActionPanel({
             </RadioGroup>
           </FormControl>
 
-          <TextField
-            label="Justification"
-            value={justification}
-            onChange={(event) =>
-              setJustification(
-                event.target.value,
-              )
-            }
-            multiline
-            minRows={3}
-            fullWidth
-            helperText={
-              "Explain why this response is appropriate."
-            }
-          />
-
-          <TextField
-            label="Analyst Notes"
-            value={notes}
-            onChange={(event) =>
-              setNotes(event.target.value)
-            }
-            multiline
-            minRows={2}
-            fullWidth
-          />
+    <DecisionDraftWorkspace
+      decisionDraft={decisionDraft}
+      isDraftLoading={isDraftLoading}
+      draftError={draftError}
+      justification={justification}
+      onJustificationChange={(value) => {
+        justificationEditedRef.current = true;
+        setJustification(value);
+      }}
+      notes={notes}
+      onNotesChange={(value) => {
+        notesEditedRef.current = true;
+        setNotes(value);
+      }}
+  />
 
           {decisionType
             === "AcceptRisk" && (
