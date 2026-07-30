@@ -82,8 +82,8 @@ class RecommendationSegmentBuilder:
 
         segment = DecisionDraftSegment(
             text=(
-                "The selected organizational "
-                "response addresses the "
+                "This decision documents the "
+                "organization's response to the "
                 f"recommendation: {title}."
             ),
             evidence=(evidence,),

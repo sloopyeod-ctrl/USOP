@@ -124,9 +124,9 @@ def test_history_builder_constructs_factual_summary():
     )
 
     assert segment.text == (
-        "3 prior organizational decisions "
-        "for this recommendation were "
-        "available for analyst review "
+        "3 previous organizational decisions "
+        "related to this recommendation were "
+        "available to provide historical context "
         "(AcceptRisk: 2, CorrectRisk: 1)."
     )
 

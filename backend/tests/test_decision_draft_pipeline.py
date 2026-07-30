@@ -101,18 +101,19 @@ def test_pipeline_constructs_stable_explainable_draft():
     assert (
         draft.suggested_justification
         == (
-            "The selected organizational "
-            "response addresses the "
+            "This decision documents the "
+            "organization's response to the "
             "recommendation: Remove "
             "unnecessary privileged access. "
-            "Linked customer-owned "
-            "organizational guidance was "
-            "available for analyst review "
-            "when documenting this response. "
-            "Deterministic patterns from the "
-            "organization's recorded decision "
-            "history were available for "
-            "analyst consideration."
+            "Customer-owned organizational "
+            "guidance was available during "
+            "preparation of this decision "
+            "and should be considered during "
+            "analyst review. "
+            "Established organizational "
+            "decision patterns were available "
+            "to support consistent analyst "
+            "decision making."
         )
     )
 

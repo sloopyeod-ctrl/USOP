@@ -85,19 +85,16 @@ class HistorySegmentBuilder:
 
         segment = DecisionDraftSegment(
             text=(
-                f"{history_count} prior "
+                f"{history_count} previous "
                 + (
                     "organizational decision "
                     if history_count == 1
-                    else (
-                        "organizational "
-                        "decisions "
-                    )
+                    else "organizational decisions "
                 )
                 + (
-                    "for this recommendation "
-                    "were available for analyst "
-                    "review"
+                    "related to this recommendation "
+                    "were available to provide "
+                    "historical context"
                 )
                 + (
                     f" ({count_summary})."

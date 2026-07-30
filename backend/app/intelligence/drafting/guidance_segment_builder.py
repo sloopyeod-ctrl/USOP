@@ -78,11 +78,12 @@ class GuidanceSegmentBuilder:
 
         segment = DecisionDraftSegment(
             text=(
-                "Linked customer-owned "
-                "organizational guidance was "
-                "available for analyst review "
-                "when documenting this response."
-            ),
+            "Customer-owned organizational "
+            "guidance was available during "
+            "preparation of this decision "
+            "and should be considered during "
+            "analyst review."
+        ),
             evidence=tuple(
                 evidence_items
             ),

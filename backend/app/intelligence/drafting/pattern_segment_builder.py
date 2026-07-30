@@ -77,12 +77,12 @@ class PatternSegmentBuilder:
             )
 
         segment = DecisionDraftSegment(
-            text=(
-                "Deterministic patterns from "
-                "the organization's recorded "
-                "decision history were available "
-                "for analyst consideration."
-            ),
+           text=(
+            "Established organizational "
+            "decision patterns were available "
+            "to support consistent analyst "
+            "decision making."
+        ),
             evidence=tuple(
                 evidence_items
             ),
