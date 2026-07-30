@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useState,
 } from "react";
 
@@ -21,14 +22,26 @@ import {
 
 import AdminPanelSettingsIcon from
   "@mui/icons-material/AdminPanelSettings";
+import ApiIcon from
+  "@mui/icons-material/Api";
 import BusinessIcon from
   "@mui/icons-material/Business";
+import CheckCircleIcon from
+  "@mui/icons-material/CheckCircle";
+import WarningAmberIcon from
+  "@mui/icons-material/WarningAmber";
 import PeopleAltIcon from
   "@mui/icons-material/PeopleAlt";
+import StorageIcon from
+  "@mui/icons-material/Storage";
 
-import api from "../api/usopApi";
 import useOrganizationContext from
   "../hooks/useOrganizationContext";
+import {
+  getPlatformHealth,
+  listPlatformUsers,
+  listRegisteredConnectors,
+} from "../services/platformOperationsService";
 
 
 function DetailRow({
@@ -39,6 +52,7 @@ function DetailRow({
     <Stack
       direction="row"
       justifyContent="space-between"
+      alignItems="flex-start"
       spacing={2}
     >
       <Typography color="text.secondary">
@@ -48,11 +62,185 @@ function DetailRow({
       <Typography
         fontWeight={700}
         textAlign="right"
+        sx={{
+          overflowWrap: "anywhere",
+        }}
       >
         {value || "Not configured"}
       </Typography>
     </Stack>
   );
+}
+
+
+function SummaryMetric({
+  label,
+  value,
+  emphasis = false,
+}) {
+  return (
+    <Box>
+      <Typography
+        variant="body2"
+        color="text.secondary"
+      >
+        {label}
+      </Typography>
+
+      <Typography
+        variant={emphasis ? "h4" : "h6"}
+        fontWeight={900}
+      >
+        {value}
+      </Typography>
+    </Box>
+  );
+}
+
+
+function StatusChip({
+  status,
+  healthy,
+}) {
+  if (healthy === true) {
+    return (
+      <Chip
+        icon={<CheckCircleIcon />}
+        label={status || "Healthy"}
+        color="success"
+        size="small"
+        sx={{ fontWeight: 800 }}
+      />
+    );
+  }
+
+  if (healthy === false) {
+    return (
+      <Chip
+        icon={<WarningAmberIcon />}
+        label={status || "Unavailable"}
+        color="error"
+        size="small"
+        sx={{ fontWeight: 800 }}
+      />
+    );
+  }
+
+  return (
+    <Chip
+      label={status || "Unknown"}
+      variant="outlined"
+      size="small"
+      sx={{ fontWeight: 800 }}
+    />
+  );
+}
+
+
+function OperationalSummaryCard({
+  icon,
+  title,
+  status,
+  healthy,
+  isLoading = false,
+  error = null,
+  children,
+}) {
+  return (
+    <Card
+      sx={{
+        height: "100%",
+        border: (
+          healthy === false
+            ? "1px solid rgba(239,68,68,.55)"
+            : "1px solid rgba(148,163,184,.18)"
+        ),
+      }}
+    >
+      <CardContent>
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="flex-start"
+          spacing={2}
+          sx={{ mb: 2 }}
+        >
+          <Stack
+            direction="row"
+            spacing={1.25}
+            alignItems="center"
+          >
+            {icon}
+
+            <Typography
+              variant="h6"
+              fontWeight={900}
+            >
+              {title}
+            </Typography>
+          </Stack>
+
+          {!isLoading && (
+            <StatusChip
+              status={status}
+              healthy={healthy}
+            />
+          )}
+        </Stack>
+
+        <Divider sx={{ mb: 2 }} />
+
+        {isLoading && (
+          <Stack
+            direction="row"
+            spacing={1.5}
+            alignItems="center"
+            sx={{ py: 2 }}
+          >
+            <CircularProgress size={24} />
+
+            <Typography color="text.secondary">
+              Loading current state...
+            </Typography>
+          </Stack>
+        )}
+
+        {!isLoading && error && (
+          <Alert severity="error">
+            {error}
+          </Alert>
+        )}
+
+        {!isLoading && !error && children}
+      </CardContent>
+    </Card>
+  );
+}
+
+
+function formatDateTime(value) {
+  if (!value) {
+    return "Never";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Unavailable";
+  }
+
+  return date.toLocaleString();
+}
+
+
+function countPlatformUsersByStatus(
+  platformUsers,
+  status,
+) {
+  return platformUsers.filter(
+    (platformUser) =>
+      platformUser.status === status,
+  ).length;
 }
 
 
@@ -75,20 +263,118 @@ export default function PlatformAdministration() {
   ] = useState([]);
 
   const [
+    platformHealth,
+    setPlatformHealth,
+  ] = useState(null);
+
+  const [
+    registeredConnectors,
+    setRegisteredConnectors,
+  ] = useState([]);
+
+  const [
     isLoadingPlatformUsers,
     setIsLoadingPlatformUsers,
   ] = useState(false);
+
+  const [
+    isLoadingPlatformHealth,
+    setIsLoadingPlatformHealth,
+  ] = useState(true);
+
+  const [
+    isLoadingConnectors,
+    setIsLoadingConnectors,
+  ] = useState(true);
 
   const [
     platformUserError,
     setPlatformUserError,
   ] = useState(null);
 
+  const [
+    platformHealthError,
+    setPlatformHealthError,
+  ] = useState(null);
+
+  const [
+    connectorError,
+    setConnectorError,
+  ] = useState(null);
+
 
   useEffect(() => {
     let isCurrent = true;
 
-    async function loadPlatformUsers() {
+    async function loadPlatformOperations() {
+      setIsLoadingPlatformHealth(true);
+      setIsLoadingConnectors(true);
+      setPlatformHealthError(null);
+      setConnectorError(null);
+
+      const [
+        healthResult,
+        connectorResult,
+      ] = await Promise.allSettled([
+        getPlatformHealth(),
+        listRegisteredConnectors(),
+      ]);
+
+      if (!isCurrent) {
+        return;
+      }
+
+      if (healthResult.status === "fulfilled") {
+        setPlatformHealth(
+          healthResult.value,
+        );
+      } else {
+        console.error(
+          "Platform health load failed:",
+          healthResult.reason,
+        );
+
+        setPlatformHealth(null);
+        setPlatformHealthError(
+          "USOP API health could not be verified.",
+        );
+      }
+
+      if (
+        connectorResult.status
+        === "fulfilled"
+      ) {
+        setRegisteredConnectors(
+          connectorResult.value,
+        );
+      } else {
+        console.error(
+          "Connector inventory load failed:",
+          connectorResult.reason,
+        );
+
+        setRegisteredConnectors([]);
+        setConnectorError(
+          "Registered connectors could not be loaded.",
+        );
+      }
+
+      setIsLoadingPlatformHealth(false);
+      setIsLoadingConnectors(false);
+    }
+
+    loadPlatformOperations();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
+
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    async function loadUsers() {
       if (!selectedOrganizationId) {
         setPlatformUsers([]);
         setPlatformUserError(null);
@@ -97,34 +383,21 @@ export default function PlatformAdministration() {
         return;
       }
 
-      await Promise.resolve();
-
-      if (!isCurrent) {
-        return;
-      }
-
       setPlatformUsers([]);
       setPlatformUserError(null);
       setIsLoadingPlatformUsers(true);
 
       try {
-        const response = await api.get(
-          (
-            "/api/v1/organizations/"
-            + selectedOrganizationId
-            + "/platform-users/"
-          ),
-        );
+        const records = await listPlatformUsers({
+          organizationId:
+            selectedOrganizationId,
+        });
 
         if (!isCurrent) {
           return;
         }
 
-        setPlatformUsers(
-          Array.isArray(response.data)
-            ? response.data
-            : [],
-        );
+        setPlatformUsers(records);
       } catch (error) {
         if (!isCurrent) {
           return;
@@ -136,7 +409,7 @@ export default function PlatformAdministration() {
         );
 
         setPlatformUserError(
-          "Could not load Platform Users.",
+          "Platform Users could not be loaded.",
         );
       } finally {
         if (isCurrent) {
@@ -145,7 +418,7 @@ export default function PlatformAdministration() {
       }
     }
 
-    loadPlatformUsers();
+    loadUsers();
 
     return () => {
       isCurrent = false;
@@ -155,6 +428,49 @@ export default function PlatformAdministration() {
 
   const organizationCount =
     organizations.length;
+
+  const activePlatformUserCount =
+    useMemo(
+      () =>
+        countPlatformUsersByStatus(
+          platformUsers,
+          "Active",
+        ),
+      [platformUsers],
+    );
+
+  const invitedPlatformUserCount =
+    useMemo(
+      () =>
+        countPlatformUsersByStatus(
+          platformUsers,
+          "Invited",
+        ),
+      [platformUsers],
+    );
+
+  const disabledPlatformUserCount =
+    useMemo(
+      () =>
+        countPlatformUsersByStatus(
+          platformUsers,
+          "Disabled",
+        ),
+      [platformUsers],
+    );
+
+  const apiHealthy =
+    platformHealth?.status === "healthy";
+
+  const organizationHealthy =
+    selectedOrganization?.status === "Active";
+
+  const platformUserSummaryHealthy =
+    Boolean(selectedOrganization)
+    && !platformUserError;
+
+  const connectorInventoryHealthy =
+    !connectorError;
 
 
   return (
@@ -200,35 +516,277 @@ export default function PlatformAdministration() {
                   variant="h4"
                   fontWeight={900}
                 >
-                  Platform Administration
+                  Platform Operations
                 </Typography>
 
                 <Typography color="text.secondary">
-                  Manage the USOP Organization and its
-                  authorized Platform Users.
+                  Understand the operational state of
+                  USOP before beginning the day.
                 </Typography>
               </Box>
             </Stack>
 
-            <Chip
-              label="READ ONLY"
-              color="info"
-              variant="outlined"
-              sx={{ fontWeight: 800 }}
+            <StatusChip
+              status={
+                apiHealthy
+                  ? "PLATFORM AVAILABLE"
+                  : "ATTENTION REQUIRED"
+              }
+              healthy={apiHealthy}
             />
           </Stack>
         </CardContent>
       </Card>
 
-      <Alert
-        severity="info"
-        sx={{ mb: 3 }}
+      <Typography
+        variant="h5"
+        fontWeight={900}
+        sx={{ mb: 0.5 }}
       >
-        Administration is currently read-only.
-        Authentication, invitations, role management,
-        and commercial Seat allocation remain separate
-        future capabilities.
-      </Alert>
+        Operational Overview
+      </Typography>
+
+      <Typography
+        color="text.secondary"
+        sx={{ mb: 2.5 }}
+      >
+        Current platform state from live USOP
+        services. Detailed administration remains
+        available below.
+      </Typography>
+
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "1fr",
+            md: "repeat(2, minmax(0, 1fr))",
+            xl: "repeat(4, minmax(0, 1fr))",
+          },
+          gap: 2,
+          mb: 4,
+        }}
+      >
+        <OperationalSummaryCard
+          icon={<ApiIcon color="primary" />}
+          title="USOP API"
+          status={
+            platformHealth?.status
+              || (
+                platformHealthError
+                  ? "Unavailable"
+                  : "Unknown"
+              )
+          }
+          healthy={
+            platformHealthError
+              ? false
+              : apiHealthy
+          }
+          isLoading={isLoadingPlatformHealth}
+          error={platformHealthError}
+        >
+          <Stack spacing={1.5}>
+            <SummaryMetric
+              label="Version"
+              value={
+                platformHealth?.version
+                || "Not reported"
+              }
+              emphasis
+            />
+
+            <Typography color="text.secondary">
+              The API is responding and reporting its
+              current application version.
+            </Typography>
+          </Stack>
+        </OperationalSummaryCard>
+
+        <OperationalSummaryCard
+          icon={<BusinessIcon color="primary" />}
+          title="Organization"
+          status={
+            selectedOrganization?.status
+            || (
+              organizationError
+                ? "Unavailable"
+                : "Not selected"
+            )
+          }
+          healthy={
+            organizationError
+              ? false
+              : (
+                selectedOrganization
+                  ? organizationHealthy
+                  : null
+              )
+          }
+          isLoading={isLoadingOrganizations}
+          error={organizationError}
+        >
+          {selectedOrganization ? (
+            <Stack spacing={1.5}>
+              <SummaryMetric
+                label="Active Organization"
+                value={selectedOrganization.name}
+                emphasis
+              />
+
+              <DetailRow
+                label="Type"
+                value={
+                  selectedOrganization
+                    .organization_type
+                }
+              />
+
+              <DetailRow
+                label="Deployment"
+                value={
+                  selectedOrganization
+                    .deployment_identifier
+                }
+              />
+            </Stack>
+          ) : (
+            <Alert severity="warning">
+              No active Organization is selected.
+            </Alert>
+          )}
+        </OperationalSummaryCard>
+
+        <OperationalSummaryCard
+          icon={<PeopleAltIcon color="primary" />}
+          title="Platform Users"
+          status={
+            platformUserError
+              ? "Unavailable"
+              : (
+                selectedOrganization
+                  ? `${platformUsers.length} Total`
+                  : "Organization required"
+              )
+          }
+          healthy={
+            platformUserError
+              ? false
+              : (
+                selectedOrganization
+                  ? platformUserSummaryHealthy
+                  : null
+              )
+          }
+          isLoading={isLoadingPlatformUsers}
+          error={platformUserError}
+        >
+          {selectedOrganization ? (
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              spacing={2}
+            >
+              <SummaryMetric
+                label="Active"
+                value={activePlatformUserCount}
+                emphasis
+              />
+
+              <SummaryMetric
+                label="Invited"
+                value={invitedPlatformUserCount}
+              />
+
+              <SummaryMetric
+                label="Disabled"
+                value={disabledPlatformUserCount}
+              />
+            </Stack>
+          ) : (
+            <Alert severity="info">
+              Select an Organization to evaluate its
+              Platform Users.
+            </Alert>
+          )}
+        </OperationalSummaryCard>
+
+        <OperationalSummaryCard
+          icon={<StorageIcon color="primary" />}
+          title="Connectors"
+          status={
+            connectorError
+              ? "Unavailable"
+              : `${registeredConnectors.length} Registered`
+          }
+          healthy={
+            connectorError
+              ? false
+              : connectorInventoryHealthy
+          }
+          isLoading={isLoadingConnectors}
+          error={connectorError}
+        >
+          {registeredConnectors.length > 0 ? (
+            <Stack spacing={1.25}>
+              <SummaryMetric
+                label="Available Providers"
+                value={registeredConnectors.length}
+                emphasis
+              />
+
+              <Stack
+                direction="row"
+                spacing={1}
+                useFlexGap
+                flexWrap="wrap"
+              >
+                {registeredConnectors.map(
+                  (connectorName) => (
+                    <Chip
+                      key={connectorName}
+                      label={connectorName}
+                      variant="outlined"
+                      size="small"
+                    />
+                  ),
+                )}
+              </Stack>
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+              >
+                Registration confirms availability.
+                Runtime connector health will be added
+                when that API contract is exposed.
+              </Typography>
+            </Stack>
+          ) : (
+            <Alert severity="warning">
+              No connector providers are registered.
+            </Alert>
+          )}
+        </OperationalSummaryCard>
+      </Box>
+
+      <Divider sx={{ mb: 3 }} />
+
+      <Typography
+        variant="h5"
+        fontWeight={900}
+        sx={{ mb: 0.5 }}
+      >
+        Administration Details
+      </Typography>
+
+      <Typography
+        color="text.secondary"
+        sx={{ mb: 2.5 }}
+      >
+        Review the active Organization and its
+        authorized USOP Platform Users.
+      </Typography>
 
       <Box
         sx={{
@@ -294,8 +852,6 @@ export default function PlatformAdministration() {
               && organizationCount === 0 && (
               <Alert severity="warning">
                 No USOP Organizations are configured.
-                Create the initial Organization before
-                Platform Users can be administered.
               </Alert>
             )}
 
@@ -356,9 +912,7 @@ export default function PlatformAdministration() {
 
                 <DetailRow
                   label="Status"
-                  value={
-                    selectedOrganization.status
-                  }
+                  value={selectedOrganization.status}
                 />
 
                 <DetailRow
@@ -428,9 +982,7 @@ export default function PlatformAdministration() {
               </Stack>
 
               <Chip
-                label={
-                  `${platformUsers.length} USERS`
-                }
+                label={`${platformUsers.length} USERS`}
                 size="small"
                 variant="outlined"
               />
@@ -439,32 +991,10 @@ export default function PlatformAdministration() {
             <Divider sx={{ mb: 2 }} />
 
             {!selectedOrganization && (
-              <Box
-                sx={{
-                  minHeight: 220,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  textAlign: "center",
-                  border: "1px dashed #334155",
-                  borderRadius: 2,
-                  p: 3,
-                }}
-              >
-                <Box>
-                  <Typography
-                    fontWeight={800}
-                    sx={{ mb: 1 }}
-                  >
-                    Organization Required
-                  </Typography>
-
-                  <Typography color="text.secondary">
-                    Configure or select an Organization
-                    before loading Platform Users.
-                  </Typography>
-                </Box>
-              </Box>
+              <Alert severity="info">
+                Select an Organization before loading
+                Platform Users.
+              </Alert>
             )}
 
             {selectedOrganization
@@ -494,33 +1024,9 @@ export default function PlatformAdministration() {
               && !isLoadingPlatformUsers
               && !platformUserError
               && platformUsers.length === 0 && (
-              <Box
-                sx={{
-                  minHeight: 220,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  textAlign: "center",
-                  border: "1px dashed #334155",
-                  borderRadius: 2,
-                  p: 3,
-                }}
-              >
-                <Box>
-                  <Typography
-                    fontWeight={800}
-                    sx={{ mb: 1 }}
-                  >
-                    No Platform Users Found
-                  </Typography>
-
-                  <Typography color="text.secondary">
-                    This Organization has no Platform
-                    Users. The first administrator
-                    bootstrap has not yet been completed.
-                  </Typography>
-                </Box>
-              </Box>
+              <Alert severity="warning">
+                This Organization has no Platform Users.
+              </Alert>
             )}
 
             {selectedOrganization
@@ -562,14 +1068,17 @@ export default function PlatformAdministration() {
                           </Box>
 
                           <Chip
-                            label={
-                              platformUser.status
-                            }
+                            label={platformUser.status}
                             color={
                               platformUser.status
                               === "Active"
                                 ? "success"
-                                : "info"
+                                : (
+                                  platformUser.status
+                                  === "Disabled"
+                                    ? "error"
+                                    : "info"
+                                )
                             }
                             size="small"
                           />
@@ -598,39 +1107,29 @@ export default function PlatformAdministration() {
 
                           <DetailRow
                             label="Invited"
-                            value={
-                              platformUser.invited_at
-                                ? new Date(
-                                  platformUser
-                                    .invited_at,
-                                ).toLocaleString()
-                                : "Never"
-                            }
+                            value={formatDateTime(
+                              platformUser.invited_at,
+                            )}
                           />
 
                           <DetailRow
                             label="Activated"
                             value={
                               platformUser.activated_at
-                                ? new Date(
+                                ? formatDateTime(
                                   platformUser
                                     .activated_at,
-                                ).toLocaleString()
+                                )
                                 : "Not activated"
                             }
                           />
 
                           <DetailRow
                             label="Last Authentication"
-                            value={
+                            value={formatDateTime(
                               platformUser
-                                .last_authenticated_at
-                                ? new Date(
-                                  platformUser
-                                    .last_authenticated_at,
-                                ).toLocaleString()
-                                : "Never"
-                            }
+                                .last_authenticated_at,
+                            )}
                           />
                         </Stack>
                       </CardContent>
@@ -645,3 +1144,5 @@ export default function PlatformAdministration() {
     </Box>
   );
 }
+
+

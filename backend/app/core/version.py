@@ -1,3 +1,3 @@
 APP_NAME = "USOP"
-APP_VERSION = "0.1.0"
+APP_VERSION = "0.14.0"
 ARCHITECTURE = "Engine First"

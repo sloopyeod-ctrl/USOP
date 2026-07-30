@@ -1,4 +1,6 @@
-﻿from pathlib import Path
+from app.core.version import APP_VERSION
+
+from pathlib import Path
 
 from pydantic_settings import BaseSettings
 
@@ -9,7 +11,7 @@ ENV_FILE = BACKEND_ROOT / ".env"
 
 class Settings(BaseSettings):
     app_name: str = "USOP"
-    app_version: str = "0.1.0"
+    app_version: str = APP_VERSION
     environment: str = "development"
     debug: bool = True
 
@@ -24,3 +26,4 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
