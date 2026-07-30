@@ -27,3 +27,4 @@
 | ADR-021 | Pipeline-Based Intelligence Architecture | Accepted |
 | ADR-022 | Tiered Evidence Retention and Customer-Controlled Archival | Accepted |
 | ADR-023 | Visual Intelligence Design Principles | Accepted |
+| ADR-024 | Provider Registry Architecture | Accepted |

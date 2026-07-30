@@ -1,16 +1,27 @@
 from typing import Any
 
-from app.connectors.manager.ConnectorManager import ConnectorManager
-from app.connectors.microsoft.EntraProvider import EntraProvider
+from app.connectors.manager.ConnectorManager import (
+    ConnectorManager,
+)
+from app.connectors.microsoft.EntraProvider import (
+    EntraProvider,
+)
+from app.connectors.provider.ProviderRegistry import (
+    ProviderRegistry,
+)
 
 
 class ConnectorService:
     """
-    Application façade for connector-provider operations.
+    Application facade for connector-provider operations.
 
-    ConnectorManager is the authority for provider registration and lifecycle
-    orchestration. ConnectorService adapts provider-domain results into
-    API-compatible dictionaries.
+    ProviderRegistry owns provider discovery metadata and construction.
+
+    ConnectorManager owns active provider instances and runtime lifecycle
+    orchestration.
+
+    ConnectorService adapts those capabilities into application-facing
+    operations.
 
     The legacy "entra" identifier remains a temporary compatibility alias for
     the canonical "microsoft-entra" provider identifier.
@@ -23,25 +34,61 @@ class ConnectorService:
     def __init__(
         self,
         manager: ConnectorManager | None = None,
+        registry: ProviderRegistry | None = None,
         *,
         register_default_providers: bool = True,
     ):
         self.manager = manager or ConnectorManager()
+        self.registry = registry or ProviderRegistry()
 
         if register_default_providers:
             self._register_default_providers()
 
+        self._activate_registered_providers()
+
     def _register_default_providers(self) -> None:
         """
-        Register built-in providers without replacing injected providers.
+        Register built-in provider descriptors and factories.
         """
 
-        provider_name = EntraProvider.PROVIDER_NAME
+        provider_name = (
+            EntraProvider.DESCRIPTOR.provider_name
+        )
 
-        if self.manager.get(provider_name) is None:
-            self.manager.register(
-                EntraProvider()
+        if (
+            self.registry.get_descriptor(
+                provider_name
             )
+            is None
+        ):
+            self.registry.register(
+                descriptor=EntraProvider.DESCRIPTOR,
+                factory=EntraProvider,
+            )
+
+    def _activate_registered_providers(
+        self,
+    ) -> None:
+        """
+        Construct registered providers and add them to ConnectorManager.
+
+        Existing injected manager providers are preserved.
+        """
+
+        for provider_name in (
+            self.registry.provider_names()
+        ):
+            if self.manager.get(provider_name) is not None:
+                continue
+
+            provider = self.registry.create(
+                provider_name
+            )
+
+            if provider is not None:
+                self.manager.register(
+                    provider
+                )
 
     @classmethod
     def _resolve_provider_name(
@@ -61,18 +108,34 @@ class ConnectorService:
             normalized_name,
         )
 
-    def list_connectors(self) -> list[str]:
+    def list_connectors(
+        self,
+    ) -> list[str]:
         """
-        Return canonical registered provider identifiers.
+        Return canonical active provider identifiers.
         """
 
         return list(
             self.manager.providers()
         )
 
-    def health(self) -> list[dict[str, Any]]:
+    def list_provider_descriptors(
+        self,
+    ) -> list[dict[str, object]]:
         """
-        Return serialized health results for all registered providers.
+        Return immutable metadata for registered provider types.
+        """
+
+        return [
+            descriptor.to_dict()
+            for descriptor in self.registry.descriptors()
+        ]
+
+    def health(
+        self,
+    ) -> list[dict[str, Any]]:
+        """
+        Return serialized health results for active providers.
         """
 
         return [
@@ -86,8 +149,6 @@ class ConnectorService:
     ) -> dict[str, Any] | None:
         """
         Collect provider records without persistence.
-
-        Unknown providers preserve the existing None response contract.
         """
 
         provider_name = self._resolve_provider_name(
@@ -110,10 +171,7 @@ class ConnectorService:
         """
         Execute provider-level synchronization and serialize its result.
 
-        This operation performs the provider collection lifecycle. Canonical
-        persistence remains owned by SynchronizationEngine.
-
-        Unknown providers preserve the existing None response contract.
+        Canonical persistence remains owned by SynchronizationEngine.
         """
 
         provider_name = self._resolve_provider_name(

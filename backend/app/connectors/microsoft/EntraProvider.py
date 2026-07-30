@@ -4,6 +4,9 @@ from app.connectors.core.BaseConnector import BaseConnector
 from app.connectors.core.ConnectorConfiguration import (
     ConnectorConfiguration,
 )
+from app.connectors.provider.ProviderDescriptor import (
+    ProviderDescriptor,
+)
 from app.connectors.core.ConnectorHealth import ConnectorHealth
 from app.connectors.core.ConnectorResult import ConnectorResult
 from app.domain.principal_type import PrincipalType
@@ -40,6 +43,30 @@ class EntraProvider(BaseConnector):
 
     PROVIDER_NAME = "microsoft-entra"
     SYSTEM_NAME = "Microsoft Entra ID"
+
+    DESCRIPTOR = ProviderDescriptor(
+        provider_name=PROVIDER_NAME,
+        display_name=SYSTEM_NAME,
+        vendor="Microsoft",
+        component_version="1.0.0",
+        intelligence_domains=(
+            "Identity",
+            "Authentication",
+            "Authorization",
+        ),
+        capabilities=(
+            "identities",
+            "accounts",
+            "groups",
+            "memberships",
+            "roles",
+            "role_assignments",
+        ),
+        supported_modes=(
+            "demo",
+            "live",
+        ),
+    )
 
     def __init__(
         self,

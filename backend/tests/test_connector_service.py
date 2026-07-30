@@ -8,6 +8,12 @@ from app.connectors.core.ConnectorHealth import ConnectorHealth
 from app.connectors.core.ConnectorResult import ConnectorResult
 from app.connectors.manager.ConnectorManager import ConnectorManager
 from app.services.connector_service import ConnectorService
+from app.connectors.provider.ProviderDescriptor import (
+    ProviderDescriptor,
+)
+from app.connectors.provider.ProviderRegistry import (
+    ProviderRegistry,
+)
 
 
 class FakeEntraProvider(BaseConnector):
@@ -17,6 +23,21 @@ class FakeEntraProvider(BaseConnector):
     """
 
     PROVIDER_NAME = "microsoft-entra"
+    DESCRIPTOR = ProviderDescriptor(
+        provider_name=PROVIDER_NAME,
+        display_name="Microsoft Entra Test Provider",
+        vendor="Microsoft",
+        component_version="test",
+        intelligence_domains=(
+            "Identity",
+        ),
+        capabilities=(
+            "identities",
+        ),
+        supported_modes=(
+            "test",
+        ),
+    )
 
     def __init__(self):
         super().__init__(
@@ -82,12 +103,16 @@ class FakeEntraProvider(BaseConnector):
 
 def build_service() -> ConnectorService:
     manager = ConnectorManager()
-    manager.register(
-        FakeEntraProvider()
+    registry = ProviderRegistry()
+
+    registry.register(
+        descriptor=FakeEntraProvider.DESCRIPTOR,
+        factory=FakeEntraProvider,
     )
 
     return ConnectorService(
         manager=manager,
+        registry=registry,
         register_default_providers=False,
     )
 
@@ -160,9 +185,41 @@ def test_synchronize_accepts_temporary_entra_alias():
     assert result["provider_name"] == "microsoft-entra"
     assert result["success"] is True
 
-
 def test_unknown_provider_preserves_none_contract():
     service = build_service()
 
     assert service.collect("unknown-provider") is None
     assert service.synchronize("unknown-provider") is None
+
+def test_service_activates_registry_providers():
+    service = build_service()
+
+    assert service.manager.get(
+        "microsoft-entra"
+    ) is not None
+
+
+def test_service_lists_provider_descriptors():
+    service = build_service()
+
+    result = service.list_provider_descriptors()
+
+    assert result == [
+        {
+            "provider_name": "microsoft-entra",
+            "display_name": (
+                "Microsoft Entra Test Provider"
+            ),
+            "vendor": "Microsoft",
+            "component_version": "test",
+            "intelligence_domains": [
+                "Identity",
+            ],
+            "capabilities": [
+                "identities",
+            ],
+            "supported_modes": [
+                "test",
+            ],
+        }
+    ]    
