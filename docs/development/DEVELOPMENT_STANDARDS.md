@@ -2,326 +2,276 @@
 
 ## Purpose
 
-This document defines the engineering standards used during the development of the Unified Security Operations Platform (USOP).
+This document defines the mandatory engineering standards for the Unified
+Security Operations Platform.
 
-These standards exist to ensure the platform remains modular, maintainable, testable, and extensible as new capabilities are added.
+These standards establish the rules contributors must follow.
 
-Every contribution should reinforce the architecture rather than increase technical debt.
+The detailed engineering process is defined in:
 
----
+docs/engineering/Development-Workflow.md
 
-# Engineering Philosophy
+The standards answer:
 
-USOP is engineered as a commercial cybersecurity platform rather than a collection of features.
+> What rules must USOP engineering follow?
 
-Every architectural decision should answer one question:
+The workflow answers:
 
-> Does this improve the platform without compromising its architecture?
-
-If the answer is no, reconsider the implementation.
-
----
-
-# Core Principles
-
-## Backend Intelligence Is the Source of Truth
-
-Security meaning belongs in backend intelligence engines.
-
-Examples:
-
-- Risk scoring
-- Recommendations
-- Decision Intelligence
-- Graph Intelligence
-- Transition Intelligence
-
-Frontend components visualize intelligence.
-
-They should never become the source of security reasoning.
+> How should those rules be applied during implementation?
 
 ---
 
-## Engines Produce Intelligence
+# Platform Engineering Philosophy
 
-Business logic belongs in engines.
+USOP is engineered as a commercial Enterprise Security Decision Platform.
 
-Examples:
+It is not a collection of disconnected features.
 
-- Graph Intelligence Engine
-- Decision Intelligence Engine
-- Transition Engine
-- Policy Engine
-- Recommendation Engine
+Every contribution must reinforce the platform architecture rather than
+increase technical debt.
 
-Engines should not contain rendering logic.
+Every significant change should improve at least one of the following:
+
+- Analyst effort
+- Explainability
+- Auditability
+- Scalability
+- Decision quality
+- Organizational knowledge
+- Cognitive load
+- Architectural consistency
+
+If a change improves none of these, it belongs on the roadmap rather than in the
+current release.
 
 ---
+
+# Mandatory Standards
+
+## Inspect Before Implement
+
+Before adding a subsystem, service, engine, page, API, schema, model, or
+provider:
+
+1. Inspect the existing implementation.
+2. Identify current responsibilities.
+3. Determine whether the capability already exists in whole or in part.
+4. Extend or modernize existing architecture where practical.
+5. Create a new component only when the existing architecture cannot
+   reasonably own the responsibility.
+
+Parallel implementations that own the same responsibility are prohibited
+unless explicitly approved by an ADR.
+
+## Evolution Before Replacement
+
+Existing architecture should evolve whenever practical.
+
+Replacement is an architectural decision, not the default response to a new
+requirement.
+
+## Architecture Before Implementation
+
+Significant implementation begins only after the canonical architectural path
+is understood.
+
+Long-term architectural changes require an ADR before code is written.
+
+## Backend Owns Business Logic
+
+Security meaning belongs in backend domain logic.
+
+The frontend renders prepared intelligence.
+
+React must not become a second source of business logic.
+
+## Controllers Remain Thin
+
+Controllers accept requests, validate transport contracts, invoke services,
+translate known errors, and return response models.
+
+Controllers must not own persistence orchestration, domain calculations,
+security interpretation, transaction rules, or provider-specific logic.
 
 ## Services Coordinate
 
-Services manage workflows.
+Services coordinate application workflows.
 
-Examples:
+They must not become oversized intelligence engines or duplicate canonical
+domain rules.
 
-- Animation Service
-- Synchronization Service
-- Connector Services
+## Models Own Persistence
 
-Services coordinate.
+Models define persistence structure.
 
-They should not own business intelligence.
+Repositories own persistence access.
 
----
+## Builders Construct Deterministic Intelligence
 
-## Adapters Translate
+Builders have one responsibility, produce deterministic output, avoid
+persistence and transport logic, and compose through pipelines.
 
-Adapters convert one representation into another.
+## Providers Remain Vendor-Isolated
 
-Examples include:
+Providers retrieve and normalize facts from authoritative external systems.
 
-- React Flow adapters
-- Render adapters
-- Connector adapters
+Shared platform layers must remain provider-neutral.
 
-Adapters should not contain business logic.
+## Authoritative Systems Remain Authoritative
 
----
+USOP consumes authoritative systems.
 
-## Renderers Display
+USOP does not silently replace them as the source of truth.
 
-Renderers display prepared information.
+## Human Accountability Is Mandatory
 
-Renderers should never calculate security meaning.
+USOP prepares decisions.
 
----
+Humans make decisions.
 
-## Pages Orchestrate
+Material security decisions must preserve human attribution, evidence,
+explainability, auditability, and historical context.
 
-Pages coordinate user workflows.
+## Trust but Verify
 
-Pages should not become business logic containers.
+A recorded decision does not prove remediation.
 
----
+Risk changes only after authoritative synchronization verifies the resulting
+state.
 
-# Commit Standards
+Decision Recorded
+    â†“
+Pending Verification
+    â†“
+Verified Remediation
 
-Every commit should represent one architectural responsibility.
+## Material Authorization Changes Require Review
 
-Good examples:
+Material privilege changes must create analyst work.
 
-- Add Decision Intelligence Engine
-- Add Graph Transition Engine
-- Integrate Transition Engine into Workspace State
-- Add Reset Simulation
+Existing acceptance, governance intervals, temporary assignment, eligibility,
+or PIM activation must not silently suppress new material authorization deltas.
 
-Avoid combining unrelated work into a single commit.
+## Visual Intelligence Is Architectural
 
----
-# Development Standards
+Every screen should answer:
 
-Infrastructure Independence
+- What am I seeing?
+- Why does it matter?
+- What should I do next?
 
-Application code should not know where infrastructure resources originate.
+Interfaces must prioritize Eyes Before Mouse, Read Less Understand More,
+Progressive Disclosure, explainability, operational priority, and 10â€“20 second
+scan comprehension.
 
-Examples include:
+## Build Two, Extract One
 
-secrets,
-authentication,
-storage,
-messaging,
-scheduling.
+Do not prematurely abstract frontend components.
 
-Instead, application code should depend on interfaces and factories.
+Build two implementations, observe the shared pattern, and then extract one
+shared component.
 
-# Development Workflow
+## One Responsibility per Commit
 
-Every feature follows the same lifecycle.
+Each commit must represent one architectural responsibility.
 
-1. Design
-2. Build
-3. Test
-4. Review
-5. Commit
-6. Push
+Commits must be small, reviewable, testable, reversible, and clearly named.
 
-Do not skip review simply because the code compiles.
+## Regression Before Commit
 
----
-# Evolution Before Replacement
+Applicable regression testing is mandatory before every commit.
 
-Before introducing a new subsystem, inspect the existing implementation. Extend or modernize it when possible. Replace only when the existing architecture cannot reasonably evolve.
+Code compiling successfully is not sufficient.
 
-# Testing Standards
+## Review the Exact Delta
 
-Before every commit:
+Before commit, contributors must inspect status, whitespace, statistics, and
+the complete working or staged diff.
 
-- Verify browser behavior.
-- Confirm expected functionality.
-- Review Git diff.
-- Check for whitespace errors.
-- Confirm Vite (or backend) reports no runtime errors.
+The commit must contain only the intended architectural responsibility.
 
-Only then should changes be committed.
+## Documentation Is Part of Implementation
 
----
+Standards define rules.
 
-# Git Standards
+Workflow defines process.
 
-Commits should:
+ADRs define long-term architectural decisions.
 
-- Be small.
-- Be reviewable.
-- Be reversible.
-- Represent one milestone.
+Specifications define detailed contracts.
 
-Sprint milestones should be tagged.
+Documentation must not duplicate another document's responsibility.
 
-Major architectural milestones should be documented.
+## Avoid Premature Optimization
 
----
+Prefer clarity, correctness, and architectural consistency.
 
-# Documentation Standards
+Future-proof stable seams.
 
-Major architectural changes require documentation updates.
+Do not implement speculative systems.
 
-Preferred order:
+## Protect Backward Compatibility
 
-1. Vision
-2. Architecture
-3. Development Standards
-4. Roadmap
-5. Detailed subsystem documentation
+Existing API, provider, schema, persistence, and frontend contracts must remain
+stable unless an intentional migration is approved.
 
-Documentation is considered part of the implementation.
+## Deterministic Behavior
+
+The platform should prefer deterministic behavior for provider enumeration,
+intelligence construction, narrative output, API ordering, synchronization
+results, tests, and operational summaries.
 
 ---
 
-# Code Quality
+# Code Quality Standards
 
-Prioritize:
+Source code should prioritize:
 
-- readability,
-- maintainability,
-- modularity,
-- consistency,
-- explicit naming,
-- single responsibility.
+- Readability
+- Explicit naming
+- Cohesive functions
+- Single responsibility
+- Consistent formatting
+- Type clarity
+- Testability
+- Maintainability
 
-Avoid premature optimization.
+Avoid:
 
-Avoid unnecessary abstraction.
-
-Favor clarity over cleverness.
-
----
-# Evolution Before Replacement
-
-Before introducing a new subsystem or major architectural component, the existing platform should be evaluated.
-
-The preferred engineering approach is:
-
-1. Inspect the current implementation.
-2. Understand its responsibilities.
-3. Extend or modernize it where practical.
-4. Replace it only when the existing architecture cannot reasonably evolve.
-
-Creating duplicate subsystems should be avoided whenever possible.
-
-This approach preserves engineering investment, reduces technical debt, and maintains architectural consistency throughout the platform.
-
-Examples include:
-
-- Modernizing the Synchronization Engine instead of replacing it.
-- Integrating Connector Framework v2 into the existing normalization and reconciliation pipeline.
-- Extending existing intelligence engines rather than creating competing implementations.
-
-# Architecture Review Before Implementation
-
-Every significant feature should begin with an architectural review before new code is written.
-
-The preferred workflow is:
-
-1. Identify the capability to be added.
-2. Inspect existing architecture.
-3. Determine whether the capability already exists.
-4. Extend existing architecture when appropriate.
-5. Design new components only when necessary.
-6. Implement one architectural responsibility at a time.
-7. Validate functionality.
-8. Review the Git diff.
-9. Commit only after successful verification.
-
-This review-first approach helps prevent duplicated functionality, reduces future refactoring, and keeps the platform architecture cohesive.
-
-# Architecture First
-
-When implementing new functionality, prefer creating a reusable architectural layer over solving a single immediate problem.
-
-Examples:
-
-Instead of:
-
-- directly animating a graph,
-
-build:
-
-- Transition Engine
-- Animation Service
-- Render Adapter
-
-Future features should naturally reuse existing architecture.
+- Clever but opaque code
+- Oversized services
+- Business logic inside presentation
+- Hidden side effects
+- Duplicate constants
+- Duplicate sources of truth
+- Silent fallback behavior
+- Unexplained compatibility aliases
+- Unbounded abstraction
 
 ---
-
-# Platform Mindset
-
-USOP should be engineered as though it may eventually support:
-
-- multiple analysts,
-- live security environments,
-- enterprise deployments,
-- AI-assisted investigations,
-- plugin-based intelligence engines,
-- cloud-native scaling.
-
-Every design decision should consider future extensibility.
-
----
-
-# Review Before Commit
-
-Every commit should undergo a lightweight engineering review before being merged into the main branch.
-
-The review process includes:
-
-- Verify functionality in the running application.
-- Confirm expected behavior after user interaction.
-- Review the Git diff for unintended changes.
-- Verify no build or runtime errors are present.
-- Confirm the implementation follows the documented architecture.
-- Ensure the commit represents a single architectural responsibility.
-
-This process intentionally favors smaller, well-tested milestones over large feature drops.
-
-The goal is to maintain a clean, understandable project history while minimizing regressions.
 
 # Definition of Done
 
-A feature is considered complete when:
+A change is complete only when:
 
-- functionality works,
-- tests pass,
-- browser validation succeeds,
-- documentation is updated (when applicable),
-- Git diff is reviewed,
-- code is committed with a meaningful message,
-- repository remains clean.
+- The implementation works
+- Relevant ADRs are followed
+- Focused tests pass
+- Applicable full regression tests pass
+- Browser or runtime behavior is verified when relevant
+- The exact Git delta is reviewed
+- Whitespace checks pass
+- Documentation is current
+- The commit has one responsibility
+- The product benefit is explainable
+- The repository remains clean except for intentionally excluded files
 
 ---
 
 # Guiding Principle
 
-> Build software that is easy to extend, easy to understand, and difficult to break.
+> Build software that is easy to extend, easy to understand, and difficult to
+> break.
 
-The long-term quality of the platform is more important than the short-term speed of feature delivery.
+The long-term integrity of the platform is more important than short-term
+feature velocity.

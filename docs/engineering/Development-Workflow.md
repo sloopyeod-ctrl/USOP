@@ -1,272 +1,441 @@
-USOP Engineering Development Workflow
-Purpose
+# USOP Engineering Development Workflow
 
-This document defines the standard engineering workflow used to build USOP.
+## Purpose
 
-The objective is not simply to write software.
+This document defines the standard engineering workflow used to build and
+evolve the Unified Security Operations Platform.
 
-The objective is to continuously improve the platform while preserving architectural integrity, maintaining engineering quality, and supporting the long-term product vision.
+The objective is not merely to produce working software.
+
+The objective is to continuously improve the product while preserving
+architectural integrity, minimizing technical debt, protecting existing
+capabilities, and advancing the long-term platform mission.
 
 Every contributor should follow this workflow.
 
-Engineering Philosophy
+---
 
-USOP is designed to evolve continuously.
+# Core Philosophy
 
-New capabilities should extend existing architecture whenever practical rather than replacing mature components.
+USOP evolves before it replaces.
 
-The platform should become simpler to extend over time—not more complicated.
+New capabilities should extend proven architecture whenever practical rather
+than creating parallel implementations.
 
-Every implementation should strengthen the architecture for future providers and future capabilities.
+The platform should become easier to extend over time, not more complicated.
 
-Standard Engineering Workflow
+Every implementation should strengthen at least one of the following:
 
-Every implementation follows the same sequence.
+- Analyst effort
+- Explainability
+- Auditability
+- Decision quality
+- Scalability
+- Organizational knowledge
+- Architectural consistency
+
+The first implementation idea is rarely the complete architectural solution.
+
+Inspect first.
+
+Challenge assumptions.
+
+Then decide what should be built.
+
+---
+
+# Standard Engineering Lifecycle
 
 Inspect
-
-↓
-
+    â†“
 Understand
-
-↓
-
-Extend
-
-↓
-
+    â†“
+Challenge Assumptions
+    â†“
+Decide
+    â†“
+Implement
+    â†“
 Review
-
-↓
-
+    â†“
 Test
-
-↓
-
+    â†“
+Inspect the Exact Delta
+    â†“
 Commit
-
-↓
-
+    â†“
 Demonstrate
 
-Skipping steps increases technical debt and reduces confidence in future development.
+Skipping steps increases regression risk, duplicated responsibility, technical
+debt, and future maintenance cost.
 
-Step 1 — Inspect
+---
 
-Before implementing anything:
+# Step 1 â€” Inspect
 
-Inspect the existing repository.
+Before writing code, inspect the existing repository.
 
-Understand:
+Review the relevant:
 
-Existing architecture
-Existing domain models
-Existing services
-Existing APIs
-Existing workflows
-Existing tests
-Existing documentation
+- Architecture
+- ADRs
+- Domain models
+- Services
+- Engines
+- Pipelines
+- Repositories
+- APIs
+- Schemas
+- Frontend components
+- Tests
+- Configuration
+- Documentation
+- Current runtime behavior
 
 Never assume a capability does not already exist.
 
-The first objective is always to avoid reinventing the wheel.
+Inspection should determine whether the requested capability is:
 
-Step 2 — Understand
+- Already implemented
+- Partially implemented
+- Implemented but not exposed
+- Implemented through an obsolete path
+- Missing entirely
+- Better handled by extending an existing component
 
-Determine:
+The first objective is to avoid duplicating work.
 
-Why the existing implementation exists.
-What architectural decisions led to it.
-Which ADRs influence the design.
-Which Product Constitution principles apply.
+---
 
-If the current implementation solves the problem adequately, extend it.
+# Step 2 â€” Understand
 
-Do not replace working architecture without a compelling reason.
+Determine why the current implementation exists.
 
-Step 3 — Extend
+Identify:
 
-Favor extending mature components.
+- Its responsibilities
+- Its architectural boundaries
+- Its consumers
+- Its dependencies
+- Its test coverage
+- Its compatibility requirements
+- The ADRs governing it
+- The product principle it supports
 
-Prefer:
+Do not replace working architecture without evidence that it cannot reasonably
+evolve.
 
-Existing services
-Existing graphs
-Existing provider models
-Existing reconciliation logic
-Existing normalization
-Existing abstractions
+Understanding precedes design.
 
-Avoid creating parallel implementations.
+---
 
-Every extension should strengthen the existing architecture.
+# Step 3 â€” Challenge Assumptions
 
-Step 4 — Review
-
-Before testing:
-
-Review the implementation for:
-
-Product alignment
-Architectural consistency
-Provider neutrality
-Naming consistency
-Future extensibility
-Simplicity
+Challenge the initial implementation idea before accepting it.
 
 Ask:
 
-"Would this still make sense when five providers exist?"
+- Does this capability already exist under another name?
+- Is there already a rudimentary version that should evolve?
+- Am I proposing another page, service, model, API, or engine unnecessarily?
+- Would this create another source of truth?
+- Would this duplicate business logic?
+- Would this introduce a parallel execution path?
+- Is the proposed component in the correct architectural layer?
+- Is the requirement actually a presentation problem rather than a backend gap?
+- Is the requirement actually an architectural gap rather than a UI feature?
+- Would this design still make sense with five providers, domains, or customers?
+- Is the platform being made simpler to extend or harder to understand?
 
-Step 5 — Test
+The purpose of this step is not to delay implementation.
 
-Every implementation must include:
+The purpose is to prevent avoidable rework.
 
-Unit validation
-Integration validation
-Regression testing
-Live provider validation when available
+---
 
-Future capabilities should never break existing functionality.
+# Step 4 â€” Decide
 
-Regression testing is mandatory before every commit.
+Choose the smallest architecturally complete approach.
 
-Step 6 — Commit
+The decision should identify:
 
-Each commit should have exactly one architectural responsibility.
+- The canonical component to extend
+- The responsibility being added
+- The compatibility contract being preserved
+- The tests required
+- Whether documentation must change
+- Whether an ADR is required
 
-Examples:
+Create an ADR before implementation when the decision materially changes:
 
-Good
+- Long-term architecture
+- Ownership of business rules
+- Persistence strategy
+- Security boundaries
+- Provider lifecycle
+- Licensing behavior
+- Canonical domain meaning
+- Cross-domain relationships
+- Platform-wide user experience principles
 
-Introduce canonical role types
-Persist live Microsoft Entra groups
-Generalize membership relationships
+Do not create an ADR for routine implementation details that follow established
+architecture.
 
-Poor
+---
 
-Synchronization updates
-Bug fixes
-Misc improvements
+# Step 5 â€” Implement
 
-Commit messages should explain architectural intent.
+Implement one architectural responsibility at a time.
 
-Step 7 — Demonstrate
+Prefer:
+
+- Small vertical slices
+- Existing services
+- Existing engines
+- Existing pipelines
+- Existing provider contracts
+- Existing canonical models
+- Existing API families
+- Existing frontend services
+- Deterministic behavior
+- Explicit naming
+- Backward-compatible evolution
+
+Avoid:
+
+- Parallel subsystems
+- Vendor-specific business logic in shared layers
+- Business rules inside React
+- Controllers that own orchestration
+- Services that own domain meaning
+- Frontend calculations that reinterpret backend intelligence
+- Premature universal abstractions
+- Unrelated cleanup inside a focused commit
+
+A new abstraction should solve a demonstrated architectural need.
+
+It should not be created solely because it may be useful someday.
+
+---
+
+# Step 6 â€” Review
+
+Review the implementation before testing.
+
+Evaluate product alignment, architectural alignment, and future extensibility.
+
+Ask whether the implementation gives engineers time back, improves
+understanding, supports accepted ADRs, remains provider-neutral, and will still
+make sense as the platform grows.
+
+---
+
+# Step 7 â€” Test
+
+Testing is required before every commit.
+
+Use the smallest relevant test first, followed by the full regression surface:
+
+Focused validation
+    â†“
+Subsystem regression
+    â†“
+Full applicable regression
+    â†“
+Runtime or browser validation
+
+Testing may include:
+
+- Unit tests
+- Schema tests
+- Service tests
+- API contract tests
+- OpenAPI tests
+- Integration tests
+- Database tests
+- Frontend build
+- Targeted frontend lint
+- Browser validation
+- Live provider validation when explicitly safe and required
+
+Do not run live collection or synchronization merely to prove unrelated
+structural changes.
+
+Existing unrelated warnings should be recorded but should not be silently mixed
+into the current implementation unless they block the release.
+
+---
+
+# Step 8 â€” Inspect the Exact Delta
+
+Before committing, inspect exactly what changed.
+
+Required checks normally include:
+
+- git status --short
+- git diff --check
+- git diff --stat
+- git diff
+
+For staged work:
+
+- git diff --cached --check
+- git diff --cached --stat
+- git diff --cached
+
+Verify:
+
+- Only intended files changed
+- No unrelated files are staged
+- No secrets or credentials are present
+- No generated files were added unintentionally
+- No duplicate implementation was introduced
+- No compatibility contract changed accidentally
+- No whitespace or encoding defects remain
+- New files contain a final newline
+- The commit represents one architectural responsibility
+
+The Git delta is the final implementation contract.
+
+Review it as carefully as the source code.
+
+---
+
+# Step 9 â€” Commit
+
+Each commit should represent one architectural responsibility.
+
+Commit messages should communicate architectural intent.
+
+A focused commit is easier to review, test, revert, explain, audit, and include
+in release notes.
+
+---
+
+# Step 10 â€” Demonstrate
 
 Every completed capability should answer:
 
-What problem does this solve?
-How does this reduce engineering effort?
-How does this improve decisions?
-How would this be demonstrated to a customer?
+- What problem does this solve?
+- What engineer effort does it remove?
+- What uncertainty does it reduce?
+- What decision does it improve?
+- How is it explained to a beta user?
+- How does it support the 10â€“20 second operational scan?
+- How does it strengthen the product rather than merely add code?
 
-If a capability cannot be demonstrated, question whether it belongs in the current release.
+If a capability cannot be explained or demonstrated, reconsider whether it
+belongs in the current release.
 
-Engineering Principles
+---
 
-USOP follows these principles.
+# Inspect Before Implement Checklist
 
-Architecture before implementation
+Before implementation, answer:
 
-Understand the design before writing code.
+- What existing capability was inspected?
+- Which ADRs govern this area?
+- Does the requested capability already exist in whole or in part?
+- Is there a rudimentary implementation that should evolve?
+- What is the canonical architectural path?
+- Would this create another source of truth?
+- Would this duplicate business logic?
+- Would this introduce a parallel execution path?
+- What compatibility contract must remain stable?
+- Is a new abstraction truly required?
+- Is an ADR required?
+- What focused tests protect the change?
+- What full regression surface must remain green?
+- How will the exact Git delta be reviewed?
+- How does this improve the engineer or analyst experience?
 
-Evolution before replacement
+Implementation should not begin until these questions can be answered with
+reasonable confidence.
 
-Extend mature architecture whenever practical.
+---
 
-Avoid unnecessary rewrites.
+# Engineering Layer Responsibilities
 
-One responsibility per commit
+## Backend
 
-Each commit should implement one architectural idea.
+The backend owns business rules, security meaning, canonical relationships,
+recommendations, confidence, governance, validation, orchestration, persistence
+decisions, and audit behavior.
 
-This simplifies reviews, testing, rollback, and historical understanding.
+## Frontend
 
-Provider-neutral design
+The frontend owns presentation, visual hierarchy, progressive disclosure, user
+interaction, workflow coordination, and rendering prepared intelligence.
 
-Model security concepts—not vendor implementations.
+React must not become a second source of business truth.
 
-Providers supply information.
+## Controllers
 
-The canonical domain represents meaning.
+Controllers translate transport requests and responses. They remain thin.
 
-Canonical normalization
+## Services
 
-Normalization preserves provider identity.
+Services coordinate workflows. They do not redefine canonical domain meaning.
 
-It does not resolve database relationships.
+## Models and Repositories
 
-Canonical reconciliation
+Models own persistence structure. Repositories own persistence access.
 
-Reconciliation resolves provider references into canonical entities.
+## Builders and Pipelines
 
-Shared reusable services
+Builders construct deterministic intelligence. Pipelines compose independent
+builders.
 
-Avoid duplicated logic.
+## Providers
 
-Generalize reusable patterns before implementing the second use case.
+Providers retrieve and normalize facts from authoritative systems. Providers do
+not redefine the authority of those systems.
 
-Security-first design
+---
 
-Every capability should preserve:
-
-Least privilege
-Evidence integrity
-Explainability
-Traceability
-Historical preservation
-
-Historical information should accumulate rather than disappear.
-
-Future intelligence depends on historical evidence.
-
-Demonstrable value
-
-Every sprint should improve the customer demonstration.
-
-Engineering progress should translate into visible product value.
-
-Decision Checklist
-
-Before starting implementation ask:
-
-Does the Product Constitution support this work?
-Does this move Version 1 closer to completion?
-Does this reduce engineering effort?
-Does this improve security decisions?
-Does existing architecture already solve part of this?
-Can the capability be demonstrated?
-
-If multiple answers are "No," reconsider the implementation.
-
-Code Standards
-
-When modifying source code:
-
-Prefer complete file replacements over partial snippets.
-Preserve formatting consistency.
-Preserve existing architectural patterns.
-Keep functions cohesive.
-Avoid unnecessary abstraction.
-Document architectural intent.
-Definition of Done
+# Definition of Done
 
 A capability is complete when:
 
-Implementation is finished.
-Tests pass.
-Regression testing passes.
-Documentation is updated.
-The capability supports the Product Constitution.
-The capability strengthens the Version 1 demonstration.
-The capability is understandable by future contributors.
+- The implementation is complete
+- Applicable ADRs and standards are followed
+- Focused tests pass
+- Full applicable regression tests pass
+- Runtime or browser behavior is verified when relevant
+- The exact Git delta is reviewed
+- Whitespace and encoding checks pass
+- Documentation is updated when required
+- The commit contains one architectural responsibility
+- The product benefit can be demonstrated
+- The repository is clean except for intentionally excluded files
 
-Only then should the work be committed.
+Only then should the change be committed and pushed.
 
-Continuous Improvement
+---
 
-The engineering workflow itself should evolve over time.
+# Continuous Improvement
 
-However, any changes should preserve the core principles established by the Product Constitution.
+This workflow may evolve as USOP grows.
 
-The workflow exists to support engineering excellence—not to create unnecessary process.
+Changes should simplify engineering, improve confidence, or strengthen
+architectural integrity.
+
+The workflow must not become process for its own sake.
+
+---
+
+# Final Principle
+
+Inspect before implementing.
+
+Understand before replacing.
+
+Challenge assumptions before designing.
+
+Extend before duplicating.
+
+Test before committing.
+
+Review the exact delta before trusting it.
+
+Build the smallest complete capability that strengthens the platform.
