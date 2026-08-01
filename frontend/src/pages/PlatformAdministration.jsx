@@ -40,6 +40,7 @@ import useOrganizationContext from
 import {
   getPlatformHealth,
   listPlatformUsers,
+  listProviderCatalog,
   listRegisteredConnectors,
 } from "../services/platformOperationsService";
 
@@ -273,6 +274,11 @@ export default function PlatformAdministration() {
   ] = useState([]);
 
   const [
+    providerCatalog,
+    setProviderCatalog,
+  ] = useState([]);
+
+  const [
     isLoadingPlatformUsers,
     setIsLoadingPlatformUsers,
   ] = useState(false);
@@ -315,9 +321,11 @@ export default function PlatformAdministration() {
       const [
         healthResult,
         connectorResult,
+        providerCatalogResult,
       ] = await Promise.allSettled([
         getPlatformHealth(),
         listRegisteredConnectors(),
+        listProviderCatalog(),
       ]);
 
       if (!isCurrent) {
@@ -356,6 +364,25 @@ export default function PlatformAdministration() {
         setRegisteredConnectors([]);
         setConnectorError(
           "Registered connectors could not be loaded.",
+        );
+      }
+
+      if (
+        providerCatalogResult.status
+        === "fulfilled"
+      ) {
+        setProviderCatalog(
+          providerCatalogResult.value,
+        );
+      } else {
+        console.error(
+          "Provider catalog load failed:",
+          providerCatalogResult.reason,
+        );
+
+        setProviderCatalog([]);
+        setConnectorError(
+          "Provider catalog could not be loaded.",
         );
       }
 
@@ -468,6 +495,15 @@ export default function PlatformAdministration() {
   const platformUserSummaryHealthy =
     Boolean(selectedOrganization)
     && !platformUserError;
+
+  const activeProviderNames =
+    useMemo(
+      () =>
+        new Set(
+          registeredConnectors,
+        ),
+      [registeredConnectors],
+    );
 
   const connectorInventoryHealthy =
     !connectorError;
@@ -713,11 +749,18 @@ export default function PlatformAdministration() {
 
         <OperationalSummaryCard
           icon={<StorageIcon color="primary" />}
-          title="Connectors"
+          title="Connected Intelligence"
           status={
             connectorError
               ? "Unavailable"
-              : `${registeredConnectors.length} Registered`
+              : (
+                providerCatalog.length > 0
+                  ? (
+                    `${providerCatalog.length} Available`
+                    + ` • ${registeredConnectors.length} Active`
+                  )
+                  : "No providers"
+              )
           }
           healthy={
             connectorError
@@ -727,44 +770,139 @@ export default function PlatformAdministration() {
           isLoading={isLoadingConnectors}
           error={connectorError}
         >
-          {registeredConnectors.length > 0 ? (
-            <Stack spacing={1.25}>
-              <SummaryMetric
-                label="Available Providers"
-                value={registeredConnectors.length}
-                emphasis
-              />
-
+          {providerCatalog.length > 0 ? (
+            <Stack spacing={2}>
               <Stack
                 direction="row"
-                spacing={1}
-                useFlexGap
-                flexWrap="wrap"
+                justifyContent="space-between"
+                spacing={2}
               >
-                {registeredConnectors.map(
-                  (connectorName) => (
-                    <Chip
-                      key={connectorName}
-                      label={connectorName}
-                      variant="outlined"
-                      size="small"
-                    />
-                  ),
-                )}
+                <SummaryMetric
+                  label="Available"
+                  value={providerCatalog.length}
+                  emphasis
+                />
+
+                <SummaryMetric
+                  label="Active"
+                  value={registeredConnectors.length}
+                />
               </Stack>
+
+              <Divider />
+
+              {providerCatalog.map(
+                (provider) => {
+                  const isActive =
+                    activeProviderNames.has(
+                      provider.provider_name,
+                    );
+
+                  return (
+                    <Stack
+                      key={provider.provider_name}
+                      spacing={1}
+                    >
+                      <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="flex-start"
+                        spacing={2}
+                      >
+                        <Box>
+                          <Typography
+                            fontWeight={900}
+                          >
+                            {provider.display_name}
+                          </Typography>
+
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                          >
+                            {provider.vendor}
+                            {" • "}
+                            Version{" "}
+                            {provider.component_version}
+                          </Typography>
+                        </Box>
+
+                        <Chip
+                          label={
+                            isActive
+                              ? "Active"
+                              : "Available"
+                          }
+                          color={
+                            isActive
+                              ? "success"
+                              : "default"
+                          }
+                          variant={
+                            isActive
+                              ? "filled"
+                              : "outlined"
+                          }
+                          size="small"
+                          sx={{
+                            fontWeight: 800,
+                          }}
+                        />
+                      </Stack>
+
+                      <Stack
+                        direction="row"
+                        spacing={0.75}
+                        useFlexGap
+                        flexWrap="wrap"
+                      >
+                        {provider
+                          .intelligence_domains
+                          .map(
+                            (domain) => (
+                              <Chip
+                                key={
+                                  provider.provider_name
+                                  + "-"
+                                  + domain
+                                }
+                                label={domain}
+                                color="primary"
+                                variant="outlined"
+                                size="small"
+                              />
+                            ),
+                          )}
+                      </Stack>
+
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                      >
+                        Modes:{" "}
+                        {provider.supported_modes.join(
+                          " • ",
+                        )}
+                      </Typography>
+                    </Stack>
+                  );
+                },
+              )}
 
               <Typography
                 variant="body2"
                 color="text.secondary"
               >
-                Registration confirms availability.
-                Runtime connector health will be added
-                when that API contract is exposed.
+                Provider metadata describes available
+                intelligence. Runtime health and
+                synchronization history remain separate
+                operational states.
               </Typography>
             </Stack>
           ) : (
             <Alert severity="warning">
-              No connector providers are registered.
+              No connector providers are available in
+              the Provider Catalog.
             </Alert>
           )}
         </OperationalSummaryCard>
@@ -1144,5 +1282,3 @@ export default function PlatformAdministration() {
     </Box>
   );
 }
-
-

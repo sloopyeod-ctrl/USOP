@@ -39,6 +39,17 @@ export async function listRegisteredConnectors() {
 }
 
 
+export async function listProviderCatalog() {
+  const response = await api.get(
+    "/connectors/providers",
+  );
+
+  return Array.isArray(response.data)
+    ? response.data
+    : [];
+}
+
+
 export async function listPlatformUsers({
   organizationId,
 }) {
