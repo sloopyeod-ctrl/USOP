@@ -28,3 +28,4 @@
 | ADR-022 | Tiered Evidence Retention and Customer-Controlled Archival | Accepted |
 | ADR-023 | Visual Intelligence Design Principles | Accepted |
 | ADR-024 | Provider Registry Architecture | Accepted |
+| ADR-025 | Organization-Scoped Governance Architecture | Accepted |
