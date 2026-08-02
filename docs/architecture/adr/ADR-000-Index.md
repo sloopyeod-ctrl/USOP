@@ -29,3 +29,4 @@
 | ADR-023 | Visual Intelligence Design Principles | Accepted |
 | ADR-024 | Provider Registry Architecture | Accepted |
 | ADR-025 | Organization-Scoped Governance Architecture | Accepted |
+| ADR-026 | Organizational Identity Architecture | Accepted |
