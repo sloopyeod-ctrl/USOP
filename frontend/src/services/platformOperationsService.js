@@ -49,6 +49,15 @@ export async function listProviderCatalog() {
     : [];
 }
 
+export async function listConnectorHealth() {
+  const response = await api.get(
+    "/connectors/health",
+  );
+
+  return Array.isArray(response.data)
+    ? response.data
+    : [];
+}
 
 export async function listPlatformUsers({
   organizationId,

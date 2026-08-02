@@ -132,16 +132,15 @@ function SidebarSection({
               {item.icon}
             </ListItemIcon>
 
-            <ListItemText
+           <ListItemText
               primary={item.label}
               secondary={item.secondary}
+              sx={{
+                minWidth: 0,
+              }}
               primaryTypographyProps={{
                 fontWeight: 600,
                 color: "inherit",
-              }}
-              secondaryTypographyProps={{
-                color: "#64748B",
-                fontSize: 11,
               }}
             />
           </ListItemButton>
@@ -236,11 +235,14 @@ export default function Sidebar() {
     <Box
       sx={{
         width: 280,
+        minWidth: 280,
+        flexShrink: 0,
         height: "100%",
         backgroundColor: "#111827",
         color: "#E5E7EB",
         borderRight:
           "1px solid rgba(255,255,255,.08)",
+        overflowX: "hidden",
         overflowY: "auto",
       }}
     >

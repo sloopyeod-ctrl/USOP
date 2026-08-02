@@ -39,6 +39,7 @@ import useOrganizationContext from
   "../hooks/useOrganizationContext";
 import {
   getPlatformHealth,
+  listConnectorHealth,
   listPlatformUsers,
   listProviderCatalog,
   listRegisteredConnectors,
@@ -244,6 +245,27 @@ function countPlatformUsersByStatus(
   ).length;
 }
 
+function formatCheckedAt(
+  value,
+) {
+  if (!value) {
+    return "Not reported";
+  }
+
+  const checkedAt = new Date(
+    value,
+  );
+
+  if (
+    Number.isNaN(
+      checkedAt.getTime(),
+    )
+  ) {
+    return "Invalid timestamp";
+  }
+
+  return checkedAt.toLocaleString();
+}
 
 export default function PlatformAdministration() {
   const {
@@ -279,6 +301,11 @@ export default function PlatformAdministration() {
   ] = useState([]);
 
   const [
+    connectorHealth,
+    setConnectorHealth,
+  ] = useState([]);
+
+  const [
     isLoadingPlatformUsers,
     setIsLoadingPlatformUsers,
   ] = useState(false);
@@ -308,6 +335,11 @@ export default function PlatformAdministration() {
     setConnectorError,
   ] = useState(null);
 
+  const [
+    connectorHealthError,
+    setConnectorHealthError,
+  ] = useState(null);
+
 
   useEffect(() => {
     let isCurrent = true;
@@ -317,15 +349,18 @@ export default function PlatformAdministration() {
       setIsLoadingConnectors(true);
       setPlatformHealthError(null);
       setConnectorError(null);
+      setConnectorHealthError(null);
 
       const [
         healthResult,
         connectorResult,
         providerCatalogResult,
+        connectorHealthResult,
       ] = await Promise.allSettled([
         getPlatformHealth(),
         listRegisteredConnectors(),
         listProviderCatalog(),
+        listConnectorHealth(),
       ]);
 
       if (!isCurrent) {
@@ -383,6 +418,25 @@ export default function PlatformAdministration() {
         setProviderCatalog([]);
         setConnectorError(
           "Provider catalog could not be loaded.",
+        );
+      }
+
+      if (
+        connectorHealthResult.status
+        === "fulfilled"
+      ) {
+        setConnectorHealth(
+          connectorHealthResult.value,
+        );
+      } else {
+        console.error(
+          "Connector health load failed:",
+          connectorHealthResult.reason,
+        );
+
+        setConnectorHealth([]);
+        setConnectorHealthError(
+          "Connector runtime health could not be loaded.",
         );
       }
 
@@ -505,8 +559,41 @@ export default function PlatformAdministration() {
       [registeredConnectors],
     );
 
+  const providerHealthByName =
+    useMemo(
+      () =>
+        new Map(
+          connectorHealth.map(
+            (health) => [
+              health.provider_name,
+              health,
+            ],
+          ),
+        ),
+      [connectorHealth],
+    );
+
+  const healthyProviderCount =
+    useMemo(
+      () =>
+        connectorHealth.filter(
+          (health) =>
+            health.healthy === true,
+        ).length,
+      [connectorHealth],
+    );
+
+  const activeProvidersHealthy =
+    registeredConnectors.length > 0
+    && healthyProviderCount
+      === registeredConnectors.length;
+
   const connectorInventoryHealthy =
     !connectorError;
+
+  const connectorRuntimeHealthy =
+    !connectorHealthError
+    && activeProvidersHealthy;
 
 
   return (
@@ -757,7 +844,8 @@ export default function PlatformAdministration() {
                 providerCatalog.length > 0
                   ? (
                     `${providerCatalog.length} Available`
-                    + ` • ${registeredConnectors.length} Active`
+                    + ` | ${registeredConnectors.length} Active`
+                    + ` | ${healthyProviderCount} Healthy`
                   )
                   : "No providers"
               )
@@ -765,7 +853,11 @@ export default function PlatformAdministration() {
           healthy={
             connectorError
               ? false
-              : connectorInventoryHealthy
+              : (
+                registeredConnectors.length > 0
+                  ? connectorRuntimeHealthy
+                  : connectorInventoryHealthy
+              )
           }
           isLoading={isLoadingConnectors}
           error={connectorError}
@@ -798,6 +890,30 @@ export default function PlatformAdministration() {
                       provider.provider_name,
                     );
 
+                  const runtimeHealth =
+                    providerHealthByName.get(
+                      provider.provider_name,
+                    );
+
+                  const runtimeHealthy =
+                    runtimeHealth?.healthy
+                    === true;
+
+                  const currentMode =
+                    runtimeHealth?.details?.mode
+                    || "Not reported";
+
+                  const liveCapabilities =
+                    Array.isArray(
+                      runtimeHealth
+                        ?.details
+                        ?.live_capabilities,
+                    )
+                      ? runtimeHealth
+                        .details
+                        .live_capabilities
+                      : [];
+
                   return (
                     <Stack
                       key={provider.provider_name}
@@ -821,33 +937,73 @@ export default function PlatformAdministration() {
                             color="text.secondary"
                           >
                             {provider.vendor}
-                            {" • "}
+                            {" | "}
                             Version{" "}
                             {provider.component_version}
                           </Typography>
                         </Box>
 
-                        <Chip
-                          label={
-                            isActive
-                              ? "Active"
-                              : "Available"
-                          }
-                          color={
-                            isActive
-                              ? "success"
-                              : "default"
-                          }
-                          variant={
-                            isActive
-                              ? "filled"
-                              : "outlined"
-                          }
-                          size="small"
-                          sx={{
-                            fontWeight: 800,
-                          }}
-                        />
+                        <Stack
+                          direction="row"
+                          spacing={0.75}
+                          useFlexGap
+                          flexWrap="wrap"
+                          justifyContent="flex-end"
+                        >
+                          <Chip
+                            label={
+                              isActive
+                                ? "Active"
+                                : "Available"
+                            }
+                            color={
+                              isActive
+                                ? "primary"
+                                : "default"
+                            }
+                            variant={
+                              isActive
+                                ? "filled"
+                                : "outlined"
+                            }
+                            size="small"
+                            sx={{
+                              fontWeight: 800,
+                            }}
+                          />
+
+                          {isActive && (
+                            <Chip
+                              label={
+                                runtimeHealth
+                                  ? (
+                                    runtimeHealthy
+                                      ? "Healthy"
+                                      : "Attention"
+                                  )
+                                  : "Health unavailable"
+                              }
+                              color={
+                                runtimeHealth
+                                  ? (
+                                    runtimeHealthy
+                                      ? "success"
+                                      : "warning"
+                                  )
+                                  : "default"
+                              }
+                              variant={
+                                runtimeHealth
+                                  ? "filled"
+                                  : "outlined"
+                              }
+                              size="small"
+                              sx={{
+                                fontWeight: 800,
+                              }}
+                            />
+                          )}
+                        </Stack>
                       </Stack>
 
                       <Stack
@@ -875,13 +1031,85 @@ export default function PlatformAdministration() {
                           )}
                       </Stack>
 
+                      {runtimeHealth ? (
+                        <Stack spacing={1}>
+                          <Divider />
+
+                          <Stack
+                            direction={{
+                              xs: "column",
+                              sm: "row",
+                            }}
+                            justifyContent="space-between"
+                            spacing={1}
+                          >
+                            <DetailRow
+                              label="Current Mode"
+                              value={currentMode}
+                            />
+
+                            <DetailRow
+                              label="Health Checked"
+                              value={
+                                formatCheckedAt(
+                                  runtimeHealth.checked_at,
+                                )
+                              }
+                            />
+                          </Stack>
+
+                          {liveCapabilities.length > 0 && (
+                            <Box>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                fontWeight={800}
+                              >
+                                Live Capabilities
+                              </Typography>
+
+                              <Stack
+                                direction="row"
+                                spacing={0.75}
+                                useFlexGap
+                                flexWrap="wrap"
+                                sx={{ mt: 0.75 }}
+                              >
+                                {liveCapabilities.map(
+                                  (capability) => (
+                                    <Chip
+                                      key={
+                                        provider.provider_name
+                                        + "-runtime-"
+                                        + capability
+                                      }
+                                      label={capability}
+                                      variant="outlined"
+                                      size="small"
+                                    />
+                                  ),
+                                )}
+                              </Stack>
+                            </Box>
+                          )}
+                        </Stack>
+                      ) : (
+                        isActive && (
+                          <Alert severity="warning">
+                            Current runtime health is
+                            unavailable for this active
+                            provider.
+                          </Alert>
+                        )
+                      )}
+
                       <Typography
                         variant="caption"
                         color="text.secondary"
                       >
                         Modes:{" "}
                         {provider.supported_modes.join(
-                          " • ",
+                          " | ",
                         )}
                       </Typography>
                     </Stack>
@@ -889,14 +1117,20 @@ export default function PlatformAdministration() {
                 },
               )}
 
+              {connectorHealthError && (
+                <Alert severity="warning">
+                  {connectorHealthError}
+                </Alert>
+              )}
+
               <Typography
                 variant="body2"
                 color="text.secondary"
               >
                 Provider metadata describes available
-                intelligence. Runtime health and
-                synchronization history remain separate
-                operational states.
+                intelligence. Runtime health is evaluated
+                on request. Synchronization history is
+                not yet represented by this view.
               </Typography>
             </Stack>
           ) : (
