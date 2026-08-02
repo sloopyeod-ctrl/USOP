@@ -17,6 +17,7 @@ from app.models.identity_attribute import IdentityAttribute
 from app.models.knowledge_asset import KnowledgeAsset
 from app.models.membership import Membership
 from app.models.organization import Organization
+from app.models.organizational_identity import OrganizationalIdentity
 from app.models.license import License
 from app.models.platform_permission import PlatformPermission
 from app.models.platform_role import PlatformRole
@@ -44,6 +45,7 @@ __all__ = [
     "KnowledgeAsset",
     "Membership",
     "Organization",
+    "OrganizationalIdentity",
     "License",
     "PlatformPermission",
     "PlatformRole",
