@@ -1,4 +1,5 @@
 from typing import Any
+from unittest import result
 
 from app.connectors.core.BaseConnector import BaseConnector
 from app.connectors.core.ConnectorConfiguration import (
@@ -156,6 +157,7 @@ def test_health_returns_serialized_provider_health():
     assert result[0]["provider_name"] == "microsoft-entra"
     assert result[0]["healthy"] is True
     assert result[0]["status"] == "healthy"
+    assert result[0]["checked_at"] is not None
     assert result[0]["details"]["mode"] == "test"
 
 

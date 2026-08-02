@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.schemas.provider import ProviderDescriptorRead
 from app.services.connector_service import ConnectorService
+from app.schemas.connector_health import ConnectorHealthRead
 
 
 router = APIRouter(
@@ -41,6 +42,21 @@ def list_provider_catalog():
 
     return service.list_provider_descriptors()
 
+
+@router.get(
+    "/health",
+    response_model=list[ConnectorHealthRead],
+)
+def list_connector_health():
+    """
+    Return current operational health for active connector providers.
+
+    Health is evaluated when this endpoint is requested.
+
+    The result does not represent persistent synchronization history.
+    """
+
+    return service.health()
 
 @router.get(
     "/{connector_name}/collect",
