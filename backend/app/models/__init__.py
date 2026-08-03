@@ -8,6 +8,7 @@ should load this registry before performing ORM operations.
 
 from app.models.access_review import AccessReview
 from app.models.account import Account
+from app.models.authorization_event import AuthorizationEvent
 from app.models.audit_event import AuditEvent
 from app.models.decision_record import DecisionRecord
 from app.models.governance_policy import GovernancePolicy
