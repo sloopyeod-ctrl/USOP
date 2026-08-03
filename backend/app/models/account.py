@@ -16,6 +16,13 @@ class Account(BaseSourceModel):
         index=True,
     )
 
+    organizational_identity_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("organizational_identities.id"),
+        nullable=True,
+        index=True,
+    )
+
     username: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     display_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
 

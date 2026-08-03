@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 class AccountCreate(BaseModel):
     identity_id: str | None = None
+    organizational_identity_id: str | None = None
 
     username: str
     display_name: str | None = None

@@ -7,6 +7,7 @@ from app.models.account import Account
 from app.models.group import Group
 from app.models.identity import Identity
 from app.models.membership import Membership
+from app.models.organizational_identity import OrganizationalIdentity
 from app.models.role import Role
 from app.models.role_assignment import RoleAssignment
 
@@ -23,8 +24,18 @@ class ReconciliationEngine:
     provider references into canonical database identifiers.
     """
 
-    def __init__(self, db: Session):
+    def __init__(
+        self,
+        db: Session,
+        *,
+        organization_id: str | None = None,
+    ):
         self.db = db
+        self.organization_id = (
+            organization_id.strip()
+            if organization_id
+            else None
+        )
 
     def reconcile(self, normalized: dict):
         summary = {
@@ -208,6 +219,19 @@ class ReconciliationEngine:
                 summary["accounts_skipped"] += 1
                 continue
 
+            organizational_identity = (
+                self._resolve_organizational_identity(
+                    identity_id=identity.id
+                )
+            )
+
+            if (
+                self.organization_id
+                and organizational_identity is None
+            ):
+                summary["accounts_skipped"] += 1
+                continue
+
             existing = self._find_existing_account(
                 source_system=source_system,
                 source_identifier=source_identifier,
@@ -220,6 +244,9 @@ class ReconciliationEngine:
                     existing=existing,
                     account=account,
                     identity=identity,
+                    organizational_identity=(
+                        organizational_identity
+                    ),
                 )
 
                 summary["accounts_updated"] += 1
@@ -228,6 +255,11 @@ class ReconciliationEngine:
             self.db.add(
                 Account(
                     identity_id=identity.id,
+                    organizational_identity_id=(
+                        organizational_identity.id
+                        if organizational_identity
+                        else None
+                    ),
                     username=username,
                     display_name=account.get(
                         "display_name"
@@ -304,6 +336,26 @@ class ReconciliationEngine:
             .first()
         )
 
+    def _resolve_organizational_identity(
+        self,
+        *,
+        identity_id: str,
+    ) -> OrganizationalIdentity | None:
+        if self.organization_id is None:
+            return None
+
+        return (
+            self.db.query(OrganizationalIdentity)
+            .filter(
+                OrganizationalIdentity.organization_id
+                == self.organization_id,
+                OrganizationalIdentity.identity_id
+                == identity_id,
+                OrganizationalIdentity.is_active.is_(True),
+            )
+            .one_or_none()
+        )
+
     def _find_existing_account(
         self,
         source_system: str | None,
@@ -342,8 +394,14 @@ class ReconciliationEngine:
         existing: Account,
         account: dict,
         identity: Identity,
+        organizational_identity: OrganizationalIdentity | None,
     ) -> None:
         existing.identity_id = identity.id
+        existing.organizational_identity_id = (
+            organizational_identity.id
+            if organizational_identity
+            else None
+        )
         existing.username = account["username"]
         existing.display_name = account.get(
             "display_name"

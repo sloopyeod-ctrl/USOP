@@ -18,15 +18,28 @@ class SynchronizationEngine:
     milestone after affected identities can be resolved dynamically.
     """
 
-    def __init__(self, db: Session):
+    def __init__(
+        self,
+        db: Session,
+        *,
+        organization_id: str | None = None,
+    ):
         self.db = db
+        self.organization_id = (
+            organization_id.strip()
+            if organization_id
+            else None
+        )
 
         self.connector_manager = ConnectorManager()
         self.connector_manager.register(EntraProvider())
 
         self.audit_service = AuditService(db)
         self.normalizer = NormalizationEngine()
-        self.reconciliation_engine = ReconciliationEngine(db)
+        self.reconciliation_engine = ReconciliationEngine(
+            db,
+            organization_id=self.organization_id,
+        )
 
     @staticmethod
     def _count_collections(data: dict) -> dict[str, int]:
