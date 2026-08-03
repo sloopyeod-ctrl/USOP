@@ -30,4 +30,4 @@
 | ADR-024 | Provider Registry Architecture | Accepted |
 | ADR-025 | Organization-Scoped Governance Architecture | Accepted |
 | ADR-026 | Organizational Identity Architecture | Accepted |
-| ADR-027 | [Tenant, Organization, and Connector Ownership Architecture](ADR-027-tenant-organization-connector-ownership-architecture.md) | Accepted | Defines Tenant licensing, Organization isolation, Connector ownership, and inherited data scope. |
+| ADR-027 | Tenant, Organization, and Connector Ownership Architecture | Accepted |
