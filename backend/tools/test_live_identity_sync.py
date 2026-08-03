@@ -23,6 +23,7 @@ from app.synchronization.sync_engine import (
 
 
 SOURCE_SYSTEM = "Microsoft Entra ID"
+ORGANIZATION_ID = "832e4ca6-e7e8-4bc6-8f41-ed00be193216"
 
 
 def mask_identifier(
@@ -60,7 +61,10 @@ def main() -> int:
     db = SessionLocal()
 
     try:
-        engine = SynchronizationEngine(db)
+        engine = SynchronizationEngine(
+            db,
+            organization_id=ORGANIZATION_ID,
+        )
         result = engine.run(
             "microsoft-entra"
         )
