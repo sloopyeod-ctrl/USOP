@@ -10,6 +10,9 @@ from app.models.membership import Membership
 from app.models.organizational_identity import OrganizationalIdentity
 from app.models.role import Role
 from app.models.role_assignment import RoleAssignment
+from app.services.authorization_event_emitter import (
+    AuthorizationEventEmitter,
+)
 
 
 class ReconciliationEngine:
@@ -29,12 +32,22 @@ class ReconciliationEngine:
         db: Session,
         *,
         organization_id: str | None = None,
+        authorization_event_emitter: (
+            AuthorizationEventEmitter | None
+        ) = None,
     ):
         self.db = db
         self.organization_id = (
             organization_id.strip()
             if organization_id
             else None
+        )
+        self.authorization_event_emitter = (
+            authorization_event_emitter
+            or AuthorizationEventEmitter(
+                db,
+                organization_id=self.organization_id,
+            )
         )
 
     def reconcile(self, normalized: dict):
@@ -1134,6 +1147,11 @@ class ReconciliationEngine:
             )
 
             if existing:
+                self.authorization_event_emitter.emit_role_updated_if_changed(
+                    existing=existing,
+                    incoming=assignment,
+                )
+
                 self._update_role_assignment(
                     existing=existing,
                     assignment=assignment,
@@ -1142,43 +1160,48 @@ class ReconciliationEngine:
                 summary["role_assignments_updated"] += 1
                 continue
 
-            self.db.add(
-                RoleAssignment(
-                    subject_type=subject_type,
-                    subject_id=subject_id,
-                    role_id=role_id,
-                    assignment_type=assignment.get(
-                        "assignment_type",
-                        "Direct",
-                    ),
-                    status=assignment.get(
-                        "status",
-                        "Active",
-                    ),
-                    directory_scope=assignment.get(
-                        "directory_scope"
-                    ),
-                    application_scope=assignment.get(
-                        "application_scope"
-                    ),
-                    source_system=assignment.get(
-                        "source_system",
-                        assignment.get("source"),
-                    ),
-                    source_identifier=assignment.get(
-                        "source_identifier"
-                    ),
-                    first_seen_at=assignment.get(
-                        "first_seen_at"
-                    ),
-                    last_seen_at=assignment.get(
-                        "last_seen_at"
-                    ),
-                    confidence_score=assignment.get(
-                        "confidence_score",
-                        100,
-                    ),
-                )
+            created_assignment = RoleAssignment(
+                subject_type=subject_type,
+                subject_id=subject_id,
+                role_id=role_id,
+                assignment_type=assignment.get(
+                    "assignment_type",
+                    "Direct",
+                ),
+                status=assignment.get(
+                    "status",
+                    "Active",
+                ),
+                directory_scope=assignment.get(
+                    "directory_scope"
+                ),
+                application_scope=assignment.get(
+                    "application_scope"
+                ),
+                source_system=assignment.get(
+                    "source_system",
+                    assignment.get("source"),
+                ),
+                source_identifier=assignment.get(
+                    "source_identifier"
+                ),
+                first_seen_at=assignment.get(
+                    "first_seen_at"
+                ),
+                last_seen_at=assignment.get(
+                    "last_seen_at"
+                ),
+                confidence_score=assignment.get(
+                    "confidence_score",
+                    100,
+                ),
+            )
+
+            self.db.add(created_assignment)
+            self.db.flush()
+
+            self.authorization_event_emitter.emit_role_assigned(
+                assignment=created_assignment,
             )
 
             summary["role_assignments_created"] += 1
