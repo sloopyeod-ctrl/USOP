@@ -31,3 +31,4 @@
 | ADR-025 | Organization-Scoped Governance Architecture | Accepted |
 | ADR-026 | Organizational Identity Architecture | Accepted |
 | ADR-027 | Tenant, Organization, and Connector Ownership Architecture | Accepted |
+| ADR-028 | Governance Reference Extension Architecture | Accepted |
