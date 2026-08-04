@@ -48,14 +48,38 @@ def _emitter(
     organization_id: str | None = "organization-027",
 ):
     db = MagicMock()
-    account_query = db.query.return_value
-    account_query.filter.return_value.one_or_none.return_value = (
-        SimpleNamespace(
-            id="account-001",
-            identity_id="identity-001",
-            organizational_identity_id="organizational-identity-001",
-        )
-    )
+
+    def query(model):
+        query_result = MagicMock()
+
+        if model.__name__ == "Account":
+            query_result.filter.return_value.one_or_none.return_value = (
+                SimpleNamespace(
+                    id="account-001",
+                    identity_id="identity-001",
+                    organizational_identity_id=(
+                        "organizational-identity-001"
+                    ),
+                )
+            )
+        elif model.__name__ == "Role":
+            query_result.filter.return_value.one_or_none.return_value = (
+                SimpleNamespace(
+                    id="role-global-reader",
+                    name="Global Reader",
+                    display_name="Global Reader",
+                    system_name="Microsoft Entra ID",
+                    source_identifier=(
+                        "88d8e3e3-8f55-4a1e-953a-9b9898b8876b"
+                    ),
+                    privilege_level=None,
+                )
+            )
+
+        return query_result
+
+    db.query.side_effect = query
+
     event_service = MagicMock()
     event_service.create_pending.side_effect = (
         lambda *, payload, actor: SimpleNamespace(

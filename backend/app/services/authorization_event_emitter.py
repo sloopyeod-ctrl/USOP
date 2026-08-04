@@ -5,8 +5,15 @@ from sqlalchemy.orm import Session
 
 from app.domain.principal_type import PrincipalType
 from app.models.account import Account
+from app.models.role import Role
 from app.models.role_assignment import RoleAssignment
 from app.schemas.authorization_event import AuthorizationEventCreate
+from app.security.authorization.authorization_classification_service import (
+    AuthorizationClassificationService,
+)
+from app.services.authorization_event_materiality_service import (
+    AuthorizationEventMaterialityService,
+)
 from app.services.authorization_event_service import AuthorizationEventService
 
 
@@ -25,8 +32,8 @@ class AuthorizationEventEmitter:
     Translate proven RoleAssignment reconciliation changes into append-only
     AuthorizationEvent evidence.
 
-    This emitter records facts only. It does not classify materiality, create
-    analyst work, or make recommendations.
+    This emitter records facts and materiality classification. It does not
+    create Access Reviews, decisions, recommendations, or frontend attention.
     """
 
     def __init__(
@@ -35,6 +42,12 @@ class AuthorizationEventEmitter:
         *,
         organization_id: str | None,
         event_service: AuthorizationEventService | None = None,
+        classification_service: (
+            AuthorizationClassificationService | None
+        ) = None,
+        materiality_service: (
+            AuthorizationEventMaterialityService | None
+        ) = None,
     ):
         self.db = db
         self.organization_id = (
@@ -43,6 +56,14 @@ class AuthorizationEventEmitter:
             else None
         )
         self.event_service = event_service or AuthorizationEventService(db)
+        self.classification_service = (
+            classification_service
+            or AuthorizationClassificationService()
+        )
+        self.materiality_service = (
+            materiality_service
+            or AuthorizationEventMaterialityService()
+        )
 
     @staticmethod
     def _state_from_assignment(
@@ -85,10 +106,7 @@ class AuthorizationEventEmitter:
             "application_scope": incoming.get("application_scope"),
             "source_system": incoming.get(
                 "source_system",
-                incoming.get(
-                    "source",
-                    existing.source_system,
-                ),
+                incoming.get("source", existing.source_system),
             ),
             "source_identifier": incoming.get(
                 "source_identifier",
@@ -128,6 +146,54 @@ class AuthorizationEventEmitter:
 
         return changes
 
+    def _role_evidence(
+        self,
+        assignment: RoleAssignment,
+        current_state: dict[str, Any],
+    ) -> dict[str, Any]:
+        role = (
+            self.db.query(Role)
+            .filter(Role.id == assignment.role_id)
+            .one_or_none()
+        )
+
+        if role is None:
+            return {
+                "role_name": None,
+                "role_source_identifier": None,
+                "system_name": None,
+                "privilege_level": None,
+                "assignment_type": current_state.get("assignment_type"),
+                "directory_scope": current_state.get("directory_scope"),
+                "application_scope": current_state.get("application_scope"),
+            }
+
+        return {
+            "role_name": role.display_name or role.name,
+            "role_source_identifier": role.source_identifier,
+            "system_name": role.system_name,
+            "privilege_level": role.privilege_level,
+            "assignment_type": current_state.get("assignment_type"),
+            "directory_scope": current_state.get("directory_scope"),
+            "application_scope": current_state.get("application_scope"),
+        }
+
+    def _classify_event(
+        self,
+        *,
+        event_type: str,
+        assignment: RoleAssignment,
+        current_state: dict[str, Any],
+    ) -> dict[str, Any]:
+        classification = self.classification_service.classify(
+            self._role_evidence(assignment, current_state)
+        )
+
+        return self.materiality_service.evaluate(
+            event_type=event_type,
+            classification=classification,
+        )
+
     def _account_context(
         self,
         assignment: RoleAssignment,
@@ -166,6 +232,11 @@ class AuthorizationEventEmitter:
         account_id, identity_id, organizational_identity_id = (
             self._account_context(assignment)
         )
+        materiality = self._classify_event(
+            event_type=event_type,
+            assignment=assignment,
+            current_state=current_state,
+        )
 
         payload = AuthorizationEventCreate(
             organization_id=self.organization_id,
@@ -188,11 +259,14 @@ class AuthorizationEventEmitter:
             effective_start=current_state.get("first_seen_at"),
             effective_end=None,
             detected_at=detected_at or datetime.now(UTC),
-            risk_level="Low",
-            is_material=False,
+            risk_level=materiality["risk_level"],
+            is_material=materiality["is_material"],
             previous_state_json=previous_state,
             current_state_json=current_state,
-            evidence_json=evidence_json,
+            evidence_json={
+                **evidence_json,
+                **materiality,
+            },
             source_system=assignment.source_system,
             source_identifier=assignment.source_identifier,
             confidence_score=assignment.confidence_score,
@@ -233,14 +307,8 @@ class AuthorizationEventEmitter:
         detected_at: datetime | None = None,
     ):
         previous_state = self._state_from_assignment(existing)
-        current_state = self._normalized_current_state(
-            existing,
-            incoming,
-        )
-        changes = self._tracked_changes(
-            previous_state,
-            current_state,
-        )
+        current_state = self._normalized_current_state(existing, incoming)
+        changes = self._tracked_changes(previous_state, current_state)
 
         if not changes:
             return None
