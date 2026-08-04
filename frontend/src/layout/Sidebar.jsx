@@ -1,4 +1,4 @@
-﻿import {
+import {
   NavLink,
   useLocation,
 } from "react-router-dom";
@@ -199,7 +199,8 @@ export default function Sidebar() {
     {
       label: "Investigations",
       icon: <FolderIcon />,
-      disabled: true,
+      to: "/workspace",
+      secondary: "Pending analyst decisions",
     },
     {
       label: "Executive Risk",
