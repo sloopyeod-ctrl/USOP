@@ -35,6 +35,15 @@ import {
 } from "../../services/decisionRecordService";
 
 import {
+  clearActiveWorkContext,
+  getMatchingActiveWorkContext,
+} from "../../services/activeWorkContextService";
+
+import {
+  resolvePendingDecision,
+} from "../../services/pendingDecisionResolutionService";
+
+import {
   createDecisionDraft,
 } from "../../services/decisionDraftService";
 
@@ -326,21 +335,40 @@ export default function DecisionActionPanel({
     setCreatedDecision(null);
 
     try {
-      const record =
-        await createDecisionRecord({
+      const activeWorkContext =
+        getMatchingActiveWorkContext({
           organizationId,
           identityId,
-          recommendationId:
-            recommendation
-              .recommendation_id,
-          decisionType,
-          justification,
-          notes,
-          acceptanceType,
-          reviewDueAt,
-          escalatedTo,
-          externalTicketReference,
         });
+
+      const decisionRequest = {
+        organizationId,
+        identityId,
+        recommendationId:
+          recommendation
+            .recommendation_id,
+        decisionType,
+        justification,
+        notes,
+        acceptanceType,
+        reviewDueAt,
+        escalatedTo,
+        externalTicketReference,
+      };
+
+      const record = activeWorkContext
+        ? await resolvePendingDecision({
+          ...decisionRequest,
+          workItemId:
+            activeWorkContext.workItemId,
+        })
+        : await createDecisionRecord(
+          decisionRequest
+        );
+
+      if (activeWorkContext) {
+        clearActiveWorkContext();
+      }
 
       setCreatedDecision(record);
 

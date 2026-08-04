@@ -29,6 +29,10 @@ import {
   listPendingDecisionWorkItems,
 } from "../services/pendingDecisionWorkItemService";
 
+import {
+  saveActiveWorkContext,
+} from "../services/activeWorkContextService";
+
 
 const PRIORITY_ORDER = [
   "Critical",
@@ -352,6 +356,14 @@ export default function OperationsWorkspace() {
     if (!item.identity_id) {
       return;
     }
+
+    saveActiveWorkContext({
+      organizationId:
+        activeOrganizationId,
+      workItemId: item.id,
+      identityId: item.identity_id,
+      sourceType: item.source_type,
+    });
 
     navigate(
       `/workspace/${item.identity_id}`,
