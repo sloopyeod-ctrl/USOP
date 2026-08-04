@@ -1,4 +1,4 @@
-﻿from typing import Any
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -78,7 +78,7 @@ class DecisionRecordService:
             identity_id=identity_id,
         )
 
-    def create_decision_record(
+    def create_decision_record_pending(
         self,
         *,
         organization_id: str,
@@ -86,6 +86,12 @@ class DecisionRecordService:
         recommendation_id: str,
         action: DecisionRecordAction,
     ):
+        """
+        Stage one DecisionRecord and its audit event.
+
+        The caller owns commit and rollback.
+        """
+
         intelligence = (
             self.intelligence_service
             .get_identity_intelligence(
@@ -196,11 +202,11 @@ class DecisionRecordService:
             confidence_score=100,
         )
 
-        record = self.repository.create(
+        record = self.repository.create_pending(
             payload
         )
 
-        self.audit_service.record(
+        self.audit_service.record_pending(
             event_type="DecisionCreated",
             entity_type="DecisionRecord",
             entity_id=record.id,
@@ -225,10 +231,37 @@ class DecisionRecordService:
                 ),
                 "risk_level": record.risk_level,
                 "actor_trust": "UserSupplied",
+                "transaction_mode": "CallerOwned",
             },
         )
 
         return record
+
+    def create_decision_record(
+        self,
+        *,
+        organization_id: str,
+        identity_id: str,
+        recommendation_id: str,
+        action: DecisionRecordAction,
+    ):
+        """
+        Compatibility wrapper for existing callers.
+        """
+
+        try:
+            record = self.create_decision_record_pending(
+                organization_id=organization_id,
+                identity_id=identity_id,
+                recommendation_id=recommendation_id,
+                action=action,
+            )
+            self.db.commit()
+            self.db.refresh(record)
+            return record
+        except Exception:
+            self.db.rollback()
+            raise
 
     @staticmethod
     def _build_evidence_snapshot(

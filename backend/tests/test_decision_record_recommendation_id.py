@@ -105,7 +105,7 @@ def test_stable_recommendation_id_is_preserved():
     record.id = "decision-1"
     record.risk_level = "Critical"
 
-    service.repository.create.return_value = (
+    service.repository.create_pending.return_value = (
         record
     )
 
@@ -124,8 +124,7 @@ def test_stable_recommendation_id_is_preserved():
     assert result is record
 
     payload = (
-        service.repository.create
-        .call_args.args[0]
+        service.repository.create_pending.call_args.args[0]
     )
 
     assert (
@@ -140,11 +139,10 @@ def test_stable_recommendation_id_is_preserved():
         == recommendation_id
     )
 
-    service.audit_service.record.assert_called_once()
+    service.audit_service.record_pending.assert_called_once()
 
     audit_metadata = (
-        service.audit_service.record
-        .call_args.kwargs["metadata"]
+        service.audit_service.record_pending.call_args.kwargs["metadata"]
     )
 
     assert (

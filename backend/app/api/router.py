@@ -41,6 +41,9 @@ from app.api.v1.attack_path_simulation import router as attack_path_simulation_r
 from app.api.v1.pending_decision_work_items import (
     router as pending_decision_work_item_router,
 )
+from app.api.v1.pending_decision_resolution import (
+    router as pending_decision_resolution_router,
+)
 
 router = APIRouter()
 
@@ -118,3 +121,4 @@ router.include_router(executive_exposure_dashboard_router)
 router.include_router(attack_path_router)
 router.include_router(attack_path_simulation_router)
 router.include_router(pending_decision_work_item_router)
+router.include_router(pending_decision_resolution_router)

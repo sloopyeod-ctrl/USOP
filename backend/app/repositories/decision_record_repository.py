@@ -21,6 +21,21 @@ class DecisionRecordRepository(
             DecisionRecord,
         )
 
+    def create_pending(
+        self,
+        data: DecisionRecordCreate,
+    ) -> DecisionRecord:
+        """
+        Stage one DecisionRecord in the caller-owned transaction.
+        """
+
+        record = DecisionRecord(
+            **data.model_dump()
+        )
+        self.db.add(record)
+        self.db.flush()
+        return record
+
     def list_for_organization(
         self,
         organization_id: str,

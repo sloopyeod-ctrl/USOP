@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -35,12 +37,24 @@ class PendingDecisionWorkItemDuplicateError(
     pass
 
 
+class PendingDecisionWorkItemNotFoundError(
+    PendingDecisionWorkItemError
+):
+    pass
+
+
+class PendingDecisionWorkItemConflictError(
+    PendingDecisionWorkItemError
+):
+    pass
+
+
 class PendingDecisionWorkItemService:
     """
     Backend authority for Organization-scoped human decision work.
 
-    create_pending() validates, deduplicates, stages persistence, and stages
-    audit evidence in the caller-owned transaction.
+    Pending methods stage persistence and audit evidence in a caller-owned
+    transaction. Commit-owning wrappers remain available for direct callers.
     """
 
     ALLOWED_STATUSES = {
@@ -308,6 +322,82 @@ class PendingDecisionWorkItemService:
             organization_id=organization.id,
             work_item_id=work_item_id,
         )
+
+    def resolve_pending(
+        self,
+        *,
+        organization_id: str,
+        work_item_id: str,
+        decision_record_id: str,
+        actor: str | None = None,
+    ) -> PendingDecisionWorkItem:
+        organization = self._require_organization(
+            self._required_text(
+                organization_id,
+                field_name="organization_id",
+            )
+        )
+
+        work_item = self.repository.get_by_id_for_organization(
+            organization_id=organization.id,
+            work_item_id=self._required_text(
+                work_item_id,
+                field_name="work_item_id",
+            ),
+        )
+
+        if work_item is None:
+            raise PendingDecisionWorkItemNotFoundError(
+                "PendingDecisionWorkItem was not found."
+            )
+
+        if work_item.status == "Resolved":
+            raise PendingDecisionWorkItemConflictError(
+                "PendingDecisionWorkItem is already resolved."
+            )
+
+        work_item.status = "Resolved"
+        work_item.decision_record_id = self._required_text(
+            decision_record_id,
+            field_name="decision_record_id",
+        )
+        work_item.resolved_at = datetime.now(UTC)
+        work_item.resolved_by = self._optional_text(actor)
+        work_item.updated_by = self._optional_text(actor)
+
+        self.db.flush()
+
+        self.audit_service.record_pending(
+            event_type="PendingDecisionWorkItemResolved",
+            entity_type="PendingDecisionWorkItem",
+            entity_id=work_item.id,
+            actor=actor,
+            message=(
+                f"Pending decision work item "
+                f"'{work_item.title}' was resolved."
+            ),
+            metadata={
+                "organization_id": organization.id,
+                "work_item_id": work_item.id,
+                "decision_record_id": (
+                    work_item.decision_record_id
+                ),
+                "status": work_item.status,
+                "transaction_mode": "CallerOwned",
+            },
+        )
+
+        return work_item
+
+    def resolve(self, **kwargs) -> PendingDecisionWorkItem:
+        try:
+            work_item = self.resolve_pending(**kwargs)
+            self.db.commit()
+            self.db.refresh(work_item)
+            return work_item
+        except Exception:
+            self.db.rollback()
+            raise
 
     def list_for_organization(
         self,
