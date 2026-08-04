@@ -1,3 +1,6 @@
+from app.models.pending_decision_work_item import (
+    PendingDecisionWorkItem,
+)
 """
 Central SQLAlchemy model registry.
 
