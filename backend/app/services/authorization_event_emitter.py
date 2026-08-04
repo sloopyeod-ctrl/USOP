@@ -15,6 +15,9 @@ from app.services.authorization_event_materiality_service import (
     AuthorizationEventMaterialityService,
 )
 from app.services.authorization_event_service import AuthorizationEventService
+from app.services.authorization_work_item_generator import (
+    AuthorizationWorkItemGenerator,
+)
 
 
 SYSTEM_AUTHORIZATION_EVENT_ACTOR = "system:reconciliation"
@@ -48,6 +51,9 @@ class AuthorizationEventEmitter:
         materiality_service: (
             AuthorizationEventMaterialityService | None
         ) = None,
+        work_item_generator: (
+            AuthorizationWorkItemGenerator | None
+        ) = None,
     ):
         self.db = db
         self.organization_id = (
@@ -63,6 +69,10 @@ class AuthorizationEventEmitter:
         self.materiality_service = (
             materiality_service
             or AuthorizationEventMaterialityService()
+        )
+        self.work_item_generator = (
+            work_item_generator
+            or AuthorizationWorkItemGenerator(db)
         )
 
     @staticmethod
@@ -272,10 +282,14 @@ class AuthorizationEventEmitter:
             confidence_score=assignment.confidence_score,
         )
 
-        return self.event_service.create_pending(
+        event = self.event_service.create_pending(
             payload=payload,
             actor=SYSTEM_AUTHORIZATION_EVENT_ACTOR,
         )
+
+        self.work_item_generator.generate(event=event)
+
+        return event
 
     def emit_role_assigned(
         self,

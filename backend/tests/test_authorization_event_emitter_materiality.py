@@ -76,6 +76,7 @@ def test_emitter_applies_critical_materiality():
         _db_with_role(role),
         organization_id="organization-027",
         event_service=service,
+        work_item_generator=MagicMock(),
     )
 
     result = emitter.emit_role_assigned(
@@ -96,6 +97,7 @@ def test_emitter_fails_safe_when_role_evidence_is_missing():
         _db_with_role(None),
         organization_id="organization-027",
         event_service=service,
+        work_item_generator=MagicMock(),
     )
 
     result = emitter.emit_role_assigned(

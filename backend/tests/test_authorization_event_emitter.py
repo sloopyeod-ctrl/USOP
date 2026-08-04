@@ -91,6 +91,7 @@ def _emitter(
         db,
         organization_id=organization_id,
         event_service=event_service,
+        work_item_generator=MagicMock(),
     )
     return emitter, event_service
 
