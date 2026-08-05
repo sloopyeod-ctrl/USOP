@@ -15,6 +15,8 @@ import {
 } from "react-router-dom";
 
 import api from "../api/usopApi";
+import useWorkspaceSynchronization from
+  "../hooks/useWorkspaceSynchronization";
 import useOrganizationContext from
   "../hooks/useOrganizationContext";
 import useWorkspaceState from
@@ -24,6 +26,8 @@ import WorkspaceHeader from
   "../components/workspace/WorkspaceHeader";
 import OrganizationContextBanner from
   "../components/workspace/OrganizationContextBanner";
+import OperationalPulse from
+  "../components/workspace/OperationalPulse";
 import {
   DecisionWorkspace,
 } from "../components/decision";
@@ -55,36 +59,9 @@ import {
   applyGraphAnimationMetadata,
   GRAPH_ANIMATION_MODES,
 } from "../services/graphAnimationService";
-
-
-async function fetchWorkspaceData({
-  identityId,
-  organizationId,
-}) {
-  const intelligenceUrl = (
-    "/api/v1/organizations/"
-    + encodeURIComponent(organizationId)
-    + "/identity-intelligence/"
-    + encodeURIComponent(identityId)
-  );
-
-  const [
-    intelligenceResponse,
-    attackPathResponse,
-  ] = await Promise.all([
-    api.get(intelligenceUrl),
-    api.get(
-      `/attack-path/${identityId}`,
-    ),
-  ]);
-
-  return {
-    intelligence:
-      intelligenceResponse.data,
-    attackPath:
-      attackPathResponse.data,
-  };
-}
+import {
+  WORKSPACE_REFRESH_REASONS,
+} from "../services/workspaceSynchronizationService";
 
 
 export default function AnalystWorkspace() {
@@ -98,6 +75,11 @@ export default function AnalystWorkspace() {
   } = useOrganizationContext();
 
   const workspace = useWorkspaceState();
+
+  const {
+    synchronization,
+    refresh: synchronizeWorkspace,
+  } = useWorkspaceSynchronization();
 
   const [data, setData] = useState(null);
 
@@ -142,7 +124,7 @@ export default function AnalystWorkspace() {
 
     const {
       intelligence,
-      attackPath: refreshedAttackPath,
+      attack_path: refreshedAttackPath,
     } = workspaceData;
 
     setError(null);
@@ -184,10 +166,13 @@ export default function AnalystWorkspace() {
       identityId,
     );
 
-    fetchWorkspaceData({
+    synchronizeWorkspace({
       identityId,
       organizationId:
         activeOrganizationId,
+      reason:
+        WORKSPACE_REFRESH_REASONS
+          .WORKSPACE_LOADED,
     })
       .then((workspaceData) => {
         if (!isCurrent) {
@@ -303,10 +288,13 @@ export default function AnalystWorkspace() {
 
     try {
       const workspaceData =
-        await fetchWorkspaceData({
+        await synchronizeWorkspace({
           identityId,
           organizationId:
             activeOrganizationId,
+          reason:
+            WORKSPACE_REFRESH_REASONS
+              .DECISION_RECORDED,
         });
 
       applyWorkspaceData(
@@ -414,6 +402,12 @@ export default function AnalystWorkspace() {
       <WorkspaceHeader
         identity={identity}
         exposure={exposure}
+      />
+
+      <OperationalPulse
+        synchronization={
+          synchronization
+        }
       />
 
       <OrganizationContextBanner
