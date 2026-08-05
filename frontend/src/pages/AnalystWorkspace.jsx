@@ -42,8 +42,9 @@ import MissionContextPanel from
   "../components/workspace/MissionContextPanel";
 import ImmediateActionsPanel from
   "../components/workspace/ImmediateActionsPanel";
-import RecentActivityPanel from
-  "../components/workspace/RecentActivityPanel";
+import {
+  OperationalTimelinePanel,
+} from "../components/timeline";
 import AttackSimulationPanel from
   "../components/workspace/AttackSimulationPanel";
 
@@ -99,6 +100,11 @@ export default function AnalystWorkspace() {
   const workspace = useWorkspaceState();
 
   const [data, setData] = useState(null);
+
+  const [
+    timelineRefreshKey,
+    setTimelineRefreshKey,
+  ] = useState(0);
 
   const [
     attackPath,
@@ -306,6 +312,10 @@ export default function AnalystWorkspace() {
       applyWorkspaceData(
         workspaceData,
       );
+
+      setTimelineRefreshKey(
+        (current) => current + 1,
+      );
     } catch (requestError) {
       console.error(requestError);
 
@@ -364,7 +374,6 @@ export default function AnalystWorkspace() {
     risk,
     access,
     recommendations,
-    timeline,
     decision,
   } = data;
 
@@ -557,9 +566,14 @@ export default function AnalystWorkspace() {
           selectedNode={selectedNode}
         />
 
-        <RecentActivityPanel
-          events={timeline}
-          selectedNode={selectedNode}
+        <OperationalTimelinePanel
+          organizationId={
+            activeOrganizationId
+          }
+          identityId={identityId}
+          refreshKey={
+            timelineRefreshKey
+          }
         />
       </Box>
     </Box>
