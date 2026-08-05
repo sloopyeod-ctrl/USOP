@@ -44,6 +44,9 @@ from app.api.v1.pending_decision_work_items import (
 from app.api.v1.pending_decision_resolution import (
     router as pending_decision_resolution_router,
 )
+from app.api.v1.operational_timeline import (
+    router as operational_timeline_router,
+)
 
 router = APIRouter()
 
@@ -122,3 +125,4 @@ router.include_router(attack_path_router)
 router.include_router(attack_path_simulation_router)
 router.include_router(pending_decision_work_item_router)
 router.include_router(pending_decision_resolution_router)
+router.include_router(operational_timeline_router)
