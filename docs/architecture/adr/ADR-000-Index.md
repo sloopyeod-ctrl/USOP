@@ -32,3 +32,4 @@
 | ADR-026 | Organizational Identity Architecture | Accepted |
 | ADR-027 | Tenant, Organization, and Connector Ownership Architecture | Accepted |
 | ADR-028 | Governance Reference Extension Architecture | Accepted |
+| ADR-029 | Customer-Owned Knowledge & External Retention Architecture | Accepted |
