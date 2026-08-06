@@ -1,42 +1,142 @@
-import { Box, Chip, CircularProgress, Stack, Typography } from "@mui/material";
+import {
+  Alert, Box, Chip, CircularProgress, Collapse, Stack, Typography,
+} from "@mui/material";
+
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import SyncIcon from "@mui/icons-material/Sync";
 
+import {
+  buildOperationalPulseIntelligence,
+} from "../../intelligence/OperationalPulseIntelligenceService";
+
 function formatTime(value) {
-  if (!value) return null;
+  if (!value) {
+    return null;
+  }
+
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date.toLocaleTimeString();
 }
 
-function reasonLabel(reason) {
-  if (reason === "decision-recorded") return "Decision recorded";
-  if (reason === "workspace-loaded") return "Workspace loaded";
-  return "Workspace synchronized";
+function statusIcon(model) {
+  if (model.status === "refreshing") {
+    return <CircularProgress size={20} />;
+  }
+
+  if (model.status === "failed") {
+    return <WarningAmberIcon color="error" />;
+  }
+
+  return <CheckCircleIcon color="success" />;
+}
+
+function borderColor(severity) {
+  if (severity === "error") {
+    return "rgba(239, 68, 68, 0.42)";
+  }
+  if (severity === "success") {
+    return "rgba(34, 197, 94, 0.36)";
+  }
+  return "rgba(34, 211, 238, 0.28)";
 }
 
 export default function OperationalPulse({ synchronization }) {
-  if (!synchronization) return null;
-  const { reason, completedAt, durationMs, status, isRefreshing, updatedProjections = [] } = synchronization;
+  const model = buildOperationalPulseIntelligence(synchronization);
+
+  if (!model) {
+    return null;
+  }
+
+  const completedTime = formatTime(model.refresh.completed_at);
 
   return (
-    <Box sx={{ mb: 2, px: 1.75, py: 1.25, borderRadius: 2, border: "1px solid rgba(34, 211, 238, 0.24)", backgroundColor: "rgba(8, 47, 73, 0.18)" }}>
-      <Stack direction={{ xs: "column", md: "row" }} spacing={1.25} alignItems={{ xs: "flex-start", md: "center" }} justifyContent="space-between">
-        <Stack direction="row" spacing={1} alignItems="center">
-          {isRefreshing ? <CircularProgress size={18} /> : <SyncIcon color={status === "failed" ? "error" : "primary"} />}
-          <Box>
-            <Typography variant="subtitle2" fontWeight={900}>Operational Pulse</Typography>
-            <Typography variant="caption" color="text.secondary">
-              {isRefreshing ? "Synchronizing operational state..." : reasonLabel(reason)}
-            </Typography>
-          </Box>
+    <Box
+      sx={{
+        mb: 2,
+        px: 1.75,
+        py: 1.5,
+        borderRadius: 2,
+        border: `1px solid ${borderColor(model.severity)}`,
+        backgroundColor: "rgba(8, 47, 73, 0.18)",
+      }}
+    >
+      <Stack spacing={1.25}>
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          spacing={1.25}
+          alignItems={{ xs: "flex-start", md: "center" }}
+          justifyContent="space-between"
+        >
+          <Stack direction="row" spacing={1} alignItems="center">
+            {statusIcon(model)}
+            <Box>
+              <Typography variant="subtitle2" fontWeight={900}>
+                Operational Pulse
+              </Typography>
+              <Typography variant="body2" fontWeight={800}>
+                {model.title}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {model.summary}
+              </Typography>
+            </Box>
+          </Stack>
+
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            {model.refresh.duration_ms !== null
+              && model.status !== "refreshing" && (
+              <Chip
+                label={`${model.refresh.duration_ms} ms`}
+                size="small"
+                variant="outlined"
+              />
+            )}
+
+            {completedTime && (
+              <Chip
+                label={`Updated ${completedTime}`}
+                size="small"
+                variant="outlined"
+              />
+            )}
+
+            {model.status === "refreshing" && (
+              <Chip
+                icon={<SyncIcon />}
+                label="Synchronizing"
+                size="small"
+                color="info"
+                variant="outlined"
+              />
+            )}
+          </Stack>
         </Stack>
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-          {!isRefreshing && status === "succeeded" && (
-            <Chip label={`${updatedProjections.length} projections updated`} size="small" color="success" variant="outlined" />
-          )}
-          {!isRefreshing && durationMs !== null && <Chip label={`${durationMs} ms`} size="small" variant="outlined" />}
-          {!isRefreshing && formatTime(completedAt) && <Chip label={`Updated ${formatTime(completedAt)}`} size="small" variant="outlined" />}
-          {status === "failed" && <Chip label="Synchronization failed" size="small" color="error" />}
-        </Stack>
+
+        <Collapse in={model.messages.length > 0}>
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            {model.messages.map((message) => (
+              <Chip
+                key={message}
+                icon={<CheckCircleIcon />}
+                label={message}
+                size="small"
+                color="success"
+                variant="outlined"
+              />
+            ))}
+          </Stack>
+        </Collapse>
+
+        {model.recommendation && (
+          <Alert severity="info">{model.recommendation}</Alert>
+        )}
+
+        {model.errors.map((message) => (
+          <Alert key={message} severity="error">
+            {message}
+          </Alert>
+        ))}
       </Stack>
     </Box>
   );
