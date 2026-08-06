@@ -15,10 +15,8 @@ import OperationalDecisionBrief from
   "./OperationalDecisionBrief";
 import DecisionTimelinePanel from
   "./DecisionTimelinePanel";
-import OrganizationGuidancePanel from
-  "./OrganizationGuidancePanel";
-import OrganizationPatternsPanel from
-  "./OrganizationPatternsPanel";
+import OrganizationalExperiencePanel from
+  "./OrganizationalExperiencePanel";
 
 
 function formatDateTime(value) {
@@ -325,20 +323,14 @@ export default function RecommendationIntelligenceWorkspace({
 
             <Divider />
 
-            <OrganizationGuidancePanel
-              organizationId={organizationId}
-              decisionRecordId={
-                disposition.decision_id
-              }
-            />
-
-            <Divider />
-
-            <OrganizationPatternsPanel
+            <OrganizationalExperiencePanel
               organizationId={organizationId}
               identityId={identityId}
               recommendationId={
                 recommendation.recommendation_id
+              }
+              decisionRecordId={
+                disposition.decision_id
               }
             />
           </Stack>
