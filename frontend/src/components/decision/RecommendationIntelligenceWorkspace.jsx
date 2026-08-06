@@ -11,6 +11,8 @@ import {
 
 import DecisionActionPanel from
   "./DecisionActionPanel";
+import OperationalDecisionBrief from
+  "./OperationalDecisionBrief";
 import DecisionTimelinePanel from
   "./DecisionTimelinePanel";
 import OrganizationGuidancePanel from
@@ -62,30 +64,6 @@ function dispositionColor(status) {
 }
 
 
-function severityColor(value) {
-  if (value === "Critical") {
-    return "error";
-  }
-
-  if (value === "High") {
-    return "warning";
-  }
-
-  if (
-    value === "Medium"
-    || value === "Moderate"
-  ) {
-    return "info";
-  }
-
-  if (value === "Low") {
-    return "success";
-  }
-
-  return "default";
-}
-
-
 function IntelligenceField({
   label,
   value,
@@ -126,106 +104,6 @@ function IntelligenceField({
     </Box>
   );
 }
-
-
-function TechnicalContext({
-  recommendation,
-}) {
-  const fields = [
-    {
-      label: "Evidence Type",
-      value:
-        recommendation.evidence_type,
-    },
-    {
-      label: "Affected Role",
-      value:
-        recommendation.role_name,
-    },
-    {
-      label: "Capability",
-      value:
-        recommendation.capability,
-    },
-    {
-      label: "Scope",
-      value:
-        recommendation
-          .scope_classification,
-    },
-    {
-      label: "Assignment",
-      value:
-        recommendation
-          .assignment_classification,
-    },
-    {
-      label: "Estimated Effort",
-      value:
-        recommendation.estimated_effort,
-    },
-    {
-      label: "Risk Reduction",
-      value:
-        recommendation.risk_reduction
-          !== undefined
-          ? recommendation.risk_reduction
-          : null,
-    },
-  ];
-
-  const availableFields =
-    fields.filter(
-      (field) =>
-        field.value !== null
-        && field.value !== undefined
-        && field.value !== "",
-    );
-
-  return (
-    <Stack spacing={1.5}>
-      <Typography
-        variant="h6"
-        fontWeight={900}
-      >
-        Technical Context
-      </Typography>
-
-      {availableFields.length ? (
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: {
-              xs: "1fr",
-              sm: "1fr 1fr",
-            },
-            gap: 2,
-          }}
-        >
-          {availableFields.map(
-            (field) => (
-              <IntelligenceField
-                key={field.label}
-                label={field.label}
-                value={field.value}
-              />
-            ),
-          )}
-        </Box>
-      ) : (
-        <Typography
-          variant="body2"
-          color="text.secondary"
-        >
-          No additional technical context is
-          currently projected for this
-          recommendation.
-        </Typography>
-      )}
-    </Stack>
-  );
-}
-
 
 function CurrentDecision({
   disposition,
@@ -388,113 +266,19 @@ export default function RecommendationIntelligenceWorkspace({
 
   return (
     <Stack spacing={3}>
+      <OperationalDecisionBrief
+        recommendation={recommendation}
+        disposition={disposition}
+      />
+
       <Card
         sx={{
           border:
-            "1px solid rgba(34, 211, 238, 0.30)",
+            "1px solid rgba(34, 211, 238, 0.22)",
         }}
       >
         <CardContent>
           <Stack spacing={2.5}>
-            <Stack
-              direction={{
-                xs: "column",
-                sm: "row",
-              }}
-              justifyContent="space-between"
-              alignItems={{
-                xs: "flex-start",
-                sm: "center",
-              }}
-              spacing={1.5}
-            >
-              <Box>
-                <Typography
-                  variant="overline"
-                  color="text.secondary"
-                  fontWeight={800}
-                >
-                  Recommendation Intelligence
-                </Typography>
-
-                <Typography
-                  variant="h5"
-                  fontWeight={900}
-                >
-                  {recommendation.title}
-                </Typography>
-              </Box>
-
-              <Stack
-                direction="row"
-                spacing={1}
-                flexWrap="wrap"
-                useFlexGap
-              >
-                <Chip
-                  label={
-                    recommendation
-                      .recommendation_type
-                    || "General"
-                  }
-                  size="small"
-                  variant="outlined"
-                />
-
-                <Chip
-                  label={
-                    recommendation.severity
-                    || "Unclassified"
-                  }
-                  size="small"
-                  color={severityColor(
-                    recommendation.severity,
-                  )}
-                />
-
-                <Chip
-                  label={
-                    disposition.display_status
-                  }
-                  size="small"
-                  color={dispositionColor(
-                    disposition.display_status,
-                  )}
-                />
-              </Stack>
-            </Stack>
-
-            <Divider />
-
-            <Stack spacing={1}>
-              <Typography
-                variant="h6"
-                fontWeight={900}
-              >
-                Recommendation
-              </Typography>
-
-              <Typography
-                variant="body1"
-                sx={{
-                  color: "#CBD5E1",
-                  lineHeight: 1.7,
-                }}
-              >
-                {recommendation.description}
-              </Typography>
-            </Stack>
-
-            <Divider />
-
-            <TechnicalContext
-              recommendation={
-                recommendation
-              }
-            />
-
-            <Divider />
-
             <CurrentDecision
               disposition={disposition}
             />
@@ -518,7 +302,7 @@ export default function RecommendationIntelligenceWorkspace({
                   variant="h6"
                   fontWeight={900}
                 >
-                  Decision Timeline
+                  Operational Context
                 </Typography>
 
                 <Chip
@@ -560,7 +344,6 @@ export default function RecommendationIntelligenceWorkspace({
           </Stack>
         </CardContent>
       </Card>
-
       <DecisionActionPanel
         key={
           recommendation.recommendation_id
