@@ -71,13 +71,26 @@ export default function OperationalPulse({ synchronization }) {
           <Stack direction="row" spacing={1} alignItems="center">
             {statusIcon(model)}
             <Box>
-              <Typography variant="subtitle2" fontWeight={900}>
+              <Typography
+                variant="subtitle2"
+                fontWeight={900}
+                sx={{ color: "#F8FAFC" }}
+              >
                 Operational Pulse
               </Typography>
-              <Typography variant="body2" fontWeight={800}>
+
+              <Typography
+                variant="body2"
+                fontWeight={800}
+                sx={{ color: "#E2E8F0" }}
+              >
                 {model.title}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+
+              <Typography
+                variant="caption"
+                sx={{ color: "#94A3B8" }}
+              >
                 {model.summary}
               </Typography>
             </Box>
@@ -90,6 +103,11 @@ export default function OperationalPulse({ synchronization }) {
                 label={`${model.refresh.duration_ms} ms`}
                 size="small"
                 variant="outlined"
+                sx={{
+                  color: "#E2E8F0",
+                  borderColor:
+                    "rgba(148, 163, 184, 0.45)",
+                }}
               />
             )}
 
@@ -98,6 +116,11 @@ export default function OperationalPulse({ synchronization }) {
                 label={`Updated ${completedTime}`}
                 size="small"
                 variant="outlined"
+                sx={{
+                  color: "#E2E8F0",
+                  borderColor:
+                    "rgba(148, 163, 184, 0.45)",
+                }}
               />
             )}
 
@@ -108,6 +131,11 @@ export default function OperationalPulse({ synchronization }) {
                 size="small"
                 color="info"
                 variant="outlined"
+                sx={{
+                  color: "#E2E8F0",
+                  borderColor:
+                    "rgba(148, 163, 184, 0.45)",
+                }}
               />
             )}
           </Stack>
@@ -123,6 +151,11 @@ export default function OperationalPulse({ synchronization }) {
                 size="small"
                 color="success"
                 variant="outlined"
+                sx={{
+                  color: "#E2E8F0",
+                  borderColor:
+                    "rgba(148, 163, 184, 0.45)",
+                }}
               />
             ))}
           </Stack>
