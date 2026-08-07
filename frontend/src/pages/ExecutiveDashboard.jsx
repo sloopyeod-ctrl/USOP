@@ -4,15 +4,16 @@ import api from "../api/usopApi";
 
 import KpiTile from "../components/cards/KpiTile";
 import TopRiskCard from "../components/cards/TopRiskCard";
-import ExposureTrendChart from "../components/charts/ExposureTrendChart";
 
 import {
   Alert,
   Box,
+  Button,
   Card,
   CardContent,
   Chip,
   CircularProgress,
+  Divider,
   Stack,
   Typography,
 } from "@mui/material";
@@ -24,124 +25,462 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import TimelineIcon from "@mui/icons-material/Timeline";
 import CloudDoneIcon from "@mui/icons-material/CloudDone";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+
+
+function pluralize(
+  count,
+  singular,
+  plural = `${singular}s`,
+) {
+  return count === 1
+    ? singular
+    : plural;
+}
+
 
 export default function ExecutiveDashboard() {
-  const [dashboard, setDashboard] = useState(null);
-  const [error, setError] = useState(null);
+  const [dashboard, setDashboard] =
+    useState(null);
+
+  const [error, setError] =
+    useState(null);
+
   const navigate = useNavigate();
 
   useEffect(() => {
     api
       .get("/executive-exposure-dashboard/")
-      .then((response) => setDashboard(response.data))
+      .then(
+        (response) =>
+          setDashboard(response.data),
+      )
       .catch((err) => {
         console.error(err);
-        setError("Could not load dashboard data.");
+
+        setError(
+          "Could not load dashboard data.",
+        );
       });
   }, []);
 
-  if (error) return <Alert severity="error">{error}</Alert>;
+  if (error) {
+    return (
+      <Alert severity="error">
+        {error}
+      </Alert>
+    );
+  }
 
-  if (!dashboard) return <CircularProgress />;
+  if (!dashboard) {
+    return <CircularProgress />;
+  }
 
   const summary = dashboard.summary;
 
-  const exposureTrend = [
-    { day: "Mon", exposure: 62 },
-    { day: "Tue", exposure: 70 },
-    { day: "Wed", exposure: 76 },
-    { day: "Thu", exposure: 84 },
-    { day: "Fri", exposure: 91 },
-    { day: "Sat", exposure: 97 },
-    { day: "Sun", exposure: 100 },
-  ];
+  const topRisks =
+    Array.isArray(dashboard.top_risks)
+      ? dashboard.top_risks
+      : [];
+
+  const highestRisk =
+    topRisks[0] || null;
+
+  const criticalCount =
+    summary?.critical || 0;
+
+  const highCount =
+    summary?.high || 0;
+
+  const totalIdentities =
+    summary?.total_identities || 0;
+
+  const attentionCount =
+    criticalCount + highCount;
+
+  const operationalHeadline =
+    criticalCount > 0
+      ? (
+        `${criticalCount} Critical `
+        + pluralize(
+          criticalCount,
+          "Identity",
+          "Identities",
+        )
+        + (
+          criticalCount === 1
+            ? " Requires Immediate Review"
+            : " Require Immediate Review"
+        )
+      )
+      : highCount > 0
+        ? (
+          `${highCount} High-Exposure `
+          + pluralize(
+            highCount,
+            "Identity",
+            "Identities",
+          )
+          + (
+            highCount === 1
+              ? " Requires Review"
+              : " Require Review"
+          )
+        )
+        : "No Critical Or High-Exposure Identities Require Review";
+
+  function openHighestRisk() {
+    if (!highestRisk?.identity_id) {
+      return;
+    }
+
+    navigate(
+      `/identity/${highestRisk.identity_id}`,
+    );
+  }
 
   return (
     <Box>
-
       <Card
         sx={{
           mb: 3,
           background:
-            "linear-gradient(135deg,#111827 0%,#0B1220 60%,#083344 100%)",
-          border: "1px solid #164E63",
+            "linear-gradient("
+            + "135deg,"
+            + "#111827 0%,"
+            + "#0B1220 58%,"
+            + "#083344 100%"
+            + ")",
+          border:
+            "1px solid #164E63",
         }}
       >
-        <CardContent>
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            justifyContent="space-between"
-            alignItems={{ xs: "flex-start", md: "center" }}
-          >
-            <Box>
-              <Typography variant="h4" fontWeight={900}>
-                USOP Command Center
-              </Typography>
+        <CardContent
+          sx={{
+            p: {
+              xs: 2.5,
+              md: 3,
+            },
+          }}
+        >
+          <Stack spacing={2.5}>
+            <Stack
+              direction={{
+                xs: "column",
+                md: "row",
+              }}
+              justifyContent="space-between"
+              alignItems={{
+                xs: "flex-start",
+                md: "center",
+              }}
+              spacing={2}
+            >
+              <Box>
+                <Typography
+                  variant="overline"
+                  sx={{
+                    color: "#67E8F9",
+                    fontWeight: 900,
+                    letterSpacing: 1.1,
+                  }}
+                >
+                  Today&apos;s Operational Summary
+                </Typography>
 
-              <Typography color="text.secondary">
-                Unified Security Operations Platform
-              </Typography>
-            </Box>
+                <Typography
+                  variant="h4"
+                  fontWeight={900}
+                  sx={{
+                    color: "#F8FAFC",
+                    mt: 0.25,
+                  }}
+                >
+                  {operationalHeadline}
+                </Typography>
 
-            <Chip label="LIVE" color="success" />
+                <Typography
+                  sx={{
+                    color: "#94A3B8",
+                    mt: 0.75,
+                  }}
+                >
+                  {totalIdentities}{" "}
+                  {pluralize(
+                    totalIdentities,
+                    "identity",
+                    "identities",
+                  )}{" "}
+                  monitored across the active organization.
+                </Typography>
+              </Box>
+
+              <Chip
+                label="BETA"
+                color="info"
+                variant="outlined"
+                sx={{
+                  color: "#E2E8F0",
+                  borderColor:
+                    "rgba(34, 211, 238, 0.45)",
+                  fontWeight: 900,
+                }}
+              />
+            </Stack>
+
+            <Divider
+              sx={{
+                borderColor:
+                  "rgba(148, 163, 184, 0.18)",
+              }}
+            />
+
+            <Stack
+              direction={{
+                xs: "column",
+                md: "row",
+              }}
+              spacing={2}
+              justifyContent="space-between"
+              alignItems={{
+                xs: "flex-start",
+                md: "center",
+              }}
+            >
+              <Stack
+                direction="row"
+                spacing={3}
+                flexWrap="wrap"
+                useFlexGap
+              >
+                <Box>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "#94A3B8",
+                      fontWeight: 800,
+                      textTransform:
+                        "uppercase",
+                      letterSpacing: 0.7,
+                    }}
+                  >
+                    Needs Attention
+                  </Typography>
+
+                  <Typography
+                    variant="h5"
+                    sx={{
+                      color: "#F8FAFC",
+                      fontWeight: 900,
+                    }}
+                  >
+                    {attentionCount}
+                  </Typography>
+                </Box>
+
+                <Box>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "#94A3B8",
+                      fontWeight: 800,
+                      textTransform:
+                        "uppercase",
+                      letterSpacing: 0.7,
+                    }}
+                  >
+                    Critical
+                  </Typography>
+
+                  <Typography
+                    variant="h5"
+                    sx={{
+                      color: "#F87171",
+                      fontWeight: 900,
+                    }}
+                  >
+                    {criticalCount}
+                  </Typography>
+                </Box>
+
+                <Box>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "#94A3B8",
+                      fontWeight: 800,
+                      textTransform:
+                        "uppercase",
+                      letterSpacing: 0.7,
+                    }}
+                  >
+                    High
+                  </Typography>
+
+                  <Typography
+                    variant="h5"
+                    sx={{
+                      color: "#FBBF24",
+                      fontWeight: 900,
+                    }}
+                  >
+                    {highCount}
+                  </Typography>
+                </Box>
+              </Stack>
+
+              {highestRisk?.identity_id && (
+                <Button
+                  variant="contained"
+                  endIcon={
+                    <ArrowForwardIcon />
+                  }
+                  onClick={openHighestRisk}
+                >
+                  Open Investigation
+                </Button>
+              )}
+            </Stack>
           </Stack>
         </CardContent>
       </Card>
 
-      <Typography variant="h5" fontWeight={800} gutterBottom>
+      <Typography
+        variant="h5"
+        fontWeight={800}
+        gutterBottom
+      >
         Security Posture
       </Typography>
 
-      <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: "wrap" }}>
+      <Stack
+        direction="row"
+        spacing={2}
+        sx={{
+          mb: 3,
+          flexWrap: "wrap",
+        }}
+      >
         <KpiTile
-          icon={<CrisisAlertIcon color="error" fontSize="large" />}
+          icon={
+            <CrisisAlertIcon
+              color="error"
+              fontSize="large"
+            />
+          }
           label="Critical Exposure"
           value={summary.critical}
           accent="#EF4444"
         />
 
         <KpiTile
-          icon={<WarningAmberIcon color="warning" fontSize="large" />}
+          icon={
+            <WarningAmberIcon
+              color="warning"
+              fontSize="large"
+            />
+          }
           label="High Exposure"
           value={summary.high}
           accent="#F59E0B"
         />
 
         <KpiTile
-          icon={<ReportProblemIcon color="info" fontSize="large" />}
+          icon={
+            <ReportProblemIcon
+              color="info"
+              fontSize="large"
+            />
+          }
           label="Medium Exposure"
           value={summary.medium}
           accent="#38BDF8"
         />
 
         <KpiTile
-          icon={<CheckCircleIcon color="success" fontSize="large" />}
+          icon={
+            <CheckCircleIcon
+              color="success"
+              fontSize="large"
+            />
+          }
           label="Low Exposure"
           value={summary.low}
           accent="#22C55E"
         />
 
         <KpiTile
-          icon={<PeopleAltIcon color="primary" fontSize="large" />}
+          icon={
+            <PeopleAltIcon
+              color="primary"
+              fontSize="large"
+            />
+          }
           label="Total Identities"
           value={summary.total_identities}
           accent="#22D3EE"
         />
       </Stack>
 
-      <ExposureTrendChart data={exposureTrend} />
-
-      <Typography variant="h5" fontWeight={800} gutterBottom>
+      <Typography
+        variant="h5"
+        fontWeight={800}
+        gutterBottom
+      >
         Most Exposed Identities
       </Typography>
 
-      {dashboard.top_risks.map((identity) => (
-        <TopRiskCard
-          key={identity.identity_id}
-          identity={identity}
-          onClick={() => navigate(`/identity/${identity.identity_id}`)}
-        />
-      ))}
+      {topRisks.length > 0
+        ? topRisks.map((identity) => (
+          <TopRiskCard
+            key={identity.identity_id}
+            identity={identity}
+            onClick={() =>
+              navigate(
+                `/identity/${identity.identity_id}`,
+              )
+            }
+          />
+        ))
+        : (
+          <Alert
+            severity="success"
+            sx={{ mb: 3 }}
+          >
+            No exposed identities require review.
+          </Alert>
+        )}
+
+      <Card sx={{ mt: 3 }}>
+        <CardContent>
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            sx={{ mb: 1 }}
+          >
+            <TimelineIcon color="primary" />
+
+            <Typography
+              variant="h5"
+              fontWeight={800}
+            >
+              Exposure Trend
+            </Typography>
+          </Stack>
+
+          <Typography
+            color="text.secondary"
+          >
+            Historical exposure direction will
+            appear here after sufficient
+            operational snapshots have been
+            collected. USOP does not display
+            synthetic trend data in the beta
+            experience.
+          </Typography>
+        </CardContent>
+      </Card>
 
       <Box
         sx={{
@@ -156,42 +495,87 @@ export default function ExecutiveDashboard() {
       >
         <Card>
           <CardContent>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-              <TimelineIcon color="primary" />
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+              sx={{ mb: 2 }}
+            >
+              <CrisisAlertIcon
+                color={
+                  criticalCount > 0
+                    ? "error"
+                    : "success"
+                }
+              />
 
-              <Typography variant="h5" fontWeight={800}>
-                Recent Activity
+              <Typography
+                variant="h5"
+                fontWeight={800}
+              >
+                Operational Priorities
               </Typography>
             </Stack>
 
             <Stack spacing={2}>
               <Box>
-                <Typography fontWeight={700}>
-                  Policy violation detected
+                <Typography
+                  fontWeight={700}
+                >
+                  Critical exposure
                 </Typography>
 
-                <Typography color="text.secondary">
-                  Privileged Accounts Require MFA
+                <Typography
+                  color="text.secondary"
+                >
+                  {criticalCount}{" "}
+                  {pluralize(
+                    criticalCount,
+                    "identity",
+                    "identities",
+                  )}{" "}
+                  currently classified as critical.
                 </Typography>
               </Box>
 
               <Box>
-                <Typography fontWeight={700}>
-                  Identity risk analysis completed
+                <Typography
+                  fontWeight={700}
+                >
+                  High exposure
                 </Typography>
 
-                <Typography color="text.secondary">
-                  1 critical identity identified
+                <Typography
+                  color="text.secondary"
+                >
+                  {highCount}{" "}
+                  {pluralize(
+                    highCount,
+                    "identity",
+                    "identities",
+                  )}{" "}
+                  currently classified as high.
                 </Typography>
               </Box>
 
               <Box>
-                <Typography fontWeight={700}>
-                  Synchronization completed
+                <Typography
+                  fontWeight={700}
+                >
+                  Monitored population
                 </Typography>
 
-                <Typography color="text.secondary">
-                  Entra connector processed successfully
+                <Typography
+                  color="text.secondary"
+                >
+                  {totalIdentities} total{" "}
+                  {pluralize(
+                    totalIdentities,
+                    "identity",
+                    "identities",
+                  )}{" "}
+                  represented in the current
+                  operational view.
                 </Typography>
               </Box>
             </Stack>
@@ -200,32 +584,58 @@ export default function ExecutiveDashboard() {
 
         <Card>
           <CardContent>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+              sx={{ mb: 2 }}
+            >
               <CloudDoneIcon color="success" />
 
-              <Typography variant="h5" fontWeight={800}>
-                Connector Health
+              <Typography
+                variant="h5"
+                fontWeight={800}
+              >
+                Connector Coverage
               </Typography>
             </Stack>
 
             <Stack spacing={1.5}>
-              {["Entra ID", "Azure", "AWS", "Okta", "GitHub"].map(
-                (connector) => (
-                  <Stack
-                    key={connector}
-                    direction="row"
-                    justifyContent="space-between"
-                  >
-                    <Typography>{connector}</Typography>
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                spacing={2}
+              >
+                <Typography>
+                  Microsoft Entra ID
+                </Typography>
 
-                    <Chip
-                      label="Healthy"
-                      color="success"
-                      size="small"
-                    />
-                  </Stack>
-                )
-              )}
+                <Chip
+                  label="Beta Scope"
+                  color="success"
+                  size="small"
+                />
+              </Stack>
+
+              <Divider />
+
+              <Box>
+                <Typography
+                  fontWeight={700}
+                >
+                  Additional providers
+                </Typography>
+
+                <Typography
+                  color="text.secondary"
+                >
+                  AWS, Google Cloud, Okta, and
+                  additional ingestion sources
+                  are planned for the broader V1
+                  provider catalog.
+                </Typography>
+              </Box>
             </Stack>
           </CardContent>
         </Card>
