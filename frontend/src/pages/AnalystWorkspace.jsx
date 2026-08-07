@@ -28,6 +28,8 @@ import OrganizationContextBanner from
   "../components/workspace/OrganizationContextBanner";
 import OperationalPulse from
   "../components/workspace/OperationalPulse";
+import MissionBriefPanel from
+  "../components/workspace/MissionBriefPanel";
 import {
   DecisionWorkspace,
 } from "../components/decision";
@@ -62,6 +64,9 @@ import {
 import {
   WORKSPACE_REFRESH_REASONS,
 } from "../services/workspaceSynchronizationService";
+import {
+  buildMissionBrief,
+} from "../models/MissionBriefModel";
 
 
 export default function AnalystWorkspace() {
@@ -372,6 +377,31 @@ export default function AnalystWorkspace() {
     attackPath?.summary?.ranked_paths
     || [];
 
+  const availableMissionRecommendations =
+    recommendations || [];
+
+  const primaryRecommendation =
+    availableMissionRecommendations.find(
+      (recommendation) =>
+        recommendation
+          ?.organizational_disposition
+          ?.is_actionable
+        !== false,
+    )
+    || availableMissionRecommendations[0]
+    || null;
+
+  const missionBrief =
+    buildMissionBrief({
+      identity,
+      exposure,
+      decision,
+      selectedRecommendation:
+        primaryRecommendation,
+      synchronization,
+    });
+
+
   const riskMetrics = {
     riskScore:
       risk?.score
@@ -421,6 +451,12 @@ export default function AnalystWorkspace() {
           organizationError
         }
       />
+
+      <Box sx={{ mb: 3 }}>
+        <MissionBriefPanel
+          missionBrief={missionBrief}
+        />
+      </Box>
 
       <Box sx={{ mb: 3 }}>
         <DecisionWorkspace
