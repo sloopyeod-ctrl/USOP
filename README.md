@@ -1,190 +1,212 @@
-# USOP
-# Unified Security Operations Platform
+# Unified Security Operations Platform (USOP)
 
-> **An intelligence-driven cybersecurity platform that transforms fragmented security data into explainable, organization-aware operational decisions.**
+## Understand what matters. Decide with confidence.
 
-<p align="center">
+**USOP is an operational decision platform that enables cybersecurity professionals to understand what matters, why it matters, and what to do next within 10–20 seconds.**
 
-![Status](https://img.shields.io/badge/Status-Active%20Development-brightgreen)
-![Version](https://img.shields.io/badge/Version-Alpha-blue)
-![Sprint](https://img.shields.io/badge/Sprint-14.10.5-orange)
-![Python](https://img.shields.io/badge/Python-3.11-blue)
-![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688)
-![React](https://img.shields.io/badge/React-Frontend-61DAFB)
-
-</p>
+USOP transforms fragmented security data into explainable, organization-aware investigations that reduce cognitive load and improve decision quality.
 
 ---
 
-# Analyst Workspace
+## Why USOP Exists
 
-> ![alt text](image.png)
-> ![alt text](image-1.png)
-> ![alt text](image-2.png)
-> ![alt text](image-3.png)
+Modern security teams rarely suffer from a lack of security products.
 
----
+They suffer from a lack of connected operational understanding.
 
-# The Problem
-
-Modern security teams rarely suffer from a lack of security tools.
-
-They suffer from a lack of **connected intelligence**.
-
-Identity data lives in one platform.
+Identity lives in one platform.
 
 Cloud resources live in another.
 
-Endpoint telemetry, vulnerability management, compliance evidence, attack paths, tickets, documentation, and organizational knowledge are often scattered across dozens of disconnected systems.
+Endpoint telemetry, vulnerability management, compliance evidence, tickets, documentation, organizational knowledge, and historical decisions often live somewhere else.
 
-Analysts spend far too much time collecting information before they can make an informed decision.
+Every investigation begins by collecting information before making decisions.
 
-**USOP was created to solve that problem.**
+USOP changes that.
 
----
-
-# The Mission
-
-USOP helps Identity & Access Management (IAM), Identity Governance(IGA), and Security Operations (SOC) teams reduce analyst workload whileimproving the quality, consistency, and explainability of securitydecisions.
-
-Rather than treating cybersecurity as disconnected alerts, USOP treatsevery recommendation as part of a living organizational decision system.
+Rather than replacing existing security products, USOP transforms them into a single operational investigation.
 
 ---
 
-# Why USOP is Different
+## What Makes USOP Different
 
-Traditional security products identify problems.
+| Traditional Security Platforms | USOP |
+| --- | --- |
+| Display alerts | Guide investigations |
+| Store findings | Build operational understanding |
+| Generate recommendations | Preserve organizational decisions |
+| Report risk | Improve decision quality |
+| Show history | Build organizational memory |
+| Add more dashboards | Reduce cognitive load |
+| Force users into tool-specific workflows | Preserve a stable investigation model |
 
-USOP helps organizations:
+USOP is designed around one permanent objective:
 
-Understand what should be done.
-
-Record why a decision was made.
-
-Preserve organizational knowledge.
-
-Schedule future reviews.
-
-Detect material changes that require new analyst decisions.
-
-Every recommendation can evolve into a living organizational objectcontaining technical evidence, organizational disposition, decisionhistory, review schedules, governance context, and knowledgerelationships.
+> Help experienced cybersecurity professionals move from uncertainty to confident action as quickly as possible.
 
 ---
 
-# Core Platform Capabilities
+## Product Philosophy
 
-## Identity Intelligence
+USOP is built around a small set of durable principles.
 
+### Rapid Situational Awareness
+
+Every major page should allow an experienced security professional to understand what matters, why it matters, and what should happen next within **10–20 seconds**.
+
+### Operational Truth
+
+USOP never invents operational truth.
+
+The backend determines truth.
+
+The frontend presents it.
+
+### Progressive Disclosure
+
+Only the information needed for the next decision should compete for immediate attention.
+
+Supporting detail remains available without slowing the investigation.
+
+### One Question Per Page
+
+Every major page exists to answer one primary operational question.
+
+### Reduce Cognitive Load
+
+More information is not automatically better information.
+
+Every element should earn its place by improving situational awareness, decision quality, or operational confidence.
+
+---
+
+## USOP Core v1.0
+
+USOP Core v1.0 establishes the permanent operational foundation of the platform.
+
+The investigation workflow created in Core is intended to remain familiar as USOP expands.
+
+Future releases should add providers, intelligence domains, and operational depth without forcing organizations to relearn established workflows.
+
+> **Organizations that learn USOP Core should immediately feel at home in every future version of USOP.**
+
+USOP grows through evolution rather than replacement.
+
+### Initial Core Focus
+
+USOP Core v1.0 is focused first on identity-centered operational intelligence using Microsoft Entra ID.
+
+Current core capabilities include:
+
+- Identity Intelligence
 - Identity Graph
 - Authorization Intelligence
 - Exposure Scoring
 - Risk Analytics
 - Identity Timeline Reconstruction
-- Enterprise Identity Visibility
-
----
-
-## Attack Path Intelligence
-
-- Attack Graph Generation
-- Attack Path Ranking
-- Interactive Graph Visualization
-- Attack Replay
-- Simulation Engine
-- Risk Reduction Modeling
-
----
-
-## Organizational Decision Intelligence
-
+- Attack Path Intelligence
+- Interactive Relationship Visualization
+- Decision Intelligence
 - Stable Recommendation Engine
 - Organizational Decision Recording
-- Decision-Aware Recommendations
-- Organizational Disposition Projection
 - Decision History
 - Review Scheduling
-- Governance Workflows
-
----
-
-## Organizational Memory
-
+- Organizational Memory
+- Organizational Experience
 - Knowledge Assets
-- Decision Knowledge
-- Related Decisions
-- Architecture Decision Records (ADR)
-- Organizational Learning Foundation
+- Mission Brief
+- Operational Pulse
+- Executive Dashboard
+- Analyst Investigation Workflow
+- Simulation and Risk Reduction Modeling
 
 ---
 
-## Analyst Workspace
+## The Investigation Experience
 
-- Interactive Identity Graph
-- Mission Context
-- Risk Metrics
-- Recommendation Workspace
-- Decision History
-- Simulation Comparison
-- Executive Decision Support
+USOP is not designed as a collection of disconnected dashboards.
+
+It guides an investigation.
+
+```text
+Executive Dashboard
+        ↓
+Open Investigation
+        ↓
+Mission Brief
+        ↓
+Decision Intelligence
+        ↓
+Operational Context
+        ↓
+Organizational Experience
+        ↓
+Organizational Decision
+        ↓
+Operational Pulse
+        ↓
+Verification
+```
+
+The experience is designed to remain stable as future intelligence sources are added.
 
 ---
 
-# Current Platform Architecture
+## Screenshots
 
-High-Level Architecture
+### Executive Dashboard
 
+The Executive Dashboard answers:
+
+> How healthy is my organization, and what needs attention first?
+
+<!-- Replace with repository image path once final screenshot assets are committed. -->
+
+### Mission Brief
+
+The Mission Brief answers:
+
+> Why am I here, and what is the mission?
+
+<!-- Replace with repository image path once final screenshot assets are committed. -->
+
+### Decision Workspace
+
+The decision experience answers:
+
+> What should I do, and why?
+
+<!-- Replace with repository image path once final screenshot assets are committed. -->
+
+---
+
+## Current Platform Architecture
+
+USOP is designed as an operational intelligence and decision layer that consumes authoritative information from existing security systems.
+
+It is not intended to replace those systems or become another long-term storage platform.
+
+```text
 External Security Platforms
-        │
-Synchronization Layer
-        │
-Identity Intelligence
-        │
-Recommendation Engine
-        │
-Organizational Decision Projection
-        │
+        ↓
+Synchronization & Provider Layer
+        ↓
+Operational Normalization
+        ↓
+Identity / Domain Intelligence
+        ↓
+Recommendation & Decision Intelligence
+        ↓
 Organizational Memory
-        │
-Analyst Workspace
+        ↓
+Mission Brief & Investigation Experience
+        ↓
+Organizational Decision
+```
 
----
+### Core Technology
 
-# Engineering Philosophy
-
-USOP is engineered around several core architectural principles.
-
-- Backend intelligence is the source of truth.
-- Deterministic recommendations before automation.
-- Explainable security decisions.
-- Organization-aware governance.
-- Modular, extensible architecture.
-- Small, verifiable engineering increments.
-- Regression-tested development.
-- Long-term maintainability over short-term convenience.
-
----
-
-# Current Development Snapshot
-
-| Capability | Status |
-|------------|--------|
-| Identity Intelligence | ✅ Complete |
-| Identity Governance | ✅ Complete |
-| Attack Path Analysis | ✅ Complete |
-| Recommendation Engine | ✅ Complete |
-| Organizational Decisions | ✅ Complete |
-| Decision History | ✅ Complete |
-| Organizational Memory | 🚧 Foundation Complete |
-| Microsoft Entra ID Synchronization | ✅ Live |
-| Threat Intelligence Extensions | 📋 Planned |
-| AI Security Analyst | 📋 Planned |
-
----
-
-# Technology Stack
-
-## Backend
-
+**Backend**
 - Python
 - FastAPI
 - PostgreSQL
@@ -192,8 +214,7 @@ USOP is engineered around several core architectural principles.
 - Alembic
 - Docker
 
-## Frontend
-
+**Frontend**
 - React
 - Material UI
 - React Flow
@@ -202,98 +223,176 @@ USOP is engineered around several core architectural principles.
 
 ---
 
-# Engineering Process
+## Engineering Philosophy
 
-USOP is intentionally developed using an architecture-first methodology.
+USOP is intentionally engineered for long-term evolution.
 
-Every sprint includes:
+Core principles include:
 
-- Architecture Decision Records (ADR)
-- Engineering documentation
-- Regression testing
-- Incremental feature delivery
-- Production-quality commits
-- Sprint milestones
+- Backend intelligence remains the source of truth.
+- Deterministic intelligence before opaque automation.
+- Explainable security decisions.
+- Organization-aware governance.
+- Evolution before replacement.
+- Modular, extensible architecture.
+- Small, verifiable engineering increments.
+- Regression-tested development.
+- Long-term maintainability over short-term convenience.
 
-The repository demonstrates not only implementation, but long-term software architecture and engineering methodology.
-
----
-
-# Roadmap
-
-## Foundation ✅
-
-- Identity Intelligence
-- Identity Governance
-- Decision Intelligence
-- Attack Path Analysis
-- Organizational Decision Recording
-- Organizational Memory Foundation
+The repository includes Architecture Decision Records (ADRs), product governance, sprint history, regression tests, and engineering documentation so that future changes can preserve the original design intent.
 
 ---
 
-## Enterprise Integrations 🚧
+## Product Governance
 
-- Microsoft Entra ID
-- Microsoft Graph
-- Microsoft Sentinel
-- BloodHound
-- Tenable
-- Additional Identity Providers
+USOP includes a formal product-governance foundation:
 
----
+- `PRODUCT-DESIGN-STANDARDS.md`
+- `PRODUCT-TERMINOLOGY.md`
+- `VISUAL-DESIGN-SYSTEM.md`
+- `PRODUCT-QUALITY-CHECKLIST.md`
 
-## Platform Expansion 📋
-
-- Threat Intelligence Extensions
-- CISA KEV Integration*
-- DISA STIG Integration*
-- CIAM Support
-- Enterprise Reporting
-- AI Security Analyst
-- Investigation Sessions
-- Timeline Replay
-- Plugin Architecture
-
-> *Delivered as optional licensed platform extensions.*
+These documents define how USOP should think, speak, present information, and determine whether a customer-facing capability is ready.
 
 ---
 
-# Repository Maturity
+## Product Evolution
 
-This repository represents an actively engineered cybersecurity platform.
+USOP Core is the permanent foundation.
+
+Future expansion should deepen the intelligence available inside the existing investigation model.
+
+### Provider Expansion
+
+Planned and future provider coverage may include:
+
+- AWS
+- Google Cloud
+- Okta
+- SecureW2
+- GitHub
+- NetBox
+- Zabbix
+- Additional enterprise identity and infrastructure providers
+
+### Intelligence Expansion
+
+Future intelligence domains may include:
+
+- Threat Intelligence
+- Vulnerability Intelligence
+- Compliance Intelligence
+- Asset Intelligence
+- CIAM
+- SaaS Governance
+- Cloud Security
+- Endpoint Intelligence
+
+Optional intelligence extensions may include external publications and authoritative sources such as CISA KEV and DISA content when the corresponding licensed capability is enabled.
+
+---
+
+## Design Partner Program
+
+USOP Core v1.0 is being prepared for validation with a small number of design partners.
+
+The objective is not to release unfinished software and later replace the experience.
+
+The objective is to validate that the core investigation model delivers measurable operational value in real environments while preserving the architecture and user experience that future versions will inherit.
+
+Design partners help validate:
+
+- investigation flow,
+- Rapid Situational Awareness,
+- decision quality,
+- organizational learning,
+- operational trust,
+- deployment experience,
+- performance,
+- provider behavior.
+
+The expected outcome is evolution, not rewrite.
+
+---
+
+## Roadmap
+
+```text
+USOP Core v1.0
+        ↓
+Design Partner Validation
+        ↓
+Provider Expansion
+        ↓
+Operational Intelligence Expansion
+        ↓
+Enterprise Scale
+```
+
+New capabilities should extend the same mental model rather than replace it.
+
+---
+
+## Documentation
+
+Product and engineering documentation is maintained under `docs/`.
+
+Key areas include:
+
+- Architecture Decision Records
+- Product Design Standards
+- Product Terminology
+- Visual Design System
+- Product Quality Checklist
+- Product Roadmap
+- V1 Definition
+- Demo Scenario
+- Engineering and architecture documentation
+
+---
+
+## Repository Maturity
+
+USOP is an actively engineered cybersecurity product.
 
 The repository intentionally includes:
 
-- Architecture Decision Records (ADR)
+- Architecture Decision Records
+- Product governance
 - Engineering documentation
-- Sprint history
 - Regression testing
 - Incremental architectural evolution
 - Production-quality commits
+- Long-term product planning
 
-The goal is to demonstrate both software implementation and engineering methodology.
+The goal is not merely to demonstrate software implementation.
+
+The goal is to preserve the engineering and product reasoning required to evolve USOP without losing its identity.
 
 ---
 
-# About the Author
+## About the Author
 
 **Marvin G. DeWitt**
 
-Retired U.S. Army Master Sergeant (Explosive Ordnance Disposal)
+Retired U.S. Army Master Sergeant, Explosive Ordnance Disposal (EOD).
 
-Cloud Security Engineer • Identity & Access Management • Enterprise Security Engineering • Security Platform Architecture
+Cloud Security Engineer focused on Identity & Access Management, enterprise security engineering, cloud architecture, and security platform design.
 
-USOP reflects lessons learned from military operations, enterprise cybersecurity engineering, identity governance, cloud security architecture, and modern security operations.
-
-The platform is being built to help analysts spend less time collecting information and more time making informed, explainable security decisions.
+USOP reflects lessons learned from high-consequence operations, enterprise cybersecurity engineering, identity governance, cloud security architecture, and modern security operations.
 
 ---
 
-# License
+## License
 
 © 2026 Marvin G. DeWitt
 
 All rights reserved.
 
-USOP is an actively developed cybersecurity platform. The repository is intended to demonstrate engineering methodology, software architecture, and enterprise cybersecurity platform development.
+USOP is an actively developed cybersecurity platform. Use, redistribution, licensing, and commercial deployment remain subject to the repository's applicable license terms.
+
+---
+
+## Mission
+
+> **USOP exists to help cybersecurity professionals spend less time gathering information and more time making confident, explainable security decisions.**
