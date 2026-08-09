@@ -4,6 +4,7 @@
 **Status:** Approved  
 **Audience:** Product Owners, Architects, Engineers, UX Designers, Contributors
 
+Every design decision in USOP should improve Rapid Situational Awareness by reducing the time between recognizing a security problem and confidently taking action.
 ---
 
 ## Purpose
@@ -29,6 +30,87 @@ USOP is not designed to present more information.
 USOP is designed to present the **right information at the right time**.
 
 ---
+
+## Rapid Situational Awareness
+
+### Purpose
+
+Every major page in USOP should provide enough operational context for an experienced cybersecurity professional to understand the current situation within **10–20 seconds**.
+
+The platform should reduce the time required to identify:
+
+- what requires attention,
+- why it matters,
+- what should happen next.
+
+This principle exists to minimize cognitive load before detailed investigation begins.
+
+---
+
+### The 10–20 Second Rule
+
+Within 10–20 seconds of opening any major page, an experienced analyst should be able to answer that page's primary operational question.
+
+The goal is not to display the greatest amount of information.
+
+The goal is to display the **most important information first**.
+
+Supporting information should remain immediately available through progressive disclosure without competing for attention.
+
+---
+
+### Application
+
+#### Executive Dashboard
+
+Within 10–20 seconds the user should understand:
+
+- Overall organizational health.
+- Immediate operational priorities.
+- Which investigation should begin next.
+
+---
+
+#### Analyst Workspace
+
+Within 10–20 seconds the user should understand:
+
+- Why this investigation exists.
+- The mission.
+- The highest-priority issue.
+- The expected decision.
+
+---
+
+#### Platform Administration
+
+Within 10–20 seconds the user should understand:
+
+- Platform health.
+- Connector status.
+- Whether administrator action is required.
+
+---
+
+### Design Implications
+
+Rapid situational awareness should influence every product decision.
+
+Information should be ordered by operational value rather than technical category.
+
+Mission should appear before evidence.
+
+Evidence should appear before history.
+
+History should appear before reference material.
+
+---
+
+### Product Principle
+
+If an analyst spends their first minute learning the interface instead of understanding the investigation, the interface has failed.
+
+Every design decision should move the user from uncertainty to confident action as quickly as possible.
 
 ## Product Vision
 
