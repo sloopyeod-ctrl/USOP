@@ -1,8 +1,8 @@
-# USOP Core v1.0 - Known Limitations
+﻿# USOP Core v1.0 - Known Limitations
 
-**Document:** 08-Known-Limitations  
-**Release Track:** USOP Core v1.0 Release Candidate  
-**Status:** Release Candidate Draft  
+**Document:** 08-Known-Limitations
+**Release Track:** USOP Core v1.0 Release Candidate
+**Status:** Release Candidate Draft
 **Audience:** Design Partners, Security Leaders, Security Analysts, IAM Teams, Platform Teams, Deployment Teams
 
 ## Purpose
