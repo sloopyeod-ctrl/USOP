@@ -315,7 +315,8 @@ class EntraProvider(BaseConnector):
         """
 
         response = self.graph.get(
-            "/roleManagement/directory/roleAssignments"
+            "/roleManagement/directory/roleAssignments",
+            params={"$expand": "principal"},
         )
 
         return self._extract_graph_collection(
@@ -340,29 +341,6 @@ class EntraProvider(BaseConnector):
             raise ValueError(
                 "Microsoft Graph directory role definition "
                 "response was not an object."
-            )
-
-        return response
-
-    def _collect_live_directory_object_record(
-        self,
-        principal_identifier: str,
-    ) -> dict[str, Any]:
-        """
-        Retrieve one directory principal referenced by a role assignment.
-
-        The directory object type is retained so the connector can translate
-        the principal into the canonical PrincipalType vocabulary.
-        """
-
-        response = self.graph.get(
-            f"/directoryObjects/{principal_identifier}"
-        )
-
-        if not isinstance(response, dict):
-            raise ValueError(
-                "Microsoft Graph directory object response "
-                "was not an object."
             )
 
         return response
@@ -396,16 +374,6 @@ class EntraProvider(BaseConnector):
             )
         }
 
-        principal_identifiers = {
-            principal_identifier
-            for assignment in graph_assignments
-            if (
-                principal_identifier
-                := self._clean_string(
-                    assignment.get("principalId")
-                )
-            )
-        }
 
         graph_role_definitions: dict[
             str,
@@ -423,22 +391,6 @@ class EntraProvider(BaseConnector):
                 )
             )
 
-        graph_principals: dict[
-            str,
-            dict[str, Any],
-        ] = {}
-
-        for principal_identifier in sorted(
-            principal_identifiers
-        ):
-            graph_principals[
-                principal_identifier
-            ] = (
-                self._collect_live_directory_object_record(
-                    principal_identifier
-                )
-            )
-
         roles = self._build_live_roles(
             graph_role_definitions
         )
@@ -449,7 +401,6 @@ class EntraProvider(BaseConnector):
                 graph_role_definitions=(
                     graph_role_definitions
                 ),
-                graph_principals=graph_principals,
             )
         )
 
@@ -767,10 +718,6 @@ class EntraProvider(BaseConnector):
             str,
             dict[str, Any],
         ],
-        graph_principals: dict[
-            str,
-            dict[str, Any],
-        ],
     ) -> list[dict[str, Any]]:
         """
         Translate Graph role assignments into canonical relationships.
@@ -808,10 +755,7 @@ class EntraProvider(BaseConnector):
             ):
                 continue
 
-            principal = graph_principals.get(
-                principal_identifier,
-                {},
-            )
+            principal = assignment.get("principal") or {}
 
             role_definition = (
                 graph_role_definitions.get(
