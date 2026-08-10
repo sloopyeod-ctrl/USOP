@@ -76,7 +76,14 @@ export default function ExecutiveDashboard() {
     return <CircularProgress />;
   }
 
-  const summary = dashboard.summary;
+  const summary = {
+    critical: 0,
+    high: 0,
+    medium: 0,
+    low: 0,
+    total_identities: 0,
+    ...(dashboard.summary ?? {}),
+  };
 
   const topRisks =
     Array.isArray(dashboard.top_risks)

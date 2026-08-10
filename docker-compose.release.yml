@@ -23,6 +23,22 @@ services:
     networks:
       - usop-internal
 
+  migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.release
+    restart: "no"
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["alembic", "upgrade", "head"]
+    networks:
+      - usop-internal
+
   api:
     build:
       context: ./backend
@@ -39,8 +55,8 @@ services:
       MS_GRAPH_CLIENT_ID: ${MS_GRAPH_CLIENT_ID:?MS_GRAPH_CLIENT_ID is required}
       MS_GRAPH_CLIENT_SECRET: ${MS_GRAPH_CLIENT_SECRET:?MS_GRAPH_CLIENT_SECRET is required}
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test:
         [

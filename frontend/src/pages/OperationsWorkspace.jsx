@@ -378,11 +378,17 @@ export default function OperationsWorkspace() {
     );
   }
 
-  if (
-    isLoadingOrganizations
-    || !activeOrganizationId
-  ) {
+  if (isLoadingOrganizations) {
     return <CircularProgress />;
+  }
+
+  if (!activeOrganizationId) {
+    return (
+      <Alert severity="info">
+        No Organization is configured or selected. Create or select an
+        Organization before reviewing investigations.
+      </Alert>
+    );
   }
 
   return (

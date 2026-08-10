@@ -160,7 +160,7 @@ export default function Sidebar() {
 
   const investigationRoute = activeIdentityId
     ? `/workspace/${activeIdentityId}`
-    : "/";
+    : null;
 
   const workspaceItems = [
     {
@@ -181,6 +181,7 @@ export default function Sidebar() {
         : "Analyst Workspace",
       icon: <PsychologyIcon />,
       to: investigationRoute,
+      disabled: !activeIdentityId,
       secondary: activeIdentityId
         ? "Return to active identity"
         : "Select an identity first",
@@ -189,6 +190,7 @@ export default function Sidebar() {
       label: "Attack Simulation",
       icon: <ScienceIcon />,
       to: investigationRoute,
+      disabled: !activeIdentityId,
       secondary: activeIdentityId
         ? "Continue active investigation"
         : "Select an identity first",
