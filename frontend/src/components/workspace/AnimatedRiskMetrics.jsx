@@ -1,4 +1,3 @@
-import React from "react";
 import { Box, Card, CardContent, Typography, LinearProgress } from "@mui/material";
 
 function clamp(value, min = 0, max = 100) {

@@ -86,7 +86,6 @@ export default function IdentityIntelligence() {
 
   useEffect(() => {
     if (!id) {
-      setError("No identity was selected.");
       return;
     }
 
@@ -114,6 +113,14 @@ export default function IdentityIntelligence() {
 
   function openAnalystWorkspace() {
     navigate(`/workspace/${id}`);
+  }
+
+  if (!id) {
+    return (
+      <Alert severity="error">
+        No identity was selected.
+      </Alert>
+    );
   }
 
   if (error) {

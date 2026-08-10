@@ -1,8 +1,16 @@
 .venv/
+venv/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 usop_dev.db
 .env
+.env.*
+requirements-dev.lock
+tests/
+htmlcov/
+.coverage
