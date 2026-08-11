@@ -1,4 +1,7 @@
-import { Box, Toolbar } from "@mui/material";
+import {
+  Box,
+  Toolbar,
+} from "@mui/material";
 
 import Header from "./Header";
 import Sidebar from "./Sidebar";
@@ -10,24 +13,34 @@ export default function Layout({
   return (
     <Box
       sx={{
-        display: "flex",
         minHeight: "100vh",
-        backgroundColor: "background.default",
+        backgroundColor:
+          "background.default",
       }}
     >
       <Header />
-      <Sidebar />
+
+      <Toolbar />
 
       <Box
-        component="main"
         sx={{
-          flexGrow: 1,
-          minWidth: 0,
-          p: 3,
+          display: "flex",
+          minHeight:
+            "calc(100vh - 64px)",
         }}
       >
-        <Toolbar />
-        {children}
+        <Sidebar />
+
+        <Box
+          component="main"
+          sx={{
+            flexGrow: 1,
+            minWidth: 0,
+            p: 3,
+          }}
+        >
+          {children}
+        </Box>
       </Box>
     </Box>
   );

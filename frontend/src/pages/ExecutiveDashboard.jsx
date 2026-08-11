@@ -142,7 +142,7 @@ export default function ExecutiveDashboard() {
     }
 
     navigate(
-      `/identity/${highestRisk.identity_id}`,
+      `/workspace/${highestRisk.identity_id}`,
     );
   }
 
@@ -336,7 +336,9 @@ export default function ExecutiveDashboard() {
                 </Box>
               </Stack>
 
-              {highestRisk?.identity_id && (
+              {attentionCount > 0
+                && highestRisk?.identity_id
+                && (
                 <Button
                   variant="contained"
                   endIcon={
@@ -444,7 +446,7 @@ export default function ExecutiveDashboard() {
             identity={identity}
             onClick={() =>
               navigate(
-                `/identity/${identity.identity_id}`,
+                `/workspace/${identity.identity_id}`,
               )
             }
           />

@@ -8,6 +8,8 @@ import {
   Alert,
   Box,
   CircularProgress,
+  Stack,
+  Typography,
 } from "@mui/material";
 
 import {
@@ -101,6 +103,11 @@ export default function AnalystWorkspace() {
   const [error, setError] =
     useState(null);
 
+  const [
+    isLoadingWorkspace,
+    setIsLoadingWorkspace,
+  ] = useState(false);
+
   const selectedNode =
     workspace.selection.node;
 
@@ -171,16 +178,31 @@ export default function AnalystWorkspace() {
       identityId,
     );
 
-    synchronizeWorkspace({
-      identityId,
-      organizationId:
-        activeOrganizationId,
-      reason:
-        WORKSPACE_REFRESH_REASONS
-          .WORKSPACE_LOADED,
-    })
-      .then((workspaceData) => {
+    Promise.resolve()
+      .then(() => {
         if (!isCurrent) {
+          return null;
+        }
+
+        setIsLoadingWorkspace(true);
+        setError(null);
+        setData(null);
+        setAttackPath(null);
+
+        return synchronizeWorkspace({
+          identityId,
+          organizationId:
+            activeOrganizationId,
+          reason:
+            WORKSPACE_REFRESH_REASONS
+              .WORKSPACE_LOADED,
+        });
+      })
+      .then((workspaceData) => {
+        if (
+          !isCurrent
+          || !workspaceData
+        ) {
           return;
         }
 
@@ -198,6 +220,11 @@ export default function AnalystWorkspace() {
         setError(
           "Unable to load workspace.",
         );
+      })
+      .finally(() => {
+        if (isCurrent) {
+          setIsLoadingWorkspace(false);
+        }
       });
 
     return () => {
@@ -234,6 +261,40 @@ export default function AnalystWorkspace() {
   }, [
     activeGraph,
     simulationResult,
+  ]);
+
+
+  useEffect(() => {
+    if (
+      !data
+      || !attackPath
+      || !activeGraph
+      || !animatedGraph
+      || window.location.hash
+        !== "#attack-simulation"
+    ) {
+      return undefined;
+    }
+
+    const frame = window.requestAnimationFrame(
+      () => {
+        document
+          .getElementById("attack-simulation")
+          ?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+      },
+    );
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [
+    data,
+    attackPath,
+    activeGraph,
+    animatedGraph,
   ]);
 
 
@@ -336,11 +397,48 @@ export default function AnalystWorkspace() {
     );
   }
 
-  if (
-    isLoadingOrganizations
-    || !activeOrganizationId
-  ) {
-    return <CircularProgress />;
+  if (isLoadingOrganizations) {
+    return (
+      <Stack
+        direction="row"
+        spacing={2}
+        alignItems="center"
+        sx={{ color: "#F8FAFC" }}
+      >
+        <CircularProgress size={24} />
+
+        <Typography sx={{ color: "#CBD5E1" }}>
+          Loading Organization context...
+        </Typography>
+      </Stack>
+    );
+  }
+
+  if (!activeOrganizationId) {
+    return (
+      <Alert severity="info">
+        No Organization is configured or selected.
+        Create or select an Organization before opening
+        the Analyst Workspace.
+      </Alert>
+    );
+  }
+
+  if (isLoadingWorkspace) {
+    return (
+      <Stack
+        direction="row"
+        spacing={2}
+        alignItems="center"
+        sx={{ color: "#F8FAFC" }}
+      >
+        <CircularProgress size={24} />
+
+        <Typography sx={{ color: "#CBD5E1" }}>
+          Loading identity intelligence and attack-path data...
+        </Typography>
+      </Stack>
+    );
   }
 
   if (error) {
@@ -351,13 +449,33 @@ export default function AnalystWorkspace() {
     );
   }
 
-  if (
-    !data
-    || !attackPath
-    || !activeGraph
-    || !animatedGraph
-  ) {
-    return <CircularProgress />;
+  if (!data) {
+    return (
+      <Alert severity="warning">
+        Identity intelligence is unavailable for the selected
+        identity. No synthetic workspace data will be shown.
+      </Alert>
+    );
+  }
+
+  if (!attackPath) {
+    return (
+      <Alert severity="info">
+        No attack-path intelligence is available for this
+        identity. The Analyst Workspace will not manufacture
+        a graph when no attack-path data exists.
+      </Alert>
+    );
+  }
+
+  if (!activeGraph || !animatedGraph) {
+    return (
+      <Alert severity="warning">
+        Attack-path data was returned, but the graph projection
+        is unavailable. Review synchronization details before
+        continuing the investigation.
+      </Alert>
+    );
   }
 
 
@@ -573,7 +691,11 @@ export default function AnalystWorkspace() {
           gap: 3,
         }}
       >
-        <AttackSimulationPanel
+        <Box
+          id="attack-simulation"
+          sx={{ scrollMarginTop: 24 }}
+        >
+          <AttackSimulationPanel
           rankedPaths={rankedPaths}
           selectedPath={selectedPath}
           setSelectedPath={
@@ -587,7 +709,8 @@ export default function AnalystWorkspace() {
             simulationResult
           }
           isSimulating={isSimulating}
-        />
+          />
+        </Box>
 
         <ImmediateActionsPanel
           recommendations={

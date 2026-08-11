@@ -34,6 +34,16 @@ import {
 } from "../services/activeWorkContextService";
 
 
+const COLORS = {
+  textPrimary: "#F8FAFC",
+  textSecondary: "#94A3B8",
+  textMuted: "#CBD5E1",
+  cardBackground: "#111827",
+  cardBorder: "rgba(148, 163, 184, 0.20)",
+  divider: "rgba(148, 163, 184, 0.20)",
+};
+
+
 const PRIORITY_ORDER = [
   "Critical",
   "High",
@@ -41,6 +51,7 @@ const PRIORITY_ORDER = [
   "Low",
   "Unknown",
 ];
+
 
 const PRIORITY_SEVERITY = {
   Critical: "error",
@@ -58,6 +69,7 @@ function formatAge(createdAt) {
 
   const created = new Date(createdAt);
   const now = new Date();
+
   const milliseconds = Math.max(
     0,
     now.getTime() - created.getTime(),
@@ -75,14 +87,22 @@ function formatAge(createdAt) {
     return `${minutes} min ago`;
   }
 
-  const hours = Math.floor(minutes / 60);
+  const hours = Math.floor(
+    minutes / 60,
+  );
 
   if (hours < 24) {
     return `${hours} hr ago`;
   }
 
-  const days = Math.floor(hours / 24);
-  return `${days} day${days === 1 ? "" : "s"} ago`;
+  const days = Math.floor(
+    hours / 24,
+  );
+
+  return (
+    `${days} day`
+    + `${days === 1 ? "" : "s"} ago`
+  );
 }
 
 
@@ -91,7 +111,15 @@ function PrioritySummary({
   count,
 }) {
   return (
-    <Card variant="outlined">
+    <Card
+      variant="outlined"
+      sx={{
+        backgroundColor:
+          COLORS.cardBackground,
+        borderColor:
+          COLORS.cardBorder,
+      }}
+    >
       <CardContent>
         <Stack
           direction="row"
@@ -101,7 +129,11 @@ function PrioritySummary({
         >
           <Typography
             variant="subtitle2"
-            color="text.secondary"
+            sx={{
+              color:
+                COLORS.textPrimary,
+              fontWeight: 600,
+            }}
           >
             {label}
           </Typography>
@@ -131,10 +163,27 @@ function WorkItemCard({
   );
 
   return (
-    <Card variant="outlined">
+    <Card
+      variant="outlined"
+      sx={{
+        backgroundColor:
+          COLORS.cardBackground,
+        borderColor:
+          COLORS.cardBorder,
+      }}
+    >
       <CardActionArea
         onClick={() => onOpen(item)}
         disabled={!item.identity_id}
+        sx={{
+          color:
+            COLORS.textPrimary,
+
+          "&:hover": {
+            backgroundColor:
+              "rgba(34, 211, 238, 0.04)",
+          },
+        }}
       >
         <CardContent>
           <Stack
@@ -168,12 +217,24 @@ function WorkItemCard({
                   label={item.status}
                   size="small"
                   variant="outlined"
+                  sx={{
+                    color:
+                      COLORS.textMuted,
+                    borderColor:
+                      COLORS.cardBorder,
+                  }}
                 />
 
                 <Chip
                   label={sourceLabel}
                   size="small"
                   variant="outlined"
+                  sx={{
+                    color:
+                      COLORS.textMuted,
+                    borderColor:
+                      COLORS.cardBorder,
+                  }}
                 />
               </Stack>
 
@@ -182,6 +243,8 @@ function WorkItemCard({
                 sx={{
                   fontWeight: 700,
                   mb: 0.75,
+                  color:
+                    COLORS.textPrimary,
                 }}
               >
                 {item.title}
@@ -189,8 +252,11 @@ function WorkItemCard({
 
               <Typography
                 variant="body2"
-                color="text.secondary"
-                sx={{ mb: 1 }}
+                sx={{
+                  mb: 1,
+                  color:
+                    COLORS.textSecondary,
+                }}
               >
                 {item.summary
                   || item.materiality_reason
@@ -199,11 +265,18 @@ function WorkItemCard({
 
               <Typography
                 variant="caption"
-                color="text.secondary"
+                sx={{
+                  color:
+                    COLORS.textSecondary,
+                }}
               >
-                Created {formatAge(item.created_at)}
+                Created {formatAge(
+                  item.created_at,
+                )}
                 {" • "}
-                Category {item.decision_category}
+                Category {
+                  item.decision_category
+                }
               </Typography>
             </Box>
 
@@ -218,7 +291,10 @@ function WorkItemCard({
             >
               <Typography
                 variant="body2"
-                color="text.secondary"
+                sx={{
+                  color:
+                    COLORS.textSecondary,
+                }}
               >
                 Risk: {item.risk_level}
               </Typography>
@@ -226,7 +302,9 @@ function WorkItemCard({
               <Button
                 variant="contained"
                 size="small"
-                disabled={!item.identity_id}
+                disabled={
+                  !item.identity_id
+                }
               >
                 {item.identity_id
                   ? "Open Investigation"
@@ -251,18 +329,24 @@ export default function OperationsWorkspace() {
     organizationError,
   } = useOrganizationContext();
 
-  const [items, setItems] = useState([]);
+  const [items, setItems] =
+    useState([]);
+
   const [
     loadedOrganizationId,
     setLoadedOrganizationId,
   ] = useState(null);
-  const [error, setError] = useState(null);
+
+  const [error, setError] =
+    useState(null);
+
 
   const isLoading = (
     Boolean(activeOrganizationId)
     && loadedOrganizationId
       !== activeOrganizationId
   );
+
 
   useEffect(() => {
     if (!activeOrganizationId) {
@@ -272,7 +356,8 @@ export default function OperationsWorkspace() {
     let isCurrent = true;
 
     listPendingDecisionWorkItems({
-      organizationId: activeOrganizationId,
+      organizationId:
+        activeOrganizationId,
       status: "Pending",
     })
       .then((records) => {
@@ -285,7 +370,9 @@ export default function OperationsWorkspace() {
             ? records
             : [],
         );
+
         setError(null);
+
         setLoadedOrganizationId(
           activeOrganizationId,
         );
@@ -295,10 +382,14 @@ export default function OperationsWorkspace() {
           return;
         }
 
-        console.error(requestError);
+        console.error(
+          requestError,
+        );
+
         setError(
           "Unable to load pending analyst work.",
         );
+
         setLoadedOrganizationId(
           activeOrganizationId,
         );
@@ -309,10 +400,12 @@ export default function OperationsWorkspace() {
     };
   }, [activeOrganizationId]);
 
+
   const counts = useMemo(() => {
     return PRIORITY_ORDER.reduce(
       (result, priority) => ({
         ...result,
+
         [priority]: items.filter(
           (item) =>
             item.priority === priority,
@@ -321,6 +414,7 @@ export default function OperationsWorkspace() {
       {},
     );
   }, [items]);
+
 
   const orderedItems = useMemo(() => {
     const rank = new Map(
@@ -332,25 +426,30 @@ export default function OperationsWorkspace() {
       ),
     );
 
-    return [...items].sort((left, right) => {
-      const leftRank = rank.get(
-        left.priority,
-      ) ?? PRIORITY_ORDER.length;
-      const rightRank = rank.get(
-        right.priority,
-      ) ?? PRIORITY_ORDER.length;
+    return [...items].sort(
+      (left, right) => {
+        const leftRank = (
+          rank.get(left.priority)
+          ?? PRIORITY_ORDER.length
+        );
 
-      if (leftRank !== rightRank) {
-        return leftRank - rightRank;
-      }
+        const rightRank = (
+          rank.get(right.priority)
+          ?? PRIORITY_ORDER.length
+        );
 
-      return new Date(
-        left.created_at,
-      ) - new Date(
-        right.created_at,
-      );
-    });
+        if (leftRank !== rightRank) {
+          return leftRank - rightRank;
+        }
+
+        return (
+          new Date(left.created_at)
+          - new Date(right.created_at)
+        );
+      },
+    );
   }, [items]);
+
 
   function openWorkItem(item) {
     if (!item.identity_id) {
@@ -370,6 +469,7 @@ export default function OperationsWorkspace() {
     );
   }
 
+
   if (organizationError) {
     return (
       <Alert severity="error">
@@ -378,50 +478,99 @@ export default function OperationsWorkspace() {
     );
   }
 
+
   if (isLoadingOrganizations) {
-    return <CircularProgress />;
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 2,
+          color:
+            COLORS.textPrimary,
+        }}
+      >
+        <CircularProgress
+          size={24}
+        />
+
+        <Typography
+          sx={{
+            color:
+              COLORS.textSecondary,
+          }}
+        >
+          Loading Organization context...
+        </Typography>
+      </Box>
+    );
   }
+
 
   if (!activeOrganizationId) {
     return (
       <Alert severity="info">
-        No Organization is configured or selected. Create or select an
-        Organization before reviewing investigations.
+        No Organization is configured
+        or selected. Create or select an
+        Organization before reviewing
+        investigations.
       </Alert>
     );
   }
+
 
   return (
     <Box
       data-organization-id={
         activeOrganizationId
       }
+      sx={{
+        color:
+          COLORS.textPrimary,
+      }}
     >
-      <Stack spacing={1} sx={{ mb: 3 }}>
+      <Stack
+        spacing={1}
+        sx={{ mb: 3 }}
+      >
         <Typography
           variant="h4"
-          sx={{ fontWeight: 800 }}
+          sx={{
+            fontWeight: 800,
+            color:
+              COLORS.textPrimary,
+          }}
         >
           Analyst Operations Workspace
         </Typography>
 
         <Typography
-          color="text.secondary"
+          sx={{
+            color:
+              COLORS.textSecondary,
+          }}
         >
           What requires attention right now
           {activeOrganization?.name
-            ? ` for ${activeOrganization.name}`
+            ? (
+              ` for ${
+                activeOrganization.name
+              }`
+            )
             : ""}.
         </Typography>
       </Stack>
 
+
       <Box
         sx={{
           display: "grid",
+
           gridTemplateColumns: {
             xs: "1fr 1fr",
             lg: "repeat(5, 1fr)",
           },
+
           gap: 2,
           mb: 3,
         }}
@@ -431,31 +580,67 @@ export default function OperationsWorkspace() {
             <PrioritySummary
               key={priority}
               label={priority}
-              count={counts[priority] || 0}
+              count={
+                counts[priority] || 0
+              }
             />
           ),
         )}
       </Box>
 
-      <Divider sx={{ mb: 3 }} />
+
+      <Divider
+        sx={{
+          mb: 3,
+          borderColor:
+            COLORS.divider,
+        }}
+      />
+
 
       <Stack spacing={2}>
         <Typography
           variant="h6"
-          sx={{ fontWeight: 700 }}
+          sx={{
+            fontWeight: 700,
+            color:
+              COLORS.textPrimary,
+          }}
         >
           Pending Decision Queue
         </Typography>
 
+
         {isLoading && (
-          <CircularProgress />
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+            }}
+          >
+            <CircularProgress
+              size={24}
+            />
+
+            <Typography
+              sx={{
+                color:
+                  COLORS.textSecondary,
+              }}
+            >
+              Loading pending decisions...
+            </Typography>
+          </Box>
         )}
+
 
         {error && (
           <Alert severity="error">
             {error}
           </Alert>
         )}
+
 
         {!isLoading
           && !error
@@ -467,15 +652,18 @@ export default function OperationsWorkspace() {
             </Alert>
           )}
 
+
         {!isLoading
           && !error
-          && orderedItems.map((item) => (
-            <WorkItemCard
-              key={item.id}
-              item={item}
-              onOpen={openWorkItem}
-            />
-          ))}
+          && orderedItems.map(
+            (item) => (
+              <WorkItemCard
+                key={item.id}
+                item={item}
+                onOpen={openWorkItem}
+              />
+            ),
+          )}
       </Stack>
     </Box>
   );
