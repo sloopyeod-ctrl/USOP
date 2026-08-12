@@ -376,9 +376,40 @@ class ReconciliationEngine:
         system_name: str,
         username: str,
     ) -> Account | None:
+        """
+        Resolve an existing Account without crossing an Organization boundary.
+
+        Organization-aware reconciliation may only match Accounts already
+        owned by an active OrganizationalIdentity in the current Organization.
+        This prevents a source-key or username collision in another tenant from
+        being adopted and reassigned during reconciliation.
+
+        Organization-neutral reconciliation preserves the legacy lookup
+        contract for compatibility until that mode is explicitly retired.
+        """
+
+        def organization_scoped_query():
+            query = self.db.query(Account)
+
+            if self.organization_id is None:
+                return query
+
+            return (
+                query.join(
+                    OrganizationalIdentity,
+                    Account.organizational_identity_id
+                    == OrganizationalIdentity.id,
+                )
+                .filter(
+                    OrganizationalIdentity.organization_id
+                    == self.organization_id,
+                    OrganizationalIdentity.is_active.is_(True),
+                )
+            )
+
         if source_system and source_identifier:
             existing = (
-                self.db.query(Account)
+                organization_scoped_query()
                 .filter(
                     Account.source_system
                     == source_system,
@@ -392,7 +423,7 @@ class ReconciliationEngine:
                 return existing
 
         return (
-            self.db.query(Account)
+            organization_scoped_query()
             .filter(
                 func.lower(Account.username)
                 == username.lower(),
