@@ -20,6 +20,7 @@ class PlatformUserRead(BaseModel):
 
     id: str
     organization_id: str
+    organizational_identity_id: str | None
 
     display_name: str
     email: str

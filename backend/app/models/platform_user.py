@@ -50,6 +50,13 @@ class PlatformUser(BaseModel):
         index=True,
     )
 
+    organizational_identity_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("organizational_identities.id"),
+        nullable=True,
+        index=True,
+    )
+
     display_name: Mapped[str] = mapped_column(
         String(255),
         nullable=False,

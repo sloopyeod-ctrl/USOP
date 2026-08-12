@@ -88,6 +88,55 @@ class PlatformUserRepository:
             .all()
         )
 
+    def list_for_organizational_identity(
+        self,
+        *,
+        organization_id: str,
+        organizational_identity_id: str,
+    ) -> list[PlatformUser]:
+        """
+        Return Platform Users explicitly bound to one OrganizationalIdentity.
+
+        Organization scope is mandatory so this relationship can never be
+        queried as a tenant-neutral collection.
+        """
+
+        return (
+            self.db.query(PlatformUser)
+            .filter(
+                PlatformUser.organization_id
+                == organization_id,
+                PlatformUser.organizational_identity_id
+                == organizational_identity_id,
+            )
+            .order_by(
+                PlatformUser.created_at.asc(),
+                PlatformUser.id.asc(),
+            )
+            .all()
+        )
+
+    def set_organizational_identity_binding(
+        self,
+        *,
+        platform_user: PlatformUser,
+        organizational_identity_id: str | None,
+    ) -> PlatformUser:
+        """
+        Persist the caller-authorized identity binding without committing.
+
+        Binding policy and tenant validation belong to the service layer.
+        """
+
+        platform_user.organizational_identity_id = (
+            organizational_identity_id
+        )
+
+        self.db.flush()
+        self.db.refresh(platform_user)
+
+        return platform_user
+
     def count_for_organization(
         self,
         organization_id: str,
