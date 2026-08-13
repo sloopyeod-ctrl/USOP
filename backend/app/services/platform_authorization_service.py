@@ -43,6 +43,10 @@ SYSTEM_PLATFORM_AUTHORIZATION_ACTOR = (
 
 AUTHENTICATED_PLATFORM_USER_ACTOR_PREFIX = "platform-user:"
 
+PROTECTED_PLATFORM_AUTHORITY_PERMISSION_KEY = (
+    "platform-administration.manage"
+)
+
 ASSIGNABLE_PLATFORM_USER_STATUSES = {
     PlatformUserStatus.INVITED.value,
     PlatformUserStatus.ACTIVE.value,
@@ -129,6 +133,13 @@ class PlatformAuthorizationAssignmentWindowError(
     PlatformAuthorizationServiceError
 ):
     """Raised when an assignment expiration is not after assignment time."""
+
+
+class PlatformAuthorizationProtectedPermissionError(
+    PlatformAuthorizationServiceError
+):
+    # Authenticated runtime administration may not dismantle root authority.
+    pass
 
 
 class PlatformAuthorizationService:
@@ -740,6 +751,16 @@ class PlatformAuthorizationService:
         platform_permission = self._require_platform_permission(
             platform_permission_id
         )
+
+        if (
+            trusted_caller is not None
+            and platform_permission.permission_key
+            == PROTECTED_PLATFORM_AUTHORITY_PERMISSION_KEY
+        ):
+            raise PlatformAuthorizationProtectedPermissionError(
+                "The canonical Platform administration authority cannot "
+                "be removed through the runtime administration API."
+            )
 
         self._validate_role_organization(
             organization_id=organization.id,

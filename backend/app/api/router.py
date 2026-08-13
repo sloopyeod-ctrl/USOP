@@ -32,6 +32,7 @@ from app.api.v1.identity_timeline_v2 import router as identity_timeline_v2_route
 from app.api.v1.identity_intelligence import router as identity_intelligence_router
 from app.api.v1.organizations import router as organization_router
 from app.api.v1.platform_users import router as platform_user_router
+from app.api.v1.platform_roles import router as platform_role_router
 from app.api.v1.knowledge_assets import router as knowledge_asset_router
 from app.api.v1.platform_bootstrap import router as platform_bootstrap_router
 from app.api.v1.licenses import router as license_router
@@ -117,6 +118,7 @@ router.include_router(identity_timeline_v2_router)
 router.include_router(identity_intelligence_router)
 router.include_router(organization_router)
 router.include_router(platform_user_router)
+router.include_router(platform_role_router)
 router.include_router(knowledge_asset_router)
 router.include_router(platform_bootstrap_router)
 router.include_router(license_router)
