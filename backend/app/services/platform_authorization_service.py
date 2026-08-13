@@ -34,11 +34,14 @@ from app.repositories.platform_user_repository import (
     PlatformUserRepository,
 )
 from app.services.audit_service import AuditService
+from app.services.trusted_platform_caller import TrustedPlatformCaller
 
 
 SYSTEM_PLATFORM_AUTHORIZATION_ACTOR = (
     "USOP Platform Authorization Service"
 )
+
+AUTHENTICATED_PLATFORM_USER_ACTOR_PREFIX = "platform-user:"
 
 ASSIGNABLE_PLATFORM_USER_STATUSES = {
     PlatformUserStatus.INVITED.value,
@@ -164,6 +167,32 @@ class PlatformAuthorizationService:
             PlatformRolePermissionRepository(db)
         )
         self.audit_service = AuditService(db)
+
+    @staticmethod
+    def _resolve_actor_context(
+        *,
+        organization_id: str,
+        trusted_caller: TrustedPlatformCaller | None,
+    ) -> tuple[str, str]:
+        if trusted_caller is None:
+            return (
+                SYSTEM_PLATFORM_AUTHORIZATION_ACTOR,
+                "ServerAssignedSystemActor",
+            )
+
+        if trusted_caller.organization_id != organization_id:
+            raise PlatformAuthorizationOrganizationBoundaryError(
+                "Trusted caller does not belong to the requested "
+                "Organization."
+            )
+
+        return (
+            (
+                f"{AUTHENTICATED_PLATFORM_USER_ACTOR_PREFIX}"
+                f"{trusted_caller.platform_user_id}"
+            ),
+            "AuthenticatedPlatformCaller",
+        )
 
     def _require_active_organization(
         self,
@@ -316,6 +345,7 @@ class PlatformAuthorizationService:
         platform_role_id: str,
         expires_at: datetime | None = None,
         assigned_at: datetime | None = None,
+        trusted_caller: TrustedPlatformCaller | None = None,
     ):
         """
         Create one audited Platform Role assignment without committing.
@@ -324,6 +354,11 @@ class PlatformAuthorizationService:
         calling service. It performs the same validation as assign_role but
         does not commit, refresh, or roll back the database session.
         """
+
+        actor, actor_trust = self._resolve_actor_context(
+            organization_id=organization_id,
+            trusted_caller=trusted_caller,
+        )
 
         organization = self._require_active_organization(
             organization_id
@@ -377,8 +412,8 @@ class PlatformAuthorizationService:
             platform_role_id=platform_role.id,
             assigned_at=effective_assigned_at,
             expires_at=expires_at,
-            created_by=SYSTEM_PLATFORM_AUTHORIZATION_ACTOR,
-            updated_by=SYSTEM_PLATFORM_AUTHORIZATION_ACTOR,
+            created_by=actor,
+            updated_by=actor,
         )
 
         try:
@@ -390,7 +425,7 @@ class PlatformAuthorizationService:
                 event_type="PlatformRoleAssigned",
                 entity_type="PlatformRoleAssignment",
                 entity_id=assignment.id,
-                actor=SYSTEM_PLATFORM_AUTHORIZATION_ACTOR,
+                actor=actor,
                 message=(
                     f"Platform Role '{platform_role.name}' was assigned "
                     f"to Platform User '{platform_user.display_name}'."
@@ -410,7 +445,7 @@ class PlatformAuthorizationService:
                         if assignment.expires_at
                         else None
                     ),
-                    "actor_trust": "ServerAssignedSystemActor",
+                    "actor_trust": actor_trust,
                 },
             )
 
@@ -430,6 +465,7 @@ class PlatformAuthorizationService:
         platform_role_id: str,
         expires_at: datetime | None = None,
         assigned_at: datetime | None = None,
+        trusted_caller: TrustedPlatformCaller | None = None,
     ) -> PlatformRoleAssignment:
         """
         Assign one active Platform Role to an eligible Platform User.
@@ -446,6 +482,7 @@ class PlatformAuthorizationService:
                 platform_role_id=platform_role_id,
                 expires_at=expires_at,
                 assigned_at=assigned_at,
+                trusted_caller=trusted_caller,
             )
 
             self.db.commit()
@@ -464,6 +501,7 @@ class PlatformAuthorizationService:
         organization_id: str,
         platform_user_id: str,
         platform_role_id: str,
+        trusted_caller: TrustedPlatformCaller | None = None,
     ) -> None:
         """
         Remove one Platform Role assignment.
@@ -472,6 +510,11 @@ class PlatformAuthorizationService:
         or the Platform Role is disabled. This prevents lifecycle state from
         blocking removal of existing authority.
         """
+
+        actor, actor_trust = self._resolve_actor_context(
+            organization_id=organization_id,
+            trusted_caller=trusted_caller,
+        )
 
         organization = self._require_active_organization(
             organization_id
@@ -516,7 +559,7 @@ class PlatformAuthorizationService:
                 event_type="PlatformRoleRemoved",
                 entity_type="PlatformRoleAssignment",
                 entity_id=assignment_id,
-                actor=SYSTEM_PLATFORM_AUTHORIZATION_ACTOR,
+                actor=actor,
                 message=(
                     f"Platform Role '{platform_role.name}' was removed "
                     f"from Platform User '{platform_user.display_name}'."
@@ -528,7 +571,7 @@ class PlatformAuthorizationService:
                     "platform_role_id": platform_role.id,
                     "platform_role_key": platform_role.role_key,
                     "platform_role_status": platform_role.status,
-                    "actor_trust": "ServerAssignedSystemActor",
+                    "actor_trust": actor_trust,
                 },
             )
 
@@ -545,6 +588,7 @@ class PlatformAuthorizationService:
         organization_id: str,
         platform_role_id: str,
         platform_permission_id: str,
+        trusted_caller: TrustedPlatformCaller | None = None,
     ):
         """
         Create one audited Platform Permission mapping without committing.
@@ -553,6 +597,11 @@ class PlatformAuthorizationService:
         calling service. It performs the same validation as grant_permission
         but does not commit, refresh, or roll back the database session.
         """
+
+        actor, actor_trust = self._resolve_actor_context(
+            organization_id=organization_id,
+            trusted_caller=trusted_caller,
+        )
 
         organization = self._require_active_organization(
             organization_id
@@ -589,8 +638,8 @@ class PlatformAuthorizationService:
             organization_id=organization.id,
             platform_role_id=platform_role.id,
             platform_permission_id=platform_permission.id,
-            created_by=SYSTEM_PLATFORM_AUTHORIZATION_ACTOR,
-            updated_by=SYSTEM_PLATFORM_AUTHORIZATION_ACTOR,
+            created_by=actor,
+            updated_by=actor,
         )
 
         try:
@@ -602,7 +651,7 @@ class PlatformAuthorizationService:
                 event_type="PlatformPermissionGranted",
                 entity_type="PlatformRolePermission",
                 entity_id=mapping.id,
-                actor=SYSTEM_PLATFORM_AUTHORIZATION_ACTOR,
+                actor=actor,
                 message=(
                     f"Platform Permission "
                     f"'{platform_permission.permission_key}' was granted "
@@ -619,7 +668,7 @@ class PlatformAuthorizationService:
                     ),
                     "resource": platform_permission.resource,
                     "action": platform_permission.action,
-                    "actor_trust": "ServerAssignedSystemActor",
+                    "actor_trust": actor_trust,
                 },
             )
 
@@ -637,6 +686,7 @@ class PlatformAuthorizationService:
         organization_id: str,
         platform_role_id: str,
         platform_permission_id: str,
+        trusted_caller: TrustedPlatformCaller | None = None,
     ) -> PlatformRolePermission:
         """
         Grant one global Platform Permission to an active Organization role.
@@ -647,6 +697,7 @@ class PlatformAuthorizationService:
                 organization_id=organization_id,
                 platform_role_id=platform_role_id,
                 platform_permission_id=platform_permission_id,
+                trusted_caller=trusted_caller,
             )
 
             self.db.commit()
@@ -665,12 +716,18 @@ class PlatformAuthorizationService:
         organization_id: str,
         platform_role_id: str,
         platform_permission_id: str,
+        trusted_caller: TrustedPlatformCaller | None = None,
     ) -> None:
         """
         Remove one Platform Permission from a Platform Role.
 
         Revocation remains available when the Platform Role is disabled.
         """
+
+        actor, actor_trust = self._resolve_actor_context(
+            organization_id=organization_id,
+            trusted_caller=trusted_caller,
+        )
 
         organization = self._require_active_organization(
             organization_id
@@ -711,7 +768,7 @@ class PlatformAuthorizationService:
                 event_type="PlatformPermissionRemoved",
                 entity_type="PlatformRolePermission",
                 entity_id=mapping_id,
-                actor=SYSTEM_PLATFORM_AUTHORIZATION_ACTOR,
+                actor=actor,
                 message=(
                     f"Platform Permission "
                     f"'{platform_permission.permission_key}' was removed "
@@ -728,7 +785,7 @@ class PlatformAuthorizationService:
                     ),
                     "resource": platform_permission.resource,
                     "action": platform_permission.action,
-                    "actor_trust": "ServerAssignedSystemActor",
+                    "actor_trust": actor_trust,
                 },
             )
 
