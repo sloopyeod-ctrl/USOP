@@ -20,6 +20,11 @@ class Settings(BaseSettings):
         "usop:usop_password@localhost:5432/usop"
     )
 
+    # Inbound caller authentication for the USOP API.
+    # These are intentionally separate from MS_GRAPH_* connector credentials.
+    usop_auth_entra_tenant_id: str | None = None
+    usop_auth_entra_audience: str | None = None
+
     class Config:
         env_file = str(ENV_FILE)
         extra = "ignore"
