@@ -137,6 +137,29 @@ class PlatformUserRepository:
 
         return platform_user
 
+    def set_lifecycle_status(
+        self,
+        *,
+        platform_user: PlatformUser,
+        status: str,
+        updated_by: str,
+    ) -> PlatformUser:
+        """
+        Persist a caller-authorized PlatformUser access lifecycle change.
+
+        Lifecycle policy, transition validation, tenant validation, trusted
+        actor attribution, auditing, and transaction ownership belong to the
+        service layer. This operation intentionally does not modify is_active.
+        """
+
+        platform_user.status = status
+        platform_user.updated_by = updated_by
+
+        self.db.flush()
+        self.db.refresh(platform_user)
+
+        return platform_user
+
     def count_for_organization(
         self,
         organization_id: str,
