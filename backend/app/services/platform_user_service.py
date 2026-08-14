@@ -59,6 +59,18 @@ class PlatformUserExternalIdentityConflictError(
     """Raised when the external identity binding cannot be created."""
 
 
+class PlatformUserInvitationConflictError(
+    PlatformUserServiceError
+):
+    """Raised when an ordinary Platform User invitation cannot be created."""
+
+
+class PlatformUserInvitationValidationError(
+    PlatformUserServiceError
+):
+    """Raised when required invitation identity evidence is missing."""
+
+
 class PlatformUserNotFoundError(
     PlatformUserServiceError
 ):
@@ -286,6 +298,225 @@ class PlatformUserService:
                 "Platform Administrator bootstrap could not complete "
                 "because the Organization changed concurrently."
             ) from error
+
+    @staticmethod
+    def _normalize_invitation_required(
+        value: str,
+        *,
+        field_name: str,
+    ) -> str:
+        normalized = str(value or "").strip()
+        if not normalized:
+            raise PlatformUserInvitationValidationError(
+                f"{field_name} is required."
+            )
+        return normalized
+
+    def _invite_pending(
+        self,
+        *,
+        organization_id: str,
+        display_name: str,
+        email: str,
+        identity_provider: str,
+        external_tenant_id: str,
+        external_subject_id: str,
+        trusted_caller: TrustedPlatformCaller,
+        identity_issuer: str | None = None,
+        evaluated_at: datetime | None = None,
+    ):
+        """
+        Create one ordinary invited Platform User without committing.
+
+        Invitation establishes operator identity only. It does not authenticate
+        the user, assign a role, grant a permission, allocate a Seat, or bind an
+        OrganizationalIdentity.
+        """
+
+        if trusted_caller is None:
+            raise PlatformUserOrganizationBoundaryError(
+                "Platform User invitation requires a trusted caller."
+            )
+
+        organization_id = self._normalize_invitation_required(
+            organization_id,
+            field_name="organization_id",
+        )
+
+        if trusted_caller.organization_id != organization_id:
+            raise PlatformUserOrganizationBoundaryError(
+                "Trusted Platform caller does not belong to the requested "
+                "Organization."
+            )
+
+        actor_platform_user_id = self._normalize_invitation_required(
+            trusted_caller.platform_user_id,
+            field_name="trusted_caller.platform_user_id",
+        )
+        actor = (
+            f"{AUTHENTICATED_PLATFORM_USER_ACTOR_PREFIX}"
+            f"{actor_platform_user_id}"
+        )
+
+        display_name = self._normalize_invitation_required(
+            display_name,
+            field_name="display_name",
+        )
+        email = self._normalize_invitation_required(
+            email,
+            field_name="email",
+        ).lower()
+        identity_provider = self._normalize_invitation_required(
+            identity_provider,
+            field_name="identity_provider",
+        )
+        external_tenant_id = self._normalize_invitation_required(
+            external_tenant_id,
+            field_name="external_tenant_id",
+        )
+        external_subject_id = self._normalize_invitation_required(
+            external_subject_id,
+            field_name="external_subject_id",
+        )
+
+        now = evaluated_at or datetime.now(UTC)
+
+        organization = (
+            self.organization_repository
+            .get_by_id_for_update(
+                organization_id
+            )
+        )
+
+        if organization is None:
+            raise PlatformUserOrganizationNotFoundError(
+                "The Platform User invitation references "
+                "an unknown Organization."
+            )
+
+        if organization.status != OrganizationStatus.ACTIVE.value:
+            raise PlatformUserOrganizationNotActiveError(
+                "Platform User invitation requires an active Organization."
+            )
+
+        existing_identity = (
+            self.platform_user_repository
+            .get_by_external_identity(
+                organization_id=organization.id,
+                identity_provider=identity_provider,
+                external_tenant_id=external_tenant_id,
+                external_subject_id=external_subject_id,
+            )
+        )
+
+        if existing_identity is not None:
+            raise PlatformUserExternalIdentityConflictError(
+                "This external identity is already bound "
+                "to a Platform User."
+            )
+
+        platform_user = PlatformUser(
+            organization_id=organization.id,
+            organizational_identity_id=None,
+            display_name=display_name,
+            email=email,
+            status=PlatformUserStatus.INVITED.value,
+            identity_provider=identity_provider,
+            external_tenant_id=external_tenant_id,
+            external_subject_id=external_subject_id,
+            identity_issuer=(
+                identity_issuer.strip()
+                if identity_issuer
+                else None
+            ),
+            created_via_bootstrap=False,
+            invited_at=now,
+            activated_at=None,
+            last_authenticated_at=None,
+            created_by=actor,
+            updated_by=actor,
+        )
+
+        try:
+            platform_user = (
+                self.platform_user_repository.create(
+                    platform_user
+                )
+            )
+
+            audit_event = self.audit_service.record_pending(
+                event_type="PlatformUserInvited",
+                entity_type="PlatformUser",
+                entity_id=platform_user.id,
+                actor=actor,
+                message=(
+                    f"Platform User '{platform_user.display_name}' "
+                    "was invited."
+                ),
+                metadata={
+                    "organization_id": organization.id,
+                    "platform_user_status": platform_user.status,
+                    "identity_provider": platform_user.identity_provider,
+                    "external_tenant_id": platform_user.external_tenant_id,
+                    "created_via_bootstrap": False,
+                    "authorization_granted": False,
+                    "seat_allocated": False,
+                    "authentication_completed": False,
+                    "organizational_identity_bound": False,
+                    "actor_platform_user_id": actor_platform_user_id,
+                    "actor_trust": "AuthenticatedPlatformCaller",
+                },
+            )
+
+            return platform_user, audit_event
+
+        except IntegrityError as error:
+            raise PlatformUserInvitationConflictError(
+                "Platform User invitation could not complete because "
+                "the invitation conflicts with existing Platform User state."
+            ) from error
+
+    def invite(
+        self,
+        *,
+        organization_id: str,
+        display_name: str,
+        email: str,
+        identity_provider: str,
+        external_tenant_id: str,
+        external_subject_id: str,
+        trusted_caller: TrustedPlatformCaller,
+        identity_issuer: str | None = None,
+    ) -> PlatformUser:
+        """
+        Invite one ordinary Platform User.
+
+        Authorization is enforced before this service boundary. This service
+        validates tenant ownership and derives immutable audit attribution from
+        the trusted Platform caller.
+        """
+
+        try:
+            platform_user, audit_event = self._invite_pending(
+                organization_id=organization_id,
+                display_name=display_name,
+                email=email,
+                identity_provider=identity_provider,
+                external_tenant_id=external_tenant_id,
+                external_subject_id=external_subject_id,
+                identity_issuer=identity_issuer,
+                trusted_caller=trusted_caller,
+            )
+
+            self.db.commit()
+            self.db.refresh(platform_user)
+            self.db.refresh(audit_event)
+
+            return platform_user
+
+        except Exception:
+            self.db.rollback()
+            raise
 
     @staticmethod
     def _resolve_trusted_lifecycle_actor(

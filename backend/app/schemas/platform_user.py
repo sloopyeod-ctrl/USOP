@@ -3,6 +3,25 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 
+class PlatformUserInvite(BaseModel):
+    """
+    Administrative request to invite one USOP Platform User.
+
+    The request establishes external identity coordinates only. It cannot
+    assign roles, permissions, lifecycle state, Seat state, bootstrap
+    provenance, audit attribution, or Organizational Identity binding.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    display_name: str
+    email: str
+    identity_provider: str
+    external_tenant_id: str
+    external_subject_id: str
+    identity_issuer: str | None = None
+
+
 class PlatformUserRead(BaseModel):
     """
     Read-only representation of a USOP Platform User.
