@@ -14,7 +14,10 @@ from app.schemas.platform_role_assignment import (
     PlatformRoleAssignmentCreate,
     PlatformRoleAssignmentRead,
 )
-from app.schemas.platform_user import PlatformUserRead
+from app.schemas.platform_user import (
+    PlatformUserInvite,
+    PlatformUserRead,
+)
 from app.services.platform_authorization_service import (
     PlatformAuthorizationAssignmentConflictError,
     PlatformAuthorizationAssignmentNotFoundError,
@@ -29,10 +32,14 @@ from app.services.platform_authorization_service import (
     PlatformAuthorizationUserNotFoundError,
 )
 from app.services.platform_user_service import (
+    PlatformUserExternalIdentityConflictError,
     PlatformUserInvalidLifecycleTransitionError,
+    PlatformUserInvitationConflictError,
+    PlatformUserInvitationValidationError,
     PlatformUserLastEffectiveAdministratorError,
     PlatformUserNotFoundError,
     PlatformUserOrganizationBoundaryError,
+    PlatformUserOrganizationNotActiveError,
     PlatformUserOrganizationNotFoundError,
     PlatformUserService,
 )
@@ -46,6 +53,60 @@ router = APIRouter(
     ),
     tags=["Platform Users"],
 )
+
+
+@router.post(
+    "/",
+    response_model=PlatformUserRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def invite_platform_user(
+    organization_id: str,
+    payload: PlatformUserInvite,
+    caller: TrustedPlatformCaller = Depends(
+        require_platform_permission(
+            "platform-administration.manage"
+        )
+    ),
+    db: Session = Depends(get_db),
+):
+    service = PlatformUserService(db)
+
+    try:
+        return service.invite(
+            organization_id=organization_id,
+            display_name=payload.display_name,
+            email=payload.email,
+            identity_provider=payload.identity_provider,
+            external_tenant_id=payload.external_tenant_id,
+            external_subject_id=payload.external_subject_id,
+            identity_issuer=payload.identity_issuer,
+            trusted_caller=caller,
+        )
+    except (
+        PlatformUserOrganizationNotFoundError,
+        PlatformUserOrganizationBoundaryError,
+    ) as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Requested Platform User invitation target was not found.",
+        ) from error
+    except (
+        PlatformUserExternalIdentityConflictError,
+        PlatformUserInvitationConflictError,
+    ) as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(error),
+        ) from error
+    except (
+        PlatformUserOrganizationNotActiveError,
+        PlatformUserInvitationValidationError,
+    ) as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
 
 
 @router.get(
