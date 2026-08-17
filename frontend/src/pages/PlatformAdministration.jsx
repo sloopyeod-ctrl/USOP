@@ -7,16 +7,22 @@ import {
 import {
   Alert,
   Box,
+  Button,
   Card,
   CardContent,
   Chip,
   CircularProgress,
   Divider,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControl,
   InputLabel,
   MenuItem,
   Select,
   Stack,
+  TextField,
   Typography,
 } from "@mui/material";
 
@@ -38,11 +44,15 @@ import StorageIcon from
 import useOrganizationContext from
   "../hooks/useOrganizationContext";
 import {
+  disablePlatformUser,
   getPlatformHealth,
+  invitePlatformUser,
   listConnectorHealth,
   listPlatformUsers,
   listProviderCatalog,
   listRegisteredConnectors,
+  reactivatePlatformUser,
+  suspendPlatformUser,
 } from "../services/platformOperationsService";
 
 
@@ -220,6 +230,13 @@ function OperationalSummaryCard({
 }
 
 
+function getPlatformUserActions(status) {
+  if (status === "Active") return ["suspend", "disable"];
+  if (status === "Suspended") return ["reactivate", "disable"];
+  if (status === "Invited") return ["disable"];
+  return [];
+}
+
 function formatDateTime(value) {
   if (!value) {
     return "Never";
@@ -339,6 +356,21 @@ export default function PlatformAdministration() {
     connectorHealthError,
     setConnectorHealthError,
   ] = useState(null);
+
+
+  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [isSubmittingPlatformUser, setIsSubmittingPlatformUser] = useState(false);
+  const [mutatingPlatformUserId, setMutatingPlatformUserId] = useState(null);
+  const [platformUserMutationError, setPlatformUserMutationError] = useState(null);
+  const [platformUserMutationSuccess, setPlatformUserMutationSuccess] = useState(null);
+  const [inviteForm, setInviteForm] = useState({
+    displayName: "",
+    email: "",
+    identityProvider: "",
+    externalTenantId: "",
+    externalSubjectId: "",
+    identityIssuer: "",
+  });
 
 
   useEffect(() => {
@@ -506,6 +538,105 @@ export default function PlatformAdministration() {
     };
   }, [selectedOrganizationId]);
 
+
+
+  async function refreshPlatformUsers() {
+    if (!selectedOrganizationId) {
+      setPlatformUsers([]);
+      return;
+    }
+
+    setIsLoadingPlatformUsers(true);
+    setPlatformUserError(null);
+
+    try {
+      const records = await listPlatformUsers({
+        organizationId: selectedOrganizationId,
+      });
+      setPlatformUsers(records);
+    } catch (error) {
+      console.error("Platform User refresh failed:", error);
+      setPlatformUserError("Platform Users could not be loaded.");
+    } finally {
+      setIsLoadingPlatformUsers(false);
+    }
+  }
+
+  function handleInviteFieldChange(field, value) {
+    setInviteForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }
+
+  async function handleInvitePlatformUser() {
+    if (!selectedOrganizationId) return;
+
+    setIsSubmittingPlatformUser(true);
+    setPlatformUserMutationError(null);
+    setPlatformUserMutationSuccess(null);
+
+    try {
+      await invitePlatformUser({
+        organizationId: selectedOrganizationId,
+        ...inviteForm,
+      });
+      setPlatformUserMutationSuccess("Platform User invitation created.");
+      setIsInviteDialogOpen(false);
+      setInviteForm({
+        displayName: "",
+        email: "",
+        identityProvider: "",
+        externalTenantId: "",
+        externalSubjectId: "",
+        identityIssuer: "",
+      });
+      await refreshPlatformUsers();
+    } catch (error) {
+      console.error("Platform User invitation failed:", error);
+      setPlatformUserMutationError(
+        error?.response?.data?.detail
+          || "Platform User invitation failed.",
+      );
+    } finally {
+      setIsSubmittingPlatformUser(false);
+    }
+  }
+
+  async function handlePlatformUserLifecycle(platformUser, action) {
+    if (!selectedOrganizationId) return;
+
+    const actionMap = {
+      suspend: suspendPlatformUser,
+      reactivate: reactivatePlatformUser,
+      disable: disablePlatformUser,
+    };
+    const operation = actionMap[action];
+    if (!operation) return;
+
+    setMutatingPlatformUserId(platformUser.id);
+    setPlatformUserMutationError(null);
+    setPlatformUserMutationSuccess(null);
+
+    try {
+      await operation({
+        organizationId: selectedOrganizationId,
+        platformUserId: platformUser.id,
+      });
+      setPlatformUserMutationSuccess(
+        `${platformUser.display_name} ${action} operation completed.`,
+      );
+      await refreshPlatformUsers();
+    } catch (error) {
+      console.error("Platform User lifecycle mutation failed:", error);
+      setPlatformUserMutationError(
+        error?.response?.data?.detail
+          || "Platform User lifecycle operation failed.",
+      );
+    } finally {
+      setMutatingPlatformUserId(null);
+    }
+  }
 
   const organizationCount =
     organizations.length;
@@ -1353,14 +1484,36 @@ export default function PlatformAdministration() {
                 </Typography>
               </Stack>
 
-              <Chip
-                label={`${platformUsers.length} USERS`}
-                size="small"
-                variant="outlined"
-              />
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Button
+                  variant="contained"
+                  size="small"
+                  disabled={!selectedOrganization}
+                  onClick={() => setIsInviteDialogOpen(true)}
+                >
+                  Invite User
+                </Button>
+                <Chip
+                  label={`${platformUsers.length} USERS`}
+                  size="small"
+                  variant="outlined"
+                />
+              </Stack>
             </Stack>
 
             <Divider sx={{ mb: 2 }} />
+
+            {platformUserMutationError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {platformUserMutationError}
+              </Alert>
+            )}
+
+            {platformUserMutationSuccess && (
+              <Alert severity="success" sx={{ mb: 2 }}>
+                {platformUserMutationSuccess}
+              </Alert>
+            )}
 
             {!selectedOrganization && (
               <Alert severity="info">
@@ -1504,6 +1657,29 @@ export default function PlatformAdministration() {
                             )}
                           />
                         </Stack>
+
+                        {getPlatformUserActions(platformUser.status).length > 0 && (
+                          <>
+                            <Divider sx={{ my: 2 }} />
+                            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                              {getPlatformUserActions(platformUser.status).map((action) => (
+                                <Button
+                                  key={action}
+                                  size="small"
+                                  variant={action === "disable" ? "outlined" : "contained"}
+                                  disabled={mutatingPlatformUserId === platformUser.id}
+                                  onClick={() => handlePlatformUserLifecycle(platformUser, action)}
+                                >
+                                  {action === "reactivate"
+                                    ? "Reactivate"
+                                    : action === "suspend"
+                                      ? "Suspend"
+                                      : "Disable"}
+                                </Button>
+                              ))}
+                            </Stack>
+                          </>
+                        )}
                       </CardContent>
                     </Card>
                   ),
@@ -1513,6 +1689,97 @@ export default function PlatformAdministration() {
           </CardContent>
         </Card>
       </Box>
+
+      <Dialog
+        open={isInviteDialogOpen}
+        onClose={() => {
+          if (!isSubmittingPlatformUser) {
+            setIsInviteDialogOpen(false);
+          }
+        }}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Invite Platform User</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2}>
+            <Alert severity="info">
+              Invitation creates a Platform User only. Roles and permissions
+              are managed separately.
+            </Alert>
+
+            <TextField
+              label="Display Name"
+              required
+              fullWidth
+              value={inviteForm.displayName}
+              onChange={(event) =>
+                handleInviteFieldChange("displayName", event.target.value)
+              }
+            />
+            <TextField
+              label="Email"
+              required
+              fullWidth
+              value={inviteForm.email}
+              onChange={(event) =>
+                handleInviteFieldChange("email", event.target.value)
+              }
+            />
+            <TextField
+              label="Identity Provider"
+              required
+              fullWidth
+              value={inviteForm.identityProvider}
+              onChange={(event) =>
+                handleInviteFieldChange("identityProvider", event.target.value)
+              }
+            />
+            <TextField
+              label="External Tenant ID"
+              required
+              fullWidth
+              value={inviteForm.externalTenantId}
+              onChange={(event) =>
+                handleInviteFieldChange("externalTenantId", event.target.value)
+              }
+            />
+            <TextField
+              label="External Subject ID"
+              required
+              fullWidth
+              value={inviteForm.externalSubjectId}
+              onChange={(event) =>
+                handleInviteFieldChange("externalSubjectId", event.target.value)
+              }
+            />
+            <TextField
+              label="Identity Issuer"
+              fullWidth
+              value={inviteForm.identityIssuer}
+              onChange={(event) =>
+                handleInviteFieldChange("identityIssuer", event.target.value)
+              }
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setIsInviteDialogOpen(false)}
+            disabled={isSubmittingPlatformUser}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleInvitePlatformUser}
+            disabled={isSubmittingPlatformUser}
+          >
+            {isSubmittingPlatformUser ? "Inviting..." : "Invite User"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
     </Box>
   );
 }
