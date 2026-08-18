@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies.runtime_permission import require_platform_permission
 from app.database.session import get_db
+from app.schemas.platform_role import PlatformRoleRead
 from app.schemas.platform_role_permission import (
     PlatformRolePermissionCreate,
     PlatformRolePermissionRead,
@@ -26,6 +27,41 @@ router = APIRouter(
     prefix="/api/v1/organizations/{organization_id}/platform-roles",
     tags=["Platform Roles"],
 )
+
+
+@router.get(
+    "/",
+    response_model=list[PlatformRoleRead],
+)
+def list_platform_roles(
+    organization_id: str,
+    caller: TrustedPlatformCaller = Depends(
+        require_platform_permission(
+            "platform-administration.manage"
+        )
+    ),
+    db: Session = Depends(get_db),
+):
+    service = PlatformAuthorizationService(db)
+
+    try:
+        return service.list_roles(
+            organization_id=organization_id,
+            trusted_caller=caller,
+        )
+    except (
+        PlatformAuthorizationOrganizationNotFoundError,
+        PlatformAuthorizationOrganizationBoundaryError,
+    ) as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Requested Platform authorization target was not found.",
+        ) from error
+    except PlatformAuthorizationOrganizationNotActiveError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
 
 
 @router.post(

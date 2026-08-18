@@ -291,6 +291,44 @@ def disable_platform_user(
     )
 
 
+@router.get(
+    "/{platform_user_id}/roles",
+    response_model=list[PlatformRoleAssignmentRead],
+)
+def list_platform_user_roles(
+    organization_id: str,
+    platform_user_id: str,
+    caller: TrustedPlatformCaller = Depends(
+        require_platform_permission(
+            "platform-administration.manage"
+        )
+    ),
+    db: Session = Depends(get_db),
+):
+    service = PlatformAuthorizationService(db)
+
+    try:
+        return service.list_user_role_assignments(
+            organization_id=organization_id,
+            platform_user_id=platform_user_id,
+            trusted_caller=caller,
+        )
+    except (
+        PlatformAuthorizationOrganizationNotFoundError,
+        PlatformAuthorizationUserNotFoundError,
+        PlatformAuthorizationOrganizationBoundaryError,
+    ) as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Requested Platform authorization target was not found.",
+        ) from error
+    except PlatformAuthorizationOrganizationNotActiveError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+
+
 @router.post(
     "/{platform_user_id}/roles",
     response_model=PlatformRoleAssignmentRead,

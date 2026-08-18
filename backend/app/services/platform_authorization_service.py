@@ -179,6 +179,53 @@ class PlatformAuthorizationService:
         )
         self.audit_service = AuditService(db)
 
+    def list_roles(
+        self,
+        *,
+        organization_id: str,
+        trusted_caller: TrustedPlatformCaller | None,
+    ) -> list[PlatformRole]:
+        self._resolve_actor_context(
+            organization_id=organization_id,
+            trusted_caller=trusted_caller,
+        )
+        self._require_active_organization(
+            organization_id,
+        )
+        return self.platform_role_repository.list_for_organization(
+            organization_id,
+        )
+
+    def list_user_role_assignments(
+        self,
+        *,
+        organization_id: str,
+        platform_user_id: str,
+        trusted_caller: TrustedPlatformCaller | None,
+    ) -> list[PlatformRoleAssignment]:
+        self._resolve_actor_context(
+            organization_id=organization_id,
+            trusted_caller=trusted_caller,
+        )
+        self._require_active_organization(
+            organization_id,
+        )
+
+        platform_user = self._require_platform_user(
+            platform_user_id,
+        )
+
+        if platform_user.organization_id != organization_id:
+            raise PlatformAuthorizationOrganizationBoundaryError(
+                "Platform User does not belong to the requested Organization."
+            )
+
+        return self.assignment_repository.list_for_user(
+            organization_id=organization_id,
+            platform_user_id=platform_user_id,
+        )
+
+
     @staticmethod
     def _resolve_actor_context(
         *,
