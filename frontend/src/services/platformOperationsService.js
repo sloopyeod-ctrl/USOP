@@ -151,3 +151,84 @@ export function disablePlatformUser(args) {
     action: "disable",
   });
 }
+
+
+export async function listPlatformRoles({
+  organizationId,
+}) {
+  requireValue(organizationId, "Organization");
+
+  const response = await api.get(
+    "/api/v1/organizations/"
+      + encodeURIComponent(organizationId)
+      + "/platform-roles/",
+  );
+
+  return Array.isArray(response.data)
+    ? response.data
+    : [];
+}
+
+export async function listPlatformUserRoleAssignments({
+  organizationId,
+  platformUserId,
+}) {
+  requireValue(organizationId, "Organization");
+  requireValue(platformUserId, "Platform User");
+
+  const response = await api.get(
+    "/api/v1/organizations/"
+      + encodeURIComponent(organizationId)
+      + "/platform-users/"
+      + encodeURIComponent(platformUserId)
+      + "/roles",
+  );
+
+  return Array.isArray(response.data)
+    ? response.data
+    : [];
+}
+
+export async function assignPlatformUserRole({
+  organizationId,
+  platformUserId,
+  platformRoleId,
+  expiresAt = null,
+}) {
+  requireValue(organizationId, "Organization");
+  requireValue(platformUserId, "Platform User");
+  requireValue(platformRoleId, "Platform Role");
+
+  const response = await api.post(
+    "/api/v1/organizations/"
+      + encodeURIComponent(organizationId)
+      + "/platform-users/"
+      + encodeURIComponent(platformUserId)
+      + "/roles",
+    {
+      platform_role_id: platformRoleId,
+      expires_at: expiresAt || null,
+    },
+  );
+
+  return response.data ?? null;
+}
+
+export async function removePlatformUserRole({
+  organizationId,
+  platformUserId,
+  platformRoleId,
+}) {
+  requireValue(organizationId, "Organization");
+  requireValue(platformUserId, "Platform User");
+  requireValue(platformRoleId, "Platform Role");
+
+  await api.delete(
+    "/api/v1/organizations/"
+      + encodeURIComponent(organizationId)
+      + "/platform-users/"
+      + encodeURIComponent(platformUserId)
+      + "/roles/"
+      + encodeURIComponent(platformRoleId),
+  );
+}

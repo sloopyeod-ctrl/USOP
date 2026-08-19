@@ -44,14 +44,18 @@ import StorageIcon from
 import useOrganizationContext from
   "../hooks/useOrganizationContext";
 import {
+  assignPlatformUserRole,
   disablePlatformUser,
   getPlatformHealth,
   invitePlatformUser,
   listConnectorHealth,
+  listPlatformRoles,
+  listPlatformUserRoleAssignments,
   listPlatformUsers,
   listProviderCatalog,
   listRegisteredConnectors,
   reactivatePlatformUser,
+  removePlatformUserRole,
   suspendPlatformUser,
 } from "../services/platformOperationsService";
 
@@ -363,6 +367,29 @@ export default function PlatformAdministration() {
   const [mutatingPlatformUserId, setMutatingPlatformUserId] = useState(null);
   const [platformUserMutationError, setPlatformUserMutationError] = useState(null);
   const [platformUserMutationSuccess, setPlatformUserMutationSuccess] = useState(null);
+
+  const [platformRoles, setPlatformRoles] = useState([]);
+  const [
+    platformUserRoleAssignments,
+    setPlatformUserRoleAssignments,
+  ] = useState({});
+  const [
+    selectedRoleByUser,
+    setSelectedRoleByUser,
+  ] = useState({});
+  const [
+    mutatingRoleUserId,
+    setMutatingRoleUserId,
+  ] = useState(null);
+  const [
+    platformRoleMutationError,
+    setPlatformRoleMutationError,
+  ] = useState(null);
+  const [
+    platformRoleMutationSuccess,
+    setPlatformRoleMutationSuccess,
+  ] = useState(null);
+
   const [inviteForm, setInviteForm] = useState({
     displayName: "",
     email: "",
@@ -537,6 +564,127 @@ export default function PlatformAdministration() {
       isCurrent = false;
     };
   }, [selectedOrganizationId]);
+
+
+  async function refreshPlatformAuthorizationState() {
+    if (!selectedOrganizationId) {
+      setPlatformRoles([]);
+      setPlatformUserRoleAssignments({});
+      return;
+    }
+
+    try {
+      const roles = await listPlatformRoles({
+        organizationId: selectedOrganizationId,
+      });
+      setPlatformRoles(roles);
+
+      const assignments = await Promise.all(
+        platformUsers.map(async (platformUser) => [
+          platformUser.id,
+          await listPlatformUserRoleAssignments({
+            organizationId: selectedOrganizationId,
+            platformUserId: platformUser.id,
+          }),
+        ]),
+      );
+
+      setPlatformUserRoleAssignments(
+        Object.fromEntries(assignments),
+      );
+    } catch (error) {
+      console.error(
+        "Platform authorization inventory refresh failed:",
+        error,
+      );
+      setPlatformRoleMutationError(
+        error?.response?.data?.detail
+          || "Platform role assignments could not be loaded.",
+      );
+    }
+  }
+
+  async function handleAssignPlatformRole(platformUser) {
+    const platformRoleId =
+      selectedRoleByUser[platformUser.id];
+
+    if (!selectedOrganizationId || !platformRoleId) {
+      return;
+    }
+
+    setMutatingRoleUserId(platformUser.id);
+    setPlatformRoleMutationError(null);
+    setPlatformRoleMutationSuccess(null);
+
+    try {
+      await assignPlatformUserRole({
+        organizationId: selectedOrganizationId,
+        platformUserId: platformUser.id,
+        platformRoleId,
+      });
+
+      setPlatformRoleMutationSuccess(
+        `Role assigned to ${platformUser.display_name}.`,
+      );
+
+      setSelectedRoleByUser((current) => ({
+        ...current,
+        [platformUser.id]: "",
+      }));
+
+      await refreshPlatformAuthorizationState();
+    } catch (error) {
+      console.error(
+        "Platform role assignment failed:",
+        error,
+      );
+      setPlatformRoleMutationError(
+        error?.response?.data?.detail
+          || "Platform role assignment failed.",
+      );
+    } finally {
+      setMutatingRoleUserId(null);
+    }
+  }
+
+  async function handleRemovePlatformRole(
+    platformUser,
+    platformRoleId,
+  ) {
+    if (!selectedOrganizationId) {
+      return;
+    }
+
+    setMutatingRoleUserId(platformUser.id);
+    setPlatformRoleMutationError(null);
+    setPlatformRoleMutationSuccess(null);
+
+    try {
+      await removePlatformUserRole({
+        organizationId: selectedOrganizationId,
+        platformUserId: platformUser.id,
+        platformRoleId,
+      });
+
+      setPlatformRoleMutationSuccess(
+        `Role removed from ${platformUser.display_name}.`,
+      );
+
+      await refreshPlatformAuthorizationState();
+    } catch (error) {
+      console.error(
+        "Platform role removal failed:",
+        error,
+      );
+      setPlatformRoleMutationError(
+        error?.response?.data?.detail
+          || "Platform role removal failed.",
+      );
+    } finally {
+      setMutatingRoleUserId(null);
+    }
+  }
+
 
 
 
@@ -1515,6 +1663,19 @@ export default function PlatformAdministration() {
               </Alert>
             )}
 
+            {platformRoleMutationError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {platformRoleMutationError}
+              </Alert>
+            )}
+
+            {platformRoleMutationSuccess && (
+              <Alert severity="success" sx={{ mb: 2 }}>
+                {platformRoleMutationSuccess}
+              </Alert>
+            )}
+
+
             {!selectedOrganization && (
               <Alert severity="info">
                 Select an Organization before loading
@@ -1657,6 +1818,154 @@ export default function PlatformAdministration() {
                             )}
                           />
                         </Stack>
+
+                        <Divider sx={{ my: 2 }} />
+
+                        <Stack spacing={1.25}>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{
+                              fontWeight: 700,
+                              letterSpacing: 0.6,
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            Assigned Platform Roles
+                          </Typography>
+
+                          {(
+                            platformUserRoleAssignments[
+                              platformUser.id
+                            ] ?? []
+                          ).length === 0 ? (
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                            >
+                              No Platform Roles assigned.
+                            </Typography>
+                          ) : (
+                            <Stack
+                              direction="row"
+                              spacing={1}
+                              useFlexGap
+                              flexWrap="wrap"
+                            >
+                              {(
+                                platformUserRoleAssignments[
+                                  platformUser.id
+                                ] ?? []
+                              ).map((assignment) => {
+                                const role =
+                                  platformRoles.find(
+                                    (candidate) =>
+                                      candidate.id
+                                      === assignment.platform_role_id,
+                                  ) ?? null;
+
+                                return (
+                                  <Chip
+                                    key={assignment.id}
+                                    label={
+                                      role?.name
+                                        || assignment.platform_role_id
+                                    }
+                                    variant="outlined"
+                                    onDelete={
+                                      mutatingRoleUserId
+                                      === platformUser.id
+                                        ? undefined
+                                        : () =>
+                                          handleRemovePlatformRole(
+                                            platformUser,
+                                            assignment.platform_role_id,
+                                          )
+                                    }
+                                  />
+                                );
+                              })}
+                            </Stack>
+                          )}
+
+                          {(
+                            platformUser.status === "Active"
+                            || platformUser.status === "Invited"
+                          ) && (
+                            <Stack
+                              direction={{
+                                xs: "column",
+                                sm: "row",
+                              }}
+                              spacing={1}
+                            >
+                              <FormControl size="small" fullWidth>
+                                <InputLabel>
+                                  Assign Platform Role
+                                </InputLabel>
+                                <Select
+                                  label="Assign Platform Role"
+                                  value={
+                                    selectedRoleByUser[
+                                      platformUser.id
+                                    ] ?? ""
+                                  }
+                                  onChange={(event) =>
+                                    setSelectedRoleByUser(
+                                      (current) => ({
+                                        ...current,
+                                        [platformUser.id]:
+                                          event.target.value,
+                                      }),
+                                    )
+                                  }
+                                >
+                                  {platformRoles
+                                    .filter(
+                                      (role) =>
+                                        role.status === "Active"
+                                        && !(
+                                          platformUserRoleAssignments[
+                                            platformUser.id
+                                          ] ?? []
+                                        ).some(
+                                          (assignment) =>
+                                            assignment.platform_role_id
+                                            === role.id,
+                                        ),
+                                    )
+                                    .map((role) => (
+                                      <MenuItem
+                                        key={role.id}
+                                        value={role.id}
+                                      >
+                                        {role.name}
+                                      </MenuItem>
+                                    ))}
+                                </Select>
+                              </FormControl>
+
+                              <Button
+                                variant="contained"
+                                disabled={
+                                  mutatingRoleUserId
+                                  === platformUser.id
+                                  || !selectedRoleByUser[
+                                    platformUser.id
+                                  ]
+                                }
+                                onClick={() =>
+                                  handleAssignPlatformRole(
+                                    platformUser,
+                                  )
+                                }
+                              >
+                                Assign
+                              </Button>
+                            </Stack>
+                          )}
+                        </Stack>
+
 
                         {getPlatformUserActions(platformUser.status).length > 0 && (
                           <>
