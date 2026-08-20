@@ -71,6 +71,63 @@ class PlatformUserRepository:
             .one_or_none()
         )
 
+    def get_by_external_identity_for_update(
+        self,
+        *,
+        organization_id: str,
+        identity_provider: str,
+        external_tenant_id: str,
+        external_subject_id: str,
+    ) -> PlatformUser | None:
+        """
+        Lock and resolve one PlatformUser by its complete external identity.
+
+        The repository owns persistence mechanics only. Authentication,
+        invitation acceptance policy, issuer validation, auditing, and
+        transaction ownership remain service-layer responsibilities.
+        """
+
+        return (
+            self.db.query(PlatformUser)
+            .filter(
+                PlatformUser.organization_id
+                == organization_id,
+                PlatformUser.identity_provider
+                == identity_provider,
+                PlatformUser.external_tenant_id
+                == external_tenant_id,
+                PlatformUser.external_subject_id
+                == external_subject_id,
+            )
+            .with_for_update()
+            .one_or_none()
+        )
+
+    def record_first_authentication(
+        self,
+        *,
+        platform_user: PlatformUser,
+        activated_at,
+        updated_by: str,
+    ) -> PlatformUser:
+        """
+        Persist caller-authorized first-authentication lifecycle facts.
+
+        Policy and trust validation must already have occurred in the
+        calling service. This method does not authenticate, authorize,
+        audit, commit, or roll back.
+        """
+
+        platform_user.status = "Active"
+        platform_user.activated_at = activated_at
+        platform_user.last_authenticated_at = activated_at
+        platform_user.updated_by = updated_by
+
+        self.db.flush()
+        self.db.refresh(platform_user)
+
+        return platform_user
+
     def list_for_organization(
         self,
         organization_id: str,
