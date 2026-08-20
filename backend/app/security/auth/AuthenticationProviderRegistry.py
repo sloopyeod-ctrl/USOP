@@ -133,3 +133,25 @@ class AuthenticationProviderRegistry:
             )
 
         return normalized
+
+def build_authentication_provider_registry(
+    *,
+    entra_config=None,
+    entra_jwk_client=None,
+) -> AuthenticationProviderRegistry:
+    registry = AuthenticationProviderRegistry()
+
+    if entra_config is not None:
+        from app.security.auth.EntraOidcAuthenticationAdapter import (
+            EntraOidcAuthenticationAdapter,
+        )
+
+        registry.register(
+            EntraOidcAuthenticationAdapter.PROVIDER_NAME,
+            lambda: EntraOidcAuthenticationAdapter(
+                entra_config,
+                jwk_client=entra_jwk_client,
+            ),
+        )
+
+    return registry

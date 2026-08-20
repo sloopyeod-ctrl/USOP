@@ -6,6 +6,9 @@ from typing import Any
 import jwt
 from jwt import PyJWKClient
 
+from app.security.auth.AuthenticationAdapter import (
+    AuthenticationAdapter,
+)
 from app.security.auth.EntraOidcValidationConfig import (
     EntraOidcValidationConfig,
 )
@@ -18,13 +21,19 @@ class EntraOidcAuthenticationError(ValueError):
     """Fail-closed Microsoft Entra token validation error."""
 
 
-class EntraOidcAuthenticationAdapter:
+class EntraOidcAuthenticationAdapter(AuthenticationAdapter):
     """
     Validate a Microsoft Entra v2 access token intended for the USOP API.
 
     This adapter owns cryptographic authentication only. It does not select
     an Organization, resolve a PlatformUser, or grant USOP authorization.
     """
+
+    PROVIDER_NAME = "microsoft-entra"
+
+    @property
+    def provider_name(self) -> str:
+        return self.PROVIDER_NAME
 
     ALGORITHMS = ("RS256",)
     REQUIRED_CLAIMS = (
@@ -151,7 +160,7 @@ class EntraOidcAuthenticationAdapter:
             authenticated_at = authenticated_at.astimezone(UTC)
 
         return TrustedExternalPrincipal(
-            identity_provider="microsoft-entra",
+            identity_provider=self.provider_name,
             external_tenant_id=tenant_id,
             external_subject_id=subject_id,
             issuer=issuer,
