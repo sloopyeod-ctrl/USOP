@@ -95,6 +95,7 @@ class TrustedCallerIdentityService:
                 ),
                 organization_id=organization_id,
                 platform_user_id=platform_user.id,
+                platform_user_status=platform_user.status,
                 reason="PlatformUserRecordInactive",
             )
 
@@ -106,6 +107,7 @@ class TrustedCallerIdentityService:
                 ),
                 organization_id=organization_id,
                 platform_user_id=platform_user.id,
+                platform_user_status=platform_user.status,
                 reason="PlatformUserLifecycleNotActive",
                 evidence=(
                     f"status={platform_user.status}",
@@ -130,6 +132,7 @@ class TrustedCallerIdentityService:
                 ),
                 organization_id=organization_id,
                 platform_user_id=platform_user.id,
+                platform_user_status=platform_user.status,
                 reason="TrustedPrincipalIssuerDoesNotMatchPlatformUser",
                 evidence=(
                     f"expected_issuer={expected_issuer}",
@@ -149,6 +152,7 @@ class TrustedCallerIdentityService:
             ),
             organization_id=organization_id,
             platform_user_id=platform_user.id,
+            platform_user_status=platform_user.status,
             reason="TrustedPrincipalResolvedToActivePlatformUser",
             caller=caller,
             evidence=(

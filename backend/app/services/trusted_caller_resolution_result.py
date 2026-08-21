@@ -21,6 +21,7 @@ class TrustedCallerResolutionResult:
     reason: str
     caller: TrustedPlatformCaller | None = None
     platform_user_id: str | None = None
+    platform_user_status: str | None = None
     evidence: tuple[str, ...] = ()
 
     @property
