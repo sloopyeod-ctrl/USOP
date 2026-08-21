@@ -168,19 +168,24 @@ def test_valid_token_and_org_resolve_trusted_caller(monkeypatch):
         lambda token: expected_principal,
     )
 
-    class Resolver:
+    class Composition:
         def __init__(self, db):
             self.db = db
 
-        def resolve(self, *, organization_id, principal):
+        def resolve_or_accept_invitation(
+            self,
+            *,
+            organization_id,
+            principal,
+        ):
             assert organization_id == ORG_42
             assert principal is expected_principal
             return SimpleNamespace(caller=expected_caller)
 
     monkeypatch.setattr(
         authenticated_caller,
-        "TrustedCallerIdentityService",
-        Resolver,
+        "PlatformAuthenticationCompositionService",
+        Composition,
     )
 
     result = (
@@ -204,17 +209,22 @@ def test_valid_identity_without_org_assignment_fails_403(
         lambda token: principal(),
     )
 
-    class Resolver:
+    class Composition:
         def __init__(self, db):
             self.db = db
 
-        def resolve(self, *, organization_id, principal):
+        def resolve_or_accept_invitation(
+            self,
+            *,
+            organization_id,
+            principal,
+        ):
             return SimpleNamespace(caller=None)
 
     monkeypatch.setattr(
         authenticated_caller,
-        "TrustedCallerIdentityService",
-        Resolver,
+        "PlatformAuthenticationCompositionService",
+        Composition,
     )
 
     with pytest.raises(HTTPException) as error:
@@ -242,17 +252,22 @@ def test_resolver_cannot_return_caller_for_other_org(
 
     foreign_caller = caller(ORG_92)
 
-    class Resolver:
+    class Composition:
         def __init__(self, db):
             self.db = db
 
-        def resolve(self, *, organization_id, principal):
+        def resolve_or_accept_invitation(
+            self,
+            *,
+            organization_id,
+            principal,
+        ):
             return SimpleNamespace(caller=foreign_caller)
 
     monkeypatch.setattr(
         authenticated_caller,
-        "TrustedCallerIdentityService",
-        Resolver,
+        "PlatformAuthenticationCompositionService",
+        Composition,
     )
 
     with pytest.raises(HTTPException) as error:

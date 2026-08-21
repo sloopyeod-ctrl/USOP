@@ -21,8 +21,9 @@ from app.security.auth.EntraOidcAuthenticationAdapter import (
 from app.security.auth.EntraOidcValidationConfig import (
     EntraOidcValidationConfig,
 )
-from app.services.trusted_caller_identity_service import (
-    TrustedCallerIdentityService,
+from app.services.platform_authentication_composition_service import (
+    PlatformAuthenticationCompositionError,
+    PlatformAuthenticationCompositionService,
 )
 from app.services.trusted_platform_caller import (
     TrustedPlatformCaller,
@@ -145,10 +146,19 @@ def get_authenticated_platform_caller(
 
     principal = _authenticate_bearer_token(token)
 
-    resolution = TrustedCallerIdentityService(db).resolve(
-        organization_id=normalized_organization_id,
-        principal=principal,
-    )
+    try:
+        resolution = (
+            PlatformAuthenticationCompositionService(db)
+            .resolve_or_accept_invitation(
+                organization_id=normalized_organization_id,
+                principal=principal,
+            )
+        )
+    except PlatformAuthenticationCompositionError as error:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Caller is not authorized for this Organization.",
+        ) from error
 
     caller = resolution.caller
 
