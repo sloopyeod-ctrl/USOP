@@ -54,6 +54,11 @@ services:
       MS_GRAPH_TENANT_ID: ${MS_GRAPH_TENANT_ID:?MS_GRAPH_TENANT_ID is required}
       MS_GRAPH_CLIENT_ID: ${MS_GRAPH_CLIENT_ID:?MS_GRAPH_CLIENT_ID is required}
       MS_GRAPH_CLIENT_SECRET: ${MS_GRAPH_CLIENT_SECRET:?MS_GRAPH_CLIENT_SECRET is required}
+
+      # Inbound caller authentication.
+      # Deliberately separate from Microsoft Graph connector credentials.
+      USOP_AUTH_ENTRA_TENANT_ID: ${USOP_AUTH_ENTRA_TENANT_ID:?USOP_AUTH_ENTRA_TENANT_ID is required}
+      USOP_AUTH_ENTRA_AUDIENCE: ${USOP_AUTH_ENTRA_AUDIENCE:?USOP_AUTH_ENTRA_AUDIENCE is required}
     depends_on:
       migrate:
         condition: service_completed_successfully
