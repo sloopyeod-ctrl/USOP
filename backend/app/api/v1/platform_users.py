@@ -115,14 +115,25 @@ def invite_platform_user(
 )
 def list_platform_users(
     organization_id: str,
+    caller: TrustedPlatformCaller = Depends(
+        require_platform_permission(
+            "platform-administration.manage"
+        )
+    ),
     db: Session = Depends(get_db),
 ):
     """
-    Return Platform Users belonging to one Organization.
+    Return Platform Users belonging to one authorized Organization.
 
-    Authentication, authorization, and Seat enforcement remain separate
-    concerns and are not implemented by this read-only endpoint.
+    Platform User inventory is Platform-administration data and therefore
+    requires the canonical Platform administration permission.
     """
+
+    if caller.organization_id != organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Requested Platform User inventory was not found.",
+        )
 
     try:
         return (
@@ -146,13 +157,24 @@ def list_platform_users(
 def get_platform_user(
     organization_id: str,
     platform_user_id: str,
+    caller: TrustedPlatformCaller = Depends(
+        require_platform_permission(
+            "platform-administration.manage"
+        )
+    ),
     db: Session = Depends(get_db),
 ):
     """
-    Return one Platform User only within the requested Organization.
+    Return one Platform User only within the authorized Organization.
 
     Cross-Organization Platform Users are treated as not found.
     """
+
+    if caller.organization_id != organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Platform User not found.",
+        )
 
     service = PlatformUserService(db)
 
