@@ -21,6 +21,7 @@ def _config():
     return EntraOidcValidationConfig(
         tenant_id="tenant-id",
         audience="api://usop",
+        required_scope="access_as_user",
     )
 
 

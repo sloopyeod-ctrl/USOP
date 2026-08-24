@@ -114,6 +114,11 @@ def test_configuration_is_separate_from_graph_credentials(
         "usop_auth_entra_audience",
         "api://usop",
     )
+    monkeypatch.setattr(
+        authenticated_caller.settings,
+        "usop_auth_entra_required_scope",
+        "access_as_user",
+    )
 
     config = authenticated_caller._authentication_configuration()
 
@@ -140,6 +145,11 @@ def test_authentication_failure_maps_to_401(monkeypatch):
         authenticated_caller.settings,
         "usop_auth_entra_audience",
         "api://usop",
+    )
+    monkeypatch.setattr(
+        authenticated_caller.settings,
+        "usop_auth_entra_required_scope",
+        "access_as_user",
     )
     monkeypatch.setattr(
         authenticated_caller,

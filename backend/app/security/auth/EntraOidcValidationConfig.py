@@ -12,6 +12,7 @@ class EntraOidcValidationConfig:
 
     tenant_id: str
     audience: str
+    required_scope: str
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -24,6 +25,22 @@ class EntraOidcValidationConfig:
             "audience",
             self._required(self.audience, "audience"),
         )
+        object.__setattr__(
+            self,
+            "required_scope",
+            self._required(
+                self.required_scope,
+                "required_scope",
+            ),
+        )
+
+        if any(
+            character.isspace()
+            for character in self.required_scope
+        ):
+            raise ValueError(
+                "required_scope must be one delegated scope token."
+            )
 
     @staticmethod
     def _required(value: str, field_name: str) -> str:

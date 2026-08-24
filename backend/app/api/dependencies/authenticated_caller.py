@@ -54,8 +54,11 @@ def _authentication_configuration() -> EntraOidcValidationConfig:
     audience = str(
         settings.usop_auth_entra_audience or ""
     ).strip()
+    required_scope = str(
+        settings.usop_auth_entra_required_scope or ""
+    ).strip()
 
-    if not tenant_id or not audience:
+    if not tenant_id or not audience or not required_scope:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="USOP API authentication is not configured.",
@@ -64,6 +67,7 @@ def _authentication_configuration() -> EntraOidcValidationConfig:
     return EntraOidcValidationConfig(
         tenant_id=tenant_id,
         audience=audience,
+        required_scope=required_scope,
     )
 
 

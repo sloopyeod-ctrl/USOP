@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     # These are intentionally separate from MS_GRAPH_* connector credentials.
     usop_auth_entra_tenant_id: str | None = None
     usop_auth_entra_audience: str | None = None
+    usop_auth_entra_required_scope: str | None = None
 
     class Config:
         env_file = str(ENV_FILE)

@@ -11,12 +11,15 @@ def test_release_compose_requires_inbound_auth_configuration():
     assert "${USOP_AUTH_ENTRA_TENANT_ID:?USOP_AUTH_ENTRA_TENANT_ID is required}" in source
     assert "USOP_AUTH_ENTRA_AUDIENCE:" in source
     assert "${USOP_AUTH_ENTRA_AUDIENCE:?USOP_AUTH_ENTRA_AUDIENCE is required}" in source
+    assert "USOP_AUTH_ENTRA_REQUIRED_SCOPE:" in source
+    assert "${USOP_AUTH_ENTRA_REQUIRED_SCOPE:?USOP_AUTH_ENTRA_REQUIRED_SCOPE is required}" in source
 
 
 def test_release_env_example_documents_inbound_auth_configuration():
     source = ENV_EXAMPLE.read_text(encoding="utf-8")
     assert "USOP_AUTH_ENTRA_TENANT_ID=CHANGE_ME" in source
     assert "USOP_AUTH_ENTRA_AUDIENCE=CHANGE_ME" in source
+    assert "USOP_AUTH_ENTRA_REQUIRED_SCOPE=access_as_user" in source
 
 
 def test_inbound_auth_configuration_is_not_graph_credential_aliasing():
@@ -34,5 +37,6 @@ def test_release_contract_keeps_graph_and_inbound_auth_keys_distinct():
         "MS_GRAPH_CLIENT_SECRET=",
         "USOP_AUTH_ENTRA_TENANT_ID=",
         "USOP_AUTH_ENTRA_AUDIENCE=",
+        "USOP_AUTH_ENTRA_REQUIRED_SCOPE=",
     ):
         assert key in source

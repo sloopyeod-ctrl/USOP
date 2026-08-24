@@ -16,6 +16,7 @@ from app.security.auth.EntraOidcValidationConfig import (
 
 TENANT = "11111111-2222-3333-4444-555555555555"
 AUDIENCE = "api://usop-test-api"
+REQUIRED_SCOPE = "access_as_user"
 ISSUER = f"https://login.microsoftonline.com/{TENANT}/v2.0"
 NOW = datetime.now(UTC).replace(microsecond=0)
 
@@ -46,6 +47,7 @@ def config():
     return EntraOidcValidationConfig(
         tenant_id=TENANT,
         audience=AUDIENCE,
+        required_scope=REQUIRED_SCOPE,
     )
 
 
@@ -59,6 +61,7 @@ def claims(**overrides):
         "oid": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
         "tid": TENANT,
         "ver": "2.0",
+        "scp": REQUIRED_SCOPE,
     }
     values.update(overrides)
     return values

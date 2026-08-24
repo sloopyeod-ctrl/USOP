@@ -153,6 +153,19 @@ class EntraOidcAuthenticationAdapter(AuthenticationAdapter):
         subject_id = self._required_text(payload, "oid")
         issuer = self._required_text(payload, "iss")
 
+        delegated_scope_claim = self._required_text(
+            payload,
+            "scp",
+        )
+        delegated_scopes = frozenset(
+            delegated_scope_claim.split()
+        )
+
+        if self.config.required_scope not in delegated_scopes:
+            raise EntraOidcAuthenticationError(
+                "Required delegated API scope is not present."
+            )
+
         authenticated_at = now or datetime.now(UTC)
         if authenticated_at.tzinfo is None:
             authenticated_at = authenticated_at.replace(tzinfo=UTC)

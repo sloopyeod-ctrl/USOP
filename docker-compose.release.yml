@@ -59,6 +59,7 @@ services:
       # Deliberately separate from Microsoft Graph connector credentials.
       USOP_AUTH_ENTRA_TENANT_ID: ${USOP_AUTH_ENTRA_TENANT_ID:?USOP_AUTH_ENTRA_TENANT_ID is required}
       USOP_AUTH_ENTRA_AUDIENCE: ${USOP_AUTH_ENTRA_AUDIENCE:?USOP_AUTH_ENTRA_AUDIENCE is required}
+      USOP_AUTH_ENTRA_REQUIRED_SCOPE: ${USOP_AUTH_ENTRA_REQUIRED_SCOPE:?USOP_AUTH_ENTRA_REQUIRED_SCOPE is required}
     depends_on:
       migrate:
         condition: service_completed_successfully
