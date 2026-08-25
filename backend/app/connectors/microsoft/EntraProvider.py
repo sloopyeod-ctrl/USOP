@@ -202,10 +202,10 @@ class EntraProvider(BaseConnector):
         Retrieve Microsoft Graph users needed by identity and account
         translations.
 
-        Pagination will be introduced as a separate connector capability.
+        Collection completeness is provided by GraphClient pagination.
         """
 
-        response = self.graph.get(
+        return self.graph.get_collection(
             "/users",
             params={
                 "$select": (
@@ -219,11 +219,6 @@ class EntraProvider(BaseConnector):
             },
         )
 
-        return self._extract_graph_collection(
-            response=response,
-            resource_name="users",
-        )
-
     def _collect_live_group_records(
         self,
     ) -> list[dict[str, Any]]:
@@ -231,10 +226,10 @@ class EntraProvider(BaseConnector):
         Retrieve Microsoft Graph groups needed by group and membership
         translations.
 
-        Pagination will be introduced as a separate connector capability.
+        Collection completeness is provided by GraphClient pagination.
         """
 
-        response = self.graph.get(
+        return self.graph.get_collection(
             "/groups",
             params={
                 "$select": (
@@ -251,11 +246,6 @@ class EntraProvider(BaseConnector):
             },
         )
 
-        return self._extract_graph_collection(
-            response=response,
-            resource_name="groups",
-        )
-
     def _collect_live_group_member_records(
         self,
         group: dict[str, Any],
@@ -270,14 +260,11 @@ class EntraProvider(BaseConnector):
         group_identifier = self._clean_string(
             group.get("id")
         )
-        group_name = self._clean_string(
-            group.get("displayName")
-        )
 
         if not group_identifier:
             return []
 
-        response = self.graph.get(
+        return self.graph.get_collection(
             f"/groups/{group_identifier}/members",
             params={
                 "$select": (
@@ -289,16 +276,6 @@ class EntraProvider(BaseConnector):
                 ),
                 "$top": 100,
             },
-        )
-
-        resource_name = (
-            f"group members for "
-            f"{group_name or group_identifier}"
-        )
-
-        return self._extract_graph_collection(
-            response=response,
-            resource_name=resource_name,
         )
 
     def _collect_live_role_assignment_records(
@@ -314,14 +291,9 @@ class EntraProvider(BaseConnector):
         stable provider identifiers.
         """
 
-        response = self.graph.get(
+        return self.graph.get_collection(
             "/roleManagement/directory/roleAssignments",
             params={"$expand": "principal"},
-        )
-
-        return self._extract_graph_collection(
-            response=response,
-            resource_name="directory role assignments",
         )
 
     def _collect_live_role_definition_record(

@@ -12,6 +12,26 @@ class FakeGraphClient:
     def __init__(self) -> None:
         self.calls: list[tuple[str, dict | None]] = []
 
+    def get_collection(
+        self,
+        endpoint: str,
+        params: dict | None = None,
+    ) -> list[dict]:
+        self.calls.append((endpoint, params))
+        return [
+            {
+                "id": "assignment-1",
+                "principalId": "principal-1",
+                "roleDefinitionId": "role-1",
+                "directoryScopeId": "/",
+                "appScopeId": None,
+                "principal": {
+                    "@odata.type": "#microsoft.graph.user",
+                    "id": "principal-1",
+                },
+            }
+        ]
+
     def get(
         self,
         endpoint: str,
