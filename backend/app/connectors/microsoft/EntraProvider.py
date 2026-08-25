@@ -239,8 +239,6 @@ class EntraProvider(BaseConnector):
                     "securityEnabled,"
                     "mailEnabled,"
                     "groupTypes,"
-                    "membershipRule,"
-                    "membershipRuleProcessingState"
                 ),
                 "$top": 100,
             },
@@ -269,10 +267,6 @@ class EntraProvider(BaseConnector):
             params={
                 "$select": (
                     "id,"
-                    "displayName,"
-                    "userPrincipalName,"
-                    "appId,"
-                    "deviceId"
                 ),
                 "$top": 100,
             },
