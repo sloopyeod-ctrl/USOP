@@ -158,26 +158,42 @@ USOP must not request broad Graph permissions merely to simplify development.
 
 ## Microsoft Graph Permission Matrix
 
-The final RC1 release must include a validated Graph permission matrix.
+USOP Core v1.0 requires the following Microsoft Graph application permissions for the frozen Microsoft Entra connector.
 
-The current guide intentionally does not invent the final permission set.
+| Permission | Type | Admin Consent | Purpose in USOP | Required in RC1 |
+| --- | --- | --- | --- | --- |
+| User.Read.All | Application | Required | Read the supported user identity and account properties used by the Core identity model. | Yes |
+| GroupMember.Read.All | Application | Required | Read the supported group properties and direct group membership relationships required by the Core relationship model. | Yes |
+| RoleManagement.Read.Directory | Application | Required | Read Microsoft Entra directory role assignments and referenced directory role definitions used by the Core authorization model. | Yes |
 
-The release team must populate this table after inspecting and validating the actual connector calls used by the frozen build.
+The validated Core v1.0 connector does not require the following broader Microsoft Graph application permissions:
 
-| Permission | Purpose in USOP | Required in RC1 | Notes |
-| --- | --- | --- | --- |
-| TBD | TBD | TBD | Must be validated against actual connector behavior |
+- Directory.Read.All
+- Group.Read.All
+- Application.Read.All
+- Device.Read.All
 
-For every permission included in RC1, document:
+These permissions must not be added merely to simplify deployment or broaden data access beyond the frozen Core connector contract.
 
-- exact Microsoft Graph permission name;
-- delegated or application permission type;
-- whether administrator consent is required;
-- why USOP needs it;
-- which connector capability depends on it;
-- whether the permission is optional or required.
+The permission set was validated by isolating each required application permission independently and exercising the exact Microsoft Graph operations and selected properties used by the frozen connector.
 
-If a permission is not needed by the frozen RC1 artifact, it should not be requested.
+The validated operations are:
+
+- GET /users
+- GET /groups
+- GET /groups/{id}/members
+- GET /roleManagement/directory/roleAssignments
+- GET /roleManagement/directory/roleDefinitions/{id}
+
+User.Read.All independently supported the minimized user collection contract.
+
+GroupMember.Read.All independently supported the minimized group collection contract and direct membership contract, including the member id and @odata.type evidence required by USOP relationship construction. Group.Read.All was therefore not required for the supported Core workflow.
+
+RoleManagement.Read.Directory independently supported directory role assignment collection and role-definition retrieval.
+
+All three permissions are Microsoft Graph application permissions used by the USOP Graph collector through the OAuth 2.0 client-credentials flow. They are separate from the delegated Microsoft Entra inbound-authentication configuration used for Platform User authentication.
+
+If a permission is not needed by the frozen RC1 artifact, it must not be requested.
 
 ## Least Privilege
 

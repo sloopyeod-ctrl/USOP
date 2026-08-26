@@ -158,7 +158,15 @@ The RC process requires validation of:
 - documented persistence and backup boundaries;
 - clean-room installation.
 
-Exact Graph permissions, ports, image identifiers, and outbound destinations must be populated from the frozen release artifact before RC1 distribution.
+The Microsoft Graph application permission contract for the frozen Core connector is:
+
+- User.Read.All
+- GroupMember.Read.All
+- RoleManagement.Read.Directory
+
+These permissions require administrator consent and were independently validated against the exact Core connector operations. Directory.Read.All, Group.Read.All, Application.Read.All, and Device.Read.All are not required by the validated Core v1.0 workflow.
+
+Ports, image identifiers, and remaining outbound-destination requirements must still be populated from the frozen release artifact before RC1 distribution.
 
 ## Deployment Highlights
 

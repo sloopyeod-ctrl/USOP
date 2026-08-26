@@ -1,4 +1,4 @@
-﻿# USOP Core v1.0 - Known Limitations
+# USOP Core v1.0 - Known Limitations
 
 **Document:** 08-Known-Limitations
 **Release Track:** USOP Core v1.0 Release Candidate
@@ -109,11 +109,19 @@ Do not assume that development-only ports are customer-facing requirements.
 
 ## Microsoft Graph Permissions
 
-The final Graph permission matrix must be validated against the exact connector calls used by RC1.
+The frozen Core v1.0 Microsoft Entra connector requires these Microsoft Graph application permissions:
 
-No permission should be requested simply because it was convenient during development.
+- User.Read.All
+- GroupMember.Read.All
+- RoleManagement.Read.Directory
 
-The customer-facing Security Deployment Guide must contain the minimum validated permission set before release.
+Administrator consent is required.
+
+The validated Core connector does not require Directory.Read.All, Group.Read.All, Application.Read.All, or Device.Read.All.
+
+The permission matrix was validated against the exact connector operations and selected properties used by the release.
+
+Microsoft Graph API behavior remains an external dependency. Permission sufficiency does not guarantee that every Microsoft Graph endpoint returns every possible directory object type in every API version. Service-principal membership completeness is treated separately from permission authorization and remains subject to the supported Microsoft Graph v1.0 behavior of the frozen release.
 
 ## Secret Provider Limitations
 
