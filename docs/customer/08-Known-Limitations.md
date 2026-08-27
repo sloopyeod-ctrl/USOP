@@ -101,11 +101,24 @@ Development workstation specifications are not customer support statements.
 
 ## Network Limitations
 
-The exact inbound ports, outbound destinations, DNS requirements, and proxy behavior must be validated before RC1 freeze.
+The frozen Core v1.0 Docker release publishes only the USOP web ingress to the customer host. The default host port is TCP 8080 and may be changed through USOP_WEB_PORT.
 
-Do not assume that broad outbound Internet access is required.
+API TCP 8000 and PostgreSQL TCP 5432 remain Docker-internal and are not customer-facing ports.
 
-Do not assume that development-only ports are customer-facing requirements.
+The Microsoft Entra runtime requires DNS resolution and outbound TCP 443 access to:
+
+- login.microsoftonline.com
+- graph.microsoft.com
+
+Broad unrestricted Internet egress is not required for the Core runtime.
+
+The bundled USOP ingress is HTTP. Network-accessible deployments require customer-controlled TLS termination ahead of USOP. Direct HTTP TCP 8080 access should be limited to an accepted local or isolated evaluation boundary.
+
+Explicit HTTP/HTTPS proxy configuration has not been validated for the Core v1.0 Design Partner release.
+
+IPv6-only Docker egress has not been validated as a supported deployment requirement.
+
+Build-time access to image registries and software package repositories is separate from the frozen application runtime egress contract.
 
 ## Microsoft Graph Permissions
 

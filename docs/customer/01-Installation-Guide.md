@@ -142,7 +142,19 @@ Before starting the application, read:
 03-Security-Deployment-Guide.md
 ```
 
-Confirm required inbound access, outbound access, DNS resolution, TLS behavior, proxy configuration if applicable, Microsoft identity endpoints, local firewall rules, container networking, and storage/backup expectations.
+Confirm the frozen Core v1.0 network contract before startup:
+
+- publish only the USOP web ingress using the configured USOP_WEB_PORT, default TCP 8080;
+- do not publish API TCP 8000;
+- do not publish PostgreSQL TCP 5432;
+- permit outbound TCP 443 from the API runtime to login.microsoftonline.com;
+- permit outbound TCP 443 from the API runtime to graph.microsoft.com;
+- provide DNS resolution for both Microsoft destinations;
+- use customer-controlled TLS termination ahead of USOP for network-accessible deployments;
+- do not assume explicit HTTP or HTTPS proxy support;
+- do not require broad unrestricted Internet egress.
+
+Direct HTTP access to TCP 8080 is intended only for an accepted local or isolated evaluation boundary.
 
 Do not open additional ports or permit broad outbound access merely to make deployment easier.
 

@@ -172,7 +172,15 @@ A known Microsoft Graph v1.0 limitation can omit service principals from GET /gr
 
 The release does not use Microsoft Graph beta APIs as a production workaround and does not substitute transitive membership for direct relationship semantics.
 
-Ports, image identifiers, and remaining outbound-destination requirements must still be populated from the frozen release artifact before RC1 distribution.
+The frozen Core v1.0 network contract publishes only the USOP web ingress to the customer host. The default host port is TCP 8080. API TCP 8000 and PostgreSQL TCP 5432 remain Docker-internal.
+
+Runtime Microsoft Entra integration requires DNS resolution and outbound TCP 443 access to login.microsoftonline.com and graph.microsoft.com. Broad unrestricted Internet egress is not required.
+
+The bundled ingress is HTTP. Network-accessible deployments require customer-controlled TLS termination ahead of USOP.
+
+Explicit HTTP/HTTPS proxy configuration and IPv6-only Docker egress are not validated Design Partner v1 deployment contracts.
+
+Image identifiers must still be populated from the frozen release artifact before RC1 distribution.
 
 ## Deployment Highlights
 

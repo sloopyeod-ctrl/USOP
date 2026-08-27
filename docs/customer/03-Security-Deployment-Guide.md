@@ -77,67 +77,79 @@ The customer remains responsible for:
 
 ## Network Requirements
 
-The final RC1 package must define the exact inbound and outbound network requirements.
+USOP Core v1.0 uses a deliberately narrow customer network boundary.
 
-No customer release should rely on undocumented firewall behavior.
+The frozen Docker Compose release publishes only the web ingress service to the customer host.
 
 ### Inbound Access
 
-The release documentation must identify:
+| Path | Port | Exposure | Purpose |
+| --- | ---: | --- | --- |
+| Customer browser or approved ingress -> USOP web | TCP ${USOP_WEB_PORT}; default 8080 | Host-published | User interface, supported API routes, health, and readiness |
+| USOP web -> API | TCP 8000 | Docker-internal only | nginx reverse proxy to FastAPI |
+| API and migration service -> PostgreSQL | TCP 5432 | Docker-internal only | Application persistence and schema migration |
 
-- the port used to access the USOP user interface;
-- the port or path used for the documented health endpoint;
-- whether the backend is exposed directly or only through an application gateway/reverse proxy;
-- whether administrative access is required from outside the host.
+The frozen release does not publish API TCP 8000 or PostgreSQL TCP 5432 to the customer host.
 
-Only ports required by the frozen release architecture should be exposed.
-
-Do not publish development-only ports as customer requirements unless they are part of the supported release configuration.
+Customers must not expose TCP 8000 or TCP 5432 merely to operate USOP.
 
 ### Outbound Access
 
-The release documentation must identify all required outbound destinations.
+The Microsoft Entra Core v1.0 runtime requires outbound HTTPS access from the API container to:
 
-For Microsoft Entra deployments, this will include the Microsoft identity and Microsoft Graph endpoints required by the validated connector implementation.
+| Destination | Port | Purpose |
+| --- | ---: | --- |
+| login.microsoftonline.com | TCP 443 | Graph client-credential token acquisition and Entra signing-key retrieval |
+| graph.microsoft.com | TCP 443 | Microsoft Graph v1.0 collection operations |
 
-If an external secret provider is used, the customer may also need outbound access to the supported provider endpoint.
+Broad unrestricted Internet egress is not a Core v1.0 runtime requirement.
 
-Exact destinations must be validated against the frozen application before release.
+Build-time access to registries and software package repositories is separate from the runtime network contract.
 
 ### DNS
 
-The container host and relevant containers must be able to resolve all documented external service endpoints.
+The Docker host and API container must resolve:
 
-If the customer uses internal DNS controls, split DNS, or egress filtering, required destinations should be tested before first synchronization.
+- login.microsoftonline.com
+- graph.microsoft.com
+
+Do not hard-code Microsoft IP addresses as the USOP network contract.
 
 ### Proxy Support
 
-Proxy behavior must be explicitly documented.
+Explicit customer HTTP or HTTPS proxy configuration has not been validated for the Core v1.0 Design Partner release.
 
-If the frozen release supports HTTP or HTTPS proxy configuration, the exact configuration contract must be recorded before RC1.
+USOP therefore does not claim a frozen HTTP_PROXY, HTTPS_PROXY, or NO_PROXY deployment contract.
 
-If proxy support is not validated, document that limitation rather than implying support.
+### IP Address Family
+
+IPv4 runtime egress has been exercised during release validation.
+
+IPv6-only Docker egress has not been validated as a supported Core v1.0 deployment requirement.
+
+USOP does not require customers to enable IPv6 solely for USOP.
 
 ### Firewall Principle
 
 > Permit only the network paths required by the validated release.
 
-Do not recommend broad outbound access as a workaround.
+Do not recommend broad inbound exposure or unrestricted outbound Internet access as a workaround.
 
 ## TLS and Certificates
 
-USOP customer deployments should use TLS for user-facing access where the application is exposed beyond a trusted local boundary.
+The bundled USOP web container listens on HTTP TCP 8080.
 
-The final deployment guide must define whether TLS is terminated by:
+For local or isolated Design Partner evaluation, direct HTTP access may be used only where the customer accepts that trusted evaluation boundary.
 
-- USOP directly;
-- a customer reverse proxy;
-- an application gateway;
-- another supported ingress component.
+For user-facing access beyond a trusted local or isolated boundary, TLS termination is required ahead of USOP.
 
-The customer owns production certificates unless the release explicitly provides a documented certificate-management mechanism.
+The supported pattern is customer-controlled TLS termination through a reverse proxy, application gateway, load balancer, or equivalent approved ingress, with USOP web TCP 8080 as the upstream application service.
 
-Do not ship private keys or customer certificates inside the release package.
+The customer owns production DNS names, certificates, certificate rotation, TLS policy, and external ingress security controls.
+
+USOP Core v1.0 does not require customer TLS private keys or certificates to be embedded in the release package.
+
+Direct exposure of HTTP TCP 8080 across an untrusted or production user network is not the recommended deployment pattern.
 
 ## Microsoft Entra Requirements
 
@@ -441,17 +453,26 @@ The release package should not require weakening host security controls.
 
 ## Reverse Proxy and Ingress
 
-If a reverse proxy or application gateway is part of the supported customer architecture, the release must document:
+A customer-controlled reverse proxy, application gateway, load balancer, or equivalent approved ingress is the supported security boundary for network-accessible TLS termination.
 
-- supported pattern;
-- upstream service destination;
-- headers required by the application;
-- TLS termination expectations;
-- timeout requirements;
-- WebSocket behavior if applicable;
-- health-check behavior.
+The upstream application destination is the USOP web service on TCP 8080.
 
-If no reverse proxy pattern has been validated, document that limitation.
+The bundled nginx layer forwards these standard request headers to the API:
+
+- Host
+- X-Forwarded-Proto
+- X-Forwarded-For
+
+The supported health and readiness paths are:
+
+- /health
+- /ready
+
+USOP Core v1.0 does not require WebSocket support for the frozen release routes.
+
+Customer ingress timeout, certificate, cipher, WAF, and external authentication policy remain customer-controlled unless a later release explicitly freezes additional requirements.
+
+The reverse proxy or ingress must not expose Docker-internal API TCP 8000 or PostgreSQL TCP 5432 as alternate customer ingress paths.
 
 ## Security Validation Before Release
 
