@@ -121,7 +121,21 @@ The validated Core connector does not require Directory.Read.All, Group.Read.All
 
 The permission matrix was validated against the exact connector operations and selected properties used by the release.
 
-Microsoft Graph API behavior remains an external dependency. Permission sufficiency does not guarantee that every Microsoft Graph endpoint returns every possible directory object type in every API version. Service-principal membership completeness is treated separately from permission authorization and remains subject to the supported Microsoft Graph v1.0 behavior of the frozen release.
+Microsoft Graph API behavior remains an external dependency. Permission sufficiency does not guarantee that every Microsoft Graph endpoint returns every possible directory object type in every API version.
+
+### Service-Principal Group Membership
+
+USOP Core v1.0 does not claim complete service-principal group-membership visibility.
+
+The frozen connector collects direct group membership from Microsoft Graph v1.0 GET /groups/{id}/members. Microsoft documents a known issue in which service principals are not listed as group members through that v1.0 operation.
+
+Release validation reproduced the limitation against a live Microsoft Entra tenant. A service principal directly assigned to the validation group was absent from GET /groups/{id}/members but was visible through GET /groups/{id}?$expand=members as #microsoft.graph.servicePrincipal.
+
+USOP does not use the beta Graph endpoint as a production workaround.
+
+USOP also does not treat $expand=members as an authoritative replacement for the paginated direct-membership collection, and it does not substitute transitiveMembers for direct relationship semantics.
+
+Until a stable, paginated, least-privilege collection strategy is validated, absence of a service-principal membership edge in USOP is not proof that the relationship is absent from Microsoft Entra.
 
 ## Secret Provider Limitations
 

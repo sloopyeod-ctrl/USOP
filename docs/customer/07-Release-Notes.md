@@ -166,6 +166,12 @@ The Microsoft Graph application permission contract for the frozen Core connecto
 
 These permissions require administrator consent and were independently validated against the exact Core connector operations. Directory.Read.All, Group.Read.All, Application.Read.All, and Device.Read.All are not required by the validated Core v1.0 workflow.
 
+The Microsoft Entra connector uses the stable Microsoft Graph v1.0 direct-membership collection.
+
+A known Microsoft Graph v1.0 limitation can omit service principals from GET /groups/{id}/members. USOP Core v1.0 therefore does not claim complete service-principal group-membership visibility.
+
+The release does not use Microsoft Graph beta APIs as a production workaround and does not substitute transitive membership for direct relationship semantics.
+
 Ports, image identifiers, and remaining outbound-destination requirements must still be populated from the frozen release artifact before RC1 distribution.
 
 ## Deployment Highlights

@@ -195,6 +195,41 @@ All three permissions are Microsoft Graph application permissions used by the US
 
 If a permission is not needed by the frozen RC1 artifact, it must not be requested.
 
+## Microsoft Graph Membership Completeness
+
+USOP Core v1.0 collects direct Microsoft Entra group membership through the stable Microsoft Graph v1.0 endpoint:
+
+- GET /groups/{id}/members
+
+This collection is paginated and is the authoritative supported source for direct group-membership relationships in the frozen Core connector.
+
+Microsoft Graph v1.0 has a documented service-principal limitation on this endpoint. Service principals that are direct members of a group may be omitted from GET /groups/{id}/members.
+
+USOP Core v1.0 therefore does not claim complete service-principal group-membership visibility.
+
+Release validation reproduced this behavior against a live Microsoft Entra tenant:
+
+- GET /groups/{id}/members returned no service-principal member for the validation group;
+- GET /groups/{id}?$expand=members returned the directly assigned service principal;
+- the returned expanded object identified the member as #microsoft.graph.servicePrincipal.
+
+The frozen Core connector does not substitute GET /groups/{id}?$expand=members as the authoritative membership source because the release has not established an independently paginated completeness contract for the expanded members navigation property.
+
+The frozen Core connector does not substitute /groups/{id}/transitiveMembers because transitive membership has different relationship semantics from the direct membership modeled by USOP. Live release validation also did not return the validation service principal through that endpoint.
+
+The frozen Core connector does not use Microsoft Graph beta endpoints to repair this limitation. Beta API behavior is outside the supported Core v1.0 production contract.
+
+A future release may remove this limitation only after a stable Microsoft Graph collection strategy is proven to preserve:
+
+- direct relationship semantics;
+- service-principal visibility;
+- collection completeness;
+- pagination behavior;
+- least-privilege authorization;
+- deterministic reconciliation.
+
+Until that validation exists, the absence of a service-principal group-membership edge in USOP must not be interpreted as proof that the relationship does not exist in Microsoft Entra.
+
 ## Least Privilege
 
 USOP should follow least privilege across:

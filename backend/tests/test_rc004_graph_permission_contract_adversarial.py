@@ -138,9 +138,21 @@ def test_gate_exact_supported_graph_operations_are_documented():
 def test_gate_service_principal_membership_limitation_remains_visible():
     text = _text(KNOWN_LIMITATIONS)
 
-    assert "Service-principal membership completeness" in text
+    assert "### Service-Principal Group Membership" in text
+    assert (
+        "does not claim complete service-principal group-membership visibility"
+        in text
+    )
     assert "Microsoft Graph v1.0" in text
-    assert "permission authorization" in text
+    assert "GET /groups/{id}/members" in text
+    assert (
+        "absence of a service-principal membership edge in USOP"
+        in text
+    )
+    assert (
+        "is not proof that the relationship is absent from Microsoft Entra"
+        in text
+    )
 
 
 def test_gate_release_notes_publish_frozen_permission_contract():
