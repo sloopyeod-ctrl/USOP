@@ -44,6 +44,10 @@ services:
       context: ./backend
       dockerfile: Dockerfile.release
     restart: unless-stopped
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     environment:
       ENVIRONMENT: production
       DEBUG: "false"
@@ -83,6 +87,14 @@ services:
       context: ./frontend
       dockerfile: Dockerfile.release
     restart: unless-stopped
+    user: nginx
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /run:rw,uid=101,gid=101,mode=755
+      - /var/cache/nginx:rw,uid=101,gid=101,mode=755
     depends_on:
       api:
         condition: service_healthy
