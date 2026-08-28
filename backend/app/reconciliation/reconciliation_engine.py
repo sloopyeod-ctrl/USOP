@@ -54,6 +54,7 @@ class ReconciliationEngine:
         summary = {
             "identities_created": 0,
             "identities_updated": 0,
+            "organizational_identities_created": 0,
             "accounts_created": 0,
             "accounts_updated": 0,
             "accounts_skipped": 0,
@@ -71,6 +72,11 @@ class ReconciliationEngine:
         }
 
         self._reconcile_identities(
+            normalized.get("identities", []),
+            summary,
+        )
+
+        self._ensure_organizational_identity_placements(
             normalized.get("identities", []),
             summary,
         )
@@ -200,6 +206,100 @@ class ReconciliationEngine:
             summary["identities_created"] += 1
 
         self.db.flush()
+
+    def _ensure_organizational_identity_placements(
+        self,
+        identities: list[dict],
+        summary: dict,
+    ) -> None:
+        """
+        Place identities observed in this synchronization into
+        the active Organization before account reconciliation.
+
+        Placement uses the current reconciliation transaction.
+        It flushes generated identifiers but never commits.
+        """
+
+        if self.organization_id is None:
+            return
+
+        for identity_record in identities:
+            source_system = identity_record.get(
+                "source_system"
+            )
+            source_identifier = identity_record.get(
+                "source_identifier"
+            )
+            primary_email = identity_record.get(
+                "primary_email"
+            )
+
+            identity = None
+
+            if source_system and source_identifier:
+                identity = (
+                    self.db.query(Identity)
+                    .filter(
+                        Identity.source_system
+                        == source_system,
+                        Identity.source_identifier
+                        == source_identifier,
+                    )
+                    .first()
+                )
+
+            if identity is None and primary_email:
+                identity = (
+                    self.db.query(Identity)
+                    .filter(
+                        func.lower(Identity.primary_email)
+                        == primary_email.lower()
+                    )
+                    .first()
+                )
+
+            if identity is None:
+                continue
+
+            self._ensure_organizational_identity_placement(
+                identity=identity,
+                summary=summary,
+            )
+
+    def _ensure_organizational_identity_placement(
+        self,
+        *,
+        identity: Identity,
+        summary: dict,
+    ) -> OrganizationalIdentity | None:
+        """
+        Ensure one organization-owned placement for an observed
+        canonical Identity without committing the transaction.
+        """
+
+        if self.organization_id is None:
+            return None
+
+        existing = self._resolve_organizational_identity(
+            identity_id=identity.id
+        )
+
+        if existing is not None:
+            return existing
+
+        placement = OrganizationalIdentity(
+            organization_id=self.organization_id,
+            identity_id=identity.id,
+            display_name=identity.display_name,
+            status="Active",
+        )
+
+        self.db.add(placement)
+        self.db.flush()
+
+        summary["organizational_identities_created"] += 1
+
+        return placement
 
     def _reconcile_accounts(
         self,

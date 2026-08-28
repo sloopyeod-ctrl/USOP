@@ -98,3 +98,45 @@ def test_gate_api_remains_internal_only():
 
     assert "ports:" not in api
     assert "8000:8000" not in api
+
+def test_gate_api_root_filesystem_is_read_only():
+    text = _text(COMPOSE)
+
+    api_start = text.index("  api:")
+    web_start = text.index("  web:")
+    api = text[api_start:web_start]
+
+    assert "    read_only: true" in api
+
+
+def test_gate_web_root_filesystem_is_read_only():
+    text = _text(COMPOSE)
+
+    web_start = text.index("  web:")
+    web = text[web_start:]
+
+    assert "    read_only: true" in web
+
+
+def test_gate_api_has_only_controlled_transient_tmpfs():
+    text = _text(COMPOSE)
+
+    api_start = text.index("  api:")
+    web_start = text.index("  web:")
+    api = text[api_start:web_start]
+
+    assert "    tmpfs:" in api
+    assert (
+        "      - /tmp:rw,nosuid,nodev,noexec,mode=1777"
+        in api
+    )
+
+
+def test_gate_postgres_is_not_falsely_declared_immutable():
+    text = _text(COMPOSE)
+
+    postgres_start = text.index("  postgres:")
+    migrate_start = text.index("  migrate:")
+    postgres = text[postgres_start:migrate_start]
+
+    assert "    read_only: true" not in postgres

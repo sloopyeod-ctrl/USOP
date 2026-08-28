@@ -98,7 +98,7 @@ class AuthorizationWorkItemGenerator:
         return {
             "authorization_event_id": event.id,
             "event_type": event.event_type,
-            "detected_at": event.detected_at,
+            "detected_at": event.detected_at.isoformat(),
             "risk_level": event.risk_level,
             "is_material": event.is_material,
             "role_name": cls._role_label(event),

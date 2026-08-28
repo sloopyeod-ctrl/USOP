@@ -64,3 +64,49 @@ def test_material_event_creates_generic_work_item():
     )
     assert kwargs["priority"] == "Critical"
     assert "framework" not in kwargs
+
+
+def test_authorization_work_item_snapshot_is_json_serializable():
+    from datetime import UTC, datetime
+    from types import SimpleNamespace
+    import json
+
+    from app.services.authorization_work_item_generator import (
+        AuthorizationWorkItemGenerator,
+    )
+
+    detected_at = datetime(
+        2026,
+        8,
+        28,
+        15,
+        0,
+        tzinfo=UTC,
+    )
+
+    event = SimpleNamespace(
+        id="authorization-event-001",
+        event_type="ROLE_ASSIGNED",
+        detected_at=detected_at,
+        risk_level="High",
+        is_material=True,
+        evidence_json={
+            "classification": {
+                "capability": "Global Administrator",
+                "classification_source": "USOP",
+                "scope_classification": "Directory",
+                "assignment_classification": "Direct",
+                "evidence": {
+                    "role_name": "Global Administrator",
+                },
+            }
+        },
+    )
+
+    snapshot = AuthorizationWorkItemGenerator._snapshot(event)
+
+    assert snapshot["detected_at"] == (
+        "2026-08-28T15:00:00+00:00"
+    )
+
+    json.dumps(snapshot)
