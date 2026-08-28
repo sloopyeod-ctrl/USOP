@@ -1,383 +1,330 @@
-# USOP Core v1.0 - Installation Guide
+# USOP Core - Installation Guide
 
-**Document:** 01-Installation-Guide  
-**Release Track:** USOP Core v1.0 Release Candidate  
-**Status:** Release Candidate Draft  
+**Document:** 01-Installation-Guide
+**Release:** 0.14.0-dp2-final
+**Release Stage:** Design Partner Release Candidate
+**Status:** Frozen Design Partner Documentation
 **Audience:** System Administrators, Security Engineers, Platform Engineers, Design Partners
 
 ## Purpose
 
-This guide defines the first-time installation workflow for USOP Core v1.0.
+This guide defines the validated first-time installation procedure for USOP Core 0.14.0-dp2-final.
 
-Its goal is to allow an administrator who has never deployed USOP to install the release package, verify platform health, and proceed to identity-provider configuration without developer assistance.
-
-This guide intentionally does not duplicate the Secrets Configuration Guide or Security Deployment Guide. Those documents provide the detailed credential and network/security requirements referenced here.
-
-## Expected Outcome
-
-At the end of this guide, the administrator should have:
-
-- obtained the approved USOP Core release package;
-- prepared the host environment;
-- created customer-owned configuration from the provided template;
-- started the USOP containers;
-- verified container and application health;
-- opened the USOP user interface;
-- confirmed the expected release version;
-- reached the point where Microsoft Entra ID can be configured.
-
-The installation is not considered complete until health verification succeeds.
+The procedure is based on the clean-room installation performed against the frozen Design Partner package. It does not require the USOP source tree, development virtual environment, source build contexts, or developer workstation state.
 
 ## Installation Principle
 
-USOP Core is intended to be delivered as a repeatable, environment-neutral container deployment.
+USOP is distributed as frozen Docker image archives plus a customer deployment contract.
 
-The distributed release package must not contain customer credentials, development credentials, developer tenant identifiers, test secrets, machine-specific filesystem paths, or undocumented environment assumptions.
+Customer-specific credentials and configuration are supplied by the customer and are not embedded in the release images or documentation.
 
-Customer-specific values are supplied during deployment.
-
-## Before You Begin
-
-Do not begin installation until the release package includes the final versions of:
-
-- container image or image references;
-- Docker Compose configuration;
-- `.env.template`;
-- Secrets Configuration Guide;
-- Security Deployment Guide;
-- Release Notes;
-- Known Limitations;
-- release version identifier;
-- release checksums.
-
-If any required release artifact is missing, stop and obtain the complete release package.
+Do not substitute source-built images or development Compose files for the artifacts supplied in the Design Partner package.
 
 ## Required Administrative Access
 
-The deployment team should identify personnel able to:
+The deployment team must be able to:
 
-- administer the target container host;
-- create and manage local deployment files;
-- configure required network access;
-- create or approve Microsoft Entra application access;
-- provide customer-owned secrets or secret references;
-- validate local firewall, proxy, DNS, and TLS requirements.
+- administer the target Docker host;
+- create and protect local deployment configuration;
+- load supplied Docker image archives;
+- configure local firewall, DNS, proxy, and TLS policy;
+- create or approve required Microsoft Entra application configuration;
+- provide customer-owned credentials;
+- verify application health.
 
-USOP should not require a developer to perform routine customer installation.
+Routine installation should not require USOP developer assistance.
 
-## Supported Deployment Model
-
-USOP Core v1.0 uses a Docker-based deployment model.
-
-The release package is expected to provide a Docker Compose configuration that defines the supported USOP services and their relationships.
-
-The exact supported host operating systems, Docker versions, Compose versions, minimum CPU, memory, storage, and exposed ports must be frozen during the RC deployment-validation phase and recorded in this guide before customer release.
-
-**Do not infer unsupported requirements from a developer workstation.**
-
-## Release Package Layout
-
-The final customer package should follow a predictable structure similar to:
+## Validated Package Layout
 
 ```text
-USOP-Core-v1.0-RC1/
-|
-|-- README.md
+USOP-Core-0.14.0-dp2-final/
+|-- .env.release.example
+|-- CHECKSUMS.sha256
 |-- docker-compose.yml
-|-- .env.template
 |-- VERSION
-|-- CHECKSUMS
-|
 |-- docs/
-|   `-- customer/
-|       |-- 01-Installation-Guide.md
-|       |-- 02-Secrets-Configuration-Guide.md
-|       |-- 03-Security-Deployment-Guide.md
-|       |-- 04-User-Guide.md
-|       |-- 05-Design-Partner-Guide.md
-|       |-- 06-Feedback-Questionnaire.md
-|       |-- 07-Release-Notes.md
-|       `-- 08-Known-Limitations.md
-|
-`-- sample-config/
+|   |-- 01-Installation-Guide.md
+|   |-- 02-Secrets-Configuration-Guide.md
+|   |-- 03-Security-Deployment-Guide.md
+|   |-- 04-User-Guide.md
+|   |-- 05-Design-Partner-Guide.md
+|   |-- 06-Feedback-Questionnaire.md
+|   |-- 07-Release-Notes.md
+|   -- 08-Known-Limitations.md
+-- images/
+    |-- usop-core-api-0.14.0-dp2-final.tar
+    |-- usop-core-postgres-0.14.0-dp2-final.tar
+    -- usop-core-web-0.14.0-dp2-final.tar
 ```
 
-## Step 1 - Verify the Release Package
+Stop if any required package component is missing.
 
-Before changing configuration, verify that the release package is complete.
+## Step 1 - Verify Package Integrity
 
-Confirm that the expected release version, checksums, required documentation, `.env.template`, and Compose file are present and that no customer or developer secrets are embedded in distributed files.
+Before loading images or creating configuration, verify every file against CHECKSUMS.sha256.
 
-## Step 2 - Prepare a Deployment Directory
+Do not continue when a required file is missing or its SHA-256 digest does not match the supplied manifest.
 
-Create a dedicated directory for the USOP deployment.
+## Step 2 - Load the Frozen Images
 
-Maintain customer-specific configuration separately from immutable release artifacts whenever practical.
+Load all three supplied image archives:
+
+```powershell
+docker load -i .\images\usop-core-api-0.14.0-dp2-final.tar
+docker load -i .\images\usop-core-web-0.14.0-dp2-final.tar
+docker load -i .\images\usop-core-postgres-0.14.0-dp2-final.tar
+```
+
+The expected image tags are:
+
+```text
+usop-core-api:0.14.0-dp2-final
+usop-core-web:0.14.0-dp2-final
+usop-core-postgres:0.14.0-dp2-final
+```
+
+The supplied docker-compose.yml references these frozen images and contains no customer-side build contexts.
 
 ## Step 3 - Create Customer Configuration
 
-Copy the distributed environment template to the customer configuration file expected by the release package.
-
-Example pattern:
-
-```text
-.env.template  ->  .env
-```
-
-Do not place real credentials into `.env.template`.
-
-Before adding secrets, read:
-
-```text
-02-Secrets-Configuration-Guide.md
-```
-
-Where external secret-provider references are supported, the provider and secret reference should be configured explicitly rather than assuming that a UUID identifies a particular secrets platform.
-
-## Step 4 - Review Security and Network Requirements
-
-Before starting the application, read:
-
-```text
-03-Security-Deployment-Guide.md
-```
-
-Confirm the frozen Core v1.0 network contract before startup:
-
-- publish only the USOP web ingress using the configured USOP_WEB_PORT, default TCP 8080;
-- do not publish API TCP 8000;
-- do not publish PostgreSQL TCP 5432;
-- permit outbound TCP 443 from the API runtime to login.microsoftonline.com;
-- permit outbound TCP 443 from the API runtime to graph.microsoft.com;
-- provide DNS resolution for both Microsoft destinations;
-- use customer-controlled TLS termination ahead of USOP for network-accessible deployments;
-- do not assume explicit HTTP or HTTPS proxy support;
-- do not require broad unrestricted Internet egress.
-
-Direct HTTP access to TCP 8080 is intended only for an accepted local or isolated evaluation boundary.
-
-Do not open additional ports or permit broad outbound access merely to make deployment easier.
-
-## Step 5 - Validate Configuration Before Startup
-
-The final release process should include a configuration-validation step before operational synchronization begins.
-
-At minimum, validate that:
-
-- all required non-secret values are present;
-- the selected secret mode is valid;
-- required secret values or secret references are present;
-- container configuration can be parsed;
-- required port mappings do not conflict;
-- storage locations are available;
-- required release files exist.
-
-The exact validation command will be frozen during RC-002 deployment packaging.
-
-**Customer release must not require administrators to discover configuration errors through application stack traces.**
-
-## Step 6 - Pull or Load the Approved Images
-
-Use only the container images identified by the approved release package.
-
-The exact command depends on the final distribution method selected during RC packaging.
-
-For registry-based distribution, Docker Compose will obtain the pinned release images.
-
-For offline or controlled-environment distribution, the release may instead provide approved image archives and corresponding checksums.
-
-## Step 7 - Start USOP Core
-
-The final deployment is expected to use Docker Compose.
-
-The target startup pattern is:
+Copy the supplied environment template:
 
 ```powershell
-docker compose up -d
+Copy-Item .env.release.example .env.release
 ```
 
-Do not treat this command alone as proof of successful installation.
+Replace every required CHANGE_ME value with customer-owned configuration.
 
-Proceed immediately to health verification.
+Do not modify .env.release.example with real credentials. Treat .env.release as sensitive deployment configuration.
+
+Before entering credentials, read 02-Secrets-Configuration-Guide.md.
+
+## Step 4 - Configure Required Release Values
+
+The frozen customer deployment requires values for:
+
+```text
+POSTGRES_DB
+POSTGRES_USER
+POSTGRES_PASSWORD
+USOP_SECRET_PROVIDER
+
+MS_GRAPH_TENANT_ID
+MS_GRAPH_CLIENT_ID
+MS_GRAPH_CLIENT_SECRET
+
+USOP_AUTH_ENTRA_TENANT_ID
+USOP_AUTH_ENTRA_AUDIENCE
+USOP_AUTH_ENTRA_REQUIRED_SCOPE
+
+USOP_WEB_PORT
+```
+
+For this Design Partner release:
+
+```text
+USOP_SECRET_PROVIDER=env
+USOP_AUTH_ENTRA_REQUIRED_SCOPE=access_as_user
+```
+
+Generate a unique high-entropy PostgreSQL password. Do not reuse examples, validation passwords, or credentials from another environment.
+
+Microsoft Graph credentials and inbound USOP API authentication are separate trust boundaries. See the Secrets Configuration Guide.
+
+## Step 5 - Review Network and Security Requirements
+
+Before startup, read 03-Security-Deployment-Guide.md.
+
+The validated network contract is:
+
+- publish only the USOP web ingress using USOP_WEB_PORT, default TCP 8080;
+- do not publish API TCP 8000;
+- do not publish PostgreSQL TCP 5432;
+- permit required API egress to Microsoft identity and Graph endpoints over TCP 443;
+- provide DNS resolution for required Microsoft endpoints;
+- use customer-controlled TLS termination for network-accessible deployments;
+- do not open additional ports merely to simplify installation.
+
+Direct HTTP access to the web port is intended only for an accepted local or isolated evaluation boundary.
+
+## Step 6 - Validate Compose Configuration
+
+From the package directory run:
+
+```powershell
+docker compose -f docker-compose.yml --env-file .env.release config
+```
+
+This command must complete successfully before startup.
+
+Missing required values must be corrected rather than replaced with fake placeholders.
+
+## Step 7 - Start USOP
+
+Run:
+
+```powershell
+docker compose -f docker-compose.yml --env-file .env.release up -d
+```
+
+The validated startup sequence is:
+
+```text
+PostgreSQL healthy
+        |
+        v
+migrate: alembic upgrade head
+        |
+        v
+API healthy
+        |
+        v
+Web healthy
+```
+
+The migrate service is intentionally one-shot and should exit with code 0 after the schema reaches the release head.
 
 ## Step 8 - Verify Container State
 
-Confirm that all services defined by the release Compose file are running as expected.
+Run:
 
-Unexpectedly stopped or repeatedly restarting containers must be resolved before proceeding.
+```powershell
+docker compose -f docker-compose.yml --env-file .env.release ps -a
+```
 
-## Step 9 - Verify Application Health
-
-USOP includes an application health endpoint.
-
-The current development baseline has used:
+Expected state:
 
 ```text
+postgres   Up (healthy)
+migrate    Exited (0)
+api        Up (healthy)
+web        Up (healthy)
+```
+
+Repeated restarts, unhealthy services, or a non-zero migration exit require investigation before use.
+
+## Step 9 - Verify Application Routes
+
+Using the configured USOP_WEB_PORT, verify:
+
+```text
+GET /
 GET /health
+GET /ready
 ```
 
-and has returned application health and version information.
+The clean-room acceptance deployment returned HTTP 200 from all three routes.
 
-For the customer release, verify that the frozen deployment exposes the documented health endpoint through the supported access path.
+The health response reported USOP runtime version 0.14.0 and the readiness response reported the API ready.
 
-The expected result must show a healthy platform state and the expected USOP Core release version.
+## Step 10 - Verify Database Migration
 
-Do not continue if the application reports an unhealthy state or an unexpected version.
-
-## Step 10 - Open the User Interface
-
-Open the documented USOP application URL in a supported browser.
-
-A successful first launch should present the USOP interface without blank pages, unresolved API errors, development-only banners, or developer tenant data.
-
-## Step 11 - Confirm the Initial Operational View
-
-For an environment that has not yet completed provider configuration, the interface should present an intentional empty or configuration-required state rather than fabricated operational data.
-
-USOP must never present synthetic customer health, connector health, identities, or investigation results as if they were observed operational truth.
-
-## Step 12 - Configure Microsoft Entra ID
-
-Do not place Entra credentials directly into source code, Compose files, screenshots, documentation, or shared messages.
-
-Continue with:
+The frozen Design Partner schema head is:
 
 ```text
-02-Secrets-Configuration-Guide.md
+a71d9c4e2b63
 ```
 
-and:
+A fresh validated installation produced 27 public PostgreSQL tables and contained no preloaded customer operational data.
+
+Customers normally do not need to query PostgreSQL directly during routine installation. These values are release-validation references for troubleshooting and support.
+
+## Step 11 - Open the User Interface
+
+Open the USOP web URL using the configured host and USOP_WEB_PORT.
+
+For a local isolated deployment using the default port:
 
 ```text
-03-Security-Deployment-Guide.md
+http://localhost:8080/
 ```
 
-Those guides will define tenant and application identifiers, supported secret-source modes, credential/reference handling, required Microsoft Graph permissions, admin-consent expectations, network destinations, and least-privilege guidance.
+For network-accessible deployments, use the customer-controlled TLS access path defined by the Security Deployment Guide.
 
-## Step 13 - Verify Provider Connectivity
+## Step 12 - Microsoft Entra Configuration
 
-After Entra configuration is complete, use the documented synchronization or provider-validation workflow.
+This release uses Microsoft Entra for two distinct purposes:
 
-The release is not operationally ready until USOP can authenticate using the configured customer-owned secret path, reach required Microsoft endpoints, collect supported identity information, synchronize without exposing credentials, and surface a successful operational state.
+1. outbound Microsoft Graph collection by USOP;
+2. inbound delegated authentication of callers to the USOP API.
 
-## Step 14 - Begin the First Investigation
+Both configuration groups are required by the frozen customer Compose contract.
 
-Once provider synchronization is healthy, proceed to the USOP user workflow:
+Do not automatically substitute Graph client configuration for the inbound API audience.
 
-```text
-Executive Dashboard
-        |
-        v
-Open Investigation
-        |
-        v
-Mission Brief
-        |
-        v
-Decision Intelligence
-        |
-        v
-Organizational Experience
-        |
-        v
-Organizational Decision
-        |
-        v
-Operational Pulse
-```
+See 02-Secrets-Configuration-Guide.md and 03-Security-Deployment-Guide.md.
 
-For product usage instructions, continue to:
+## Restart Behavior
 
-```text
-04-User-Guide.md
-```
+A normal Docker Compose restart was validated against the clean-room deployment.
 
-## Health Verification Standard
+After restart:
 
-Installation is successful only when all applicable checks pass:
+- PostgreSQL returned healthy;
+- the migration service completed with exit code 0;
+- the schema remained at a71d9c4e2b63;
+- API and Web returned healthy;
+- /health returned HTTP 200;
+- /ready returned HTTP 200;
+- the fresh operational database remained unchanged.
 
-- [ ] Release version matches the approved package.
-- [ ] Required containers are running.
-- [ ] Health endpoint reports healthy.
-- [ ] UI loads successfully.
-- [ ] No development credentials or tenant data are present.
-- [ ] Customer configuration loads without exposed secrets.
-- [ ] Provider authentication succeeds after configuration.
-- [ ] Initial synchronization completes successfully.
-- [ ] Operational Pulse reports an expected state.
-- [ ] First investigation can be opened.
+## Runtime Security Characteristics
+
+The customer deployment contract preserves the release hardening controls:
+
+- API runs as the non-root usop user;
+- Web runs as the non-root nginx user;
+- API and Web root filesystems are read-only;
+- all Linux capabilities are dropped from API and Web;
+- privilege escalation is disabled;
+- API /tmp is a controlled writable tmpfs;
+- API and PostgreSQL are internal-only by default.
 
 ## Troubleshooting Principles
 
-Use this order:
+When installation fails:
 
-1. Verify release version.
-2. Verify container state.
-3. Verify health endpoint.
-4. Verify configuration completeness.
-5. Verify network access.
-6. Verify secret-source access.
-7. Verify Entra application configuration.
-8. Review application logs for the failing service.
-9. Consult Known Limitations.
-10. Escalate with sanitized diagnostic information.
+1. stop at the failing layer;
+2. verify package integrity;
+3. verify .env.release configuration without printing secrets;
+4. run docker compose config;
+5. inspect docker compose ps -a;
+6. inspect only the logs needed for the failed service;
+7. verify DNS and required outbound connectivity;
+8. verify Entra application configuration and consent;
+9. do not weaken security controls merely to make the stack start.
 
-Never send credentials, tokens, `.env` contents, or private keys as troubleshooting evidence.
+Never include .env.release, access tokens, client secrets, or other credentials in support bundles.
 
-## Common Installation Failure Categories
+## Clean-Room Acceptance
 
-### Container Does Not Start
+USOP Core 0.14.0-dp2-final passed clean-room installation from the packaged Docker archives using a fresh Compose project and fresh PostgreSQL volume.
 
-Check image availability, Compose syntax, port conflicts, storage permissions, and missing required configuration.
-
-### Health Endpoint Is Unhealthy
-
-Check dependent services, database connectivity, startup logs, configuration validation, and expected release version.
-
-### UI Cannot Reach Backend
-
-Check documented port mappings, reverse proxy configuration if applicable, browser/network path, frontend API configuration, and container network state.
-
-### Entra Authentication Fails
-
-Do not rotate or broaden permissions blindly.
-
-Validate tenant identifier, application/client identifier, secret or secret reference, secret-provider access, configured Graph permissions, admin consent, and outbound connectivity.
-
-### Synchronization Completes With No Expected Data
-
-Confirm that the application registration has the documented permissions and that the test organization contains supported objects.
-
-Do not assume an empty result indicates a successful production configuration.
-
-## Clean-Room Installation Requirement
-
-Before USOP Core v1.0 RC1 is provided to a design partner, the final release package must be installed on a clean host using only the customer-facing release package and documentation.
-
-The person performing the clean-room installation should not rely on undocumented developer knowledge, source-tree configuration, previously created local secrets, development database state, VS Code setup, or developer-specific environment variables.
-
-Any missing instruction discovered during clean-room installation must be corrected before release freeze.
-
-## Release Freeze Requirement
-
-The exact artifact that passes clean-room installation and final regression testing becomes the release candidate.
-
-After freeze, no dependency updates, container-image changes, deployment-behavior documentation changes, configuration-contract changes, or application code changes may be introduced without reopening validation.
-
-## Next Documents
-
-Continue in this order:
-
-1. `02-Secrets-Configuration-Guide.md`
-2. `03-Security-Deployment-Guide.md`
-3. `04-User-Guide.md`
-4. `05-Design-Partner-Guide.md`
-5. `06-Feedback-Questionnaire.md`
-6. `07-Release-Notes.md`
-7. `08-Known-Limitations.md`
+The validation did not require the source tree or development build contexts.
 
 ## Installation Success Criteria
 
-> **A design partner who has never installed USOP should be able to deploy the approved release package, verify platform health, and reach provider configuration without developer assistance.**
+Installation is successful when:
 
-If that outcome cannot be achieved, the release is not ready.
+- package checksums are verified;
+- all three frozen images are loaded;
+- required customer configuration is populated;
+- Compose configuration validates;
+- PostgreSQL is healthy;
+- migration exits 0;
+- API is healthy;
+- Web is healthy;
+- /health returns HTTP 200;
+- /ready returns HTTP 200;
+- the expected release is displayed;
+- no undocumented developer state is required.
+
+## Next Documents
+
+- 02-Secrets-Configuration-Guide.md
+- 03-Security-Deployment-Guide.md
+- 04-User-Guide.md
+- 05-Design-Partner-Guide.md
+- 06-Feedback-Questionnaire.md
+- 07-Release-Notes.md
+- 08-Known-Limitations.md

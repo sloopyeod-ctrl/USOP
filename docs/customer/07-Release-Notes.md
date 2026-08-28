@@ -1,8 +1,8 @@
 # USOP Core v1.0 - Release Notes
 
-**Document:** 07-Release-Notes  
-**Release Track:** USOP Core v1.0 Release Candidate  
-**Status:** Release Candidate Draft  
+**Document:** 07-Release-Notes
+**Release:** 0.14.0-dp2-final
+**Status:** Frozen Design Partner Documentation
 **Audience:** Design Partners, Security Leaders, Security Analysts, IAM Teams, Platform Teams, Deployment Teams
 
 ## Purpose
@@ -16,11 +16,11 @@ This document is intended to help Design Partners understand exactly what is inc
 ```text
 Product: USOP Core
 Release: v1.0
-Release Stage: Release Candidate
+Release Stage: Design Partner Release Candidate
 Customer Program: Design Partner Validation
-Build Identifier: To be frozen during RC packaging
-Container/Image Identifier: To be frozen during RC packaging
-Release Date: To be assigned at freeze
+Build Identifier: 0.14.0-dp2-final-7c74f7e
+Container Images: usop-core-api:0.14.0-dp2-final; usop-core-web:0.14.0-dp2-final; usop-core-postgres:0.14.0-dp2-final
+Release Date: 2026-08-28
 ```
 
 No build identifier, image digest, or release date should be considered final until the RC artifact has completed patching, regression, clean-room installation, and freeze.
@@ -180,23 +180,44 @@ The bundled ingress is HTTP. Network-accessible deployments require customer-con
 
 Explicit HTTP/HTTPS proxy configuration and IPv6-only Docker egress are not validated Design Partner v1 deployment contracts.
 
-Image identifiers must still be populated from the frozen release artifact before RC1 distribution.
+The frozen Design Partner package records the release image identifiers in the release manifest and VERSION metadata.
 
 ## Deployment Highlights
 
-The supported customer deployment model is Docker-based.
+USOP Core 0.14.0-dp2-final is distributed as a customer deployment package containing:
 
-The final RC package is expected to contain or reference:
+- three frozen Docker image archives;
+- docker-compose.yml;
+- .env.release.example;
+- CHECKSUMS.sha256;
+- VERSION;
+- customer documentation.
 
-- pinned container images;
-- Docker Compose configuration;
-- `.env.template`;
-- version identifier;
-- checksums;
-- customer documentation;
-- sample configuration where appropriate.
+The customer Compose file references only the frozen release images and contains no source build contexts.
 
-The exact host requirements and runtime versions will be frozen during deployment validation.
+The supplied image tags are:
+
+usop-core-api:0.14.0-dp2-final
+usop-core-web:0.14.0-dp2-final
+usop-core-postgres:0.14.0-dp2-final
+
+The validated installation flow is:
+
+1. verify CHECKSUMS.sha256;
+2. load the three supplied Docker archives;
+3. copy .env.release.example to .env.release;
+4. populate the required customer-owned values;
+5. run docker compose configuration validation;
+6. start the customer Compose stack;
+7. allow the one-shot migration service to run alembic upgrade head;
+8. verify PostgreSQL, API, and Web health;
+9. verify /health and /ready return HTTP 200.
+
+The clean-room installation succeeded from a fresh Compose project and fresh PostgreSQL volume without the USOP source tree or development build contexts.
+
+Only the Web service is published to the customer host by default. API TCP 8000 and PostgreSQL TCP 5432 remain internal to the Compose network.
+
+The validated frozen schema head is a71d9c4e2b63 and a fresh deployment produced 27 public PostgreSQL tables with no preloaded customer operational data.
 
 ## Supported Initial Provider
 
@@ -255,9 +276,9 @@ RC1 preserves the following established principles:
 
 A material authorization delta must create a new analyst decision opportunity.
 
-A prior decision, exception, temporary assignment, eligible assignment, PIM activation state, or scheduled review window must not silently suppress a new material privilege change.
+A prior decision, exception, temporary assignment, eligible assignment, PIM activation state, or scheduled review window must not silently suppress a new material privilege change when that authorization state is available to USOP.
 
-This behavior remains part of the Core governance model and must survive RC validation.
+This behavior remains part of the Core governance model. DP2 live validation proved material role-assignment change detection and analyst work-item generation; PIM-specific eligible or activation-state collection was not independently live-validated in the Design Partner tenant.
 
 ## Review Scheduling
 
@@ -267,7 +288,7 @@ Scheduled reassessment does not replace immediate review of new material authori
 
 ## Release Validation Requirements
 
-Before RC1 is delivered to a Design Partner, the frozen artifact must pass the final release-validation sequence.
+The 0.14.0-dp2-final Design Partner artifact completed the release-validation sequence before documentation freeze.
 
 At minimum:
 
@@ -341,7 +362,7 @@ If upgrade from an earlier development build is not supported, state that clearl
 
 ## Rollback Notes
 
-Rollback behavior will be frozen with the deployment package.
+The Design Partner deployment preserves the frozen image archives and customer Compose contract so the validated artifact set can be restored without rebuilding from source.
 
 At minimum, rollback guidance must identify:
 
@@ -411,7 +432,7 @@ Design Partners should review that document before classifying expected RC1 beha
 
 ## Not Included Unless Explicitly Frozen Into RC1
 
-Unless the final frozen documentation states otherwise, RC1 should not be assumed to include operational support for:
+Unless the frozen 0.14.0-dp2-final documentation explicitly states otherwise, customers should not assume operational support for:
 
 - every planned provider;
 - every planned intelligence domain;
@@ -438,7 +459,7 @@ Populate:
 - supported host/runtime requirements;
 - final Microsoft Graph permission set;
 - final network requirements;
-- final upgrade/rollback behavior.
+- validated deployment, restart, and artifact-restoration behavior.
 
 No customer-facing release claim should be based on assumption.
 

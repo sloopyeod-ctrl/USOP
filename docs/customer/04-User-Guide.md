@@ -1,8 +1,8 @@
 # USOP Core v1.0 - User Guide
 
-**Document:** 04-User-Guide  
-**Release Track:** USOP Core v1.0 Release Candidate  
-**Status:** Release Candidate Draft  
+**Document:** 04-User-Guide
+**Release:** 0.14.0-dp2-final
+**Status:** Frozen Design Partner Documentation
 **Audience:** Security Analysts, IAM Analysts, Security Engineers, Design Partners
 
 ## Purpose
@@ -108,13 +108,6 @@ Prioritize:
 4. New or materially changed conditions.
 5. Any platform or connector issue that may affect trust in the displayed intelligence.
 
-### Screenshot
-
-<!-- Add final repository screenshot path before RC1 freeze. -->
-
-**Screenshot target:** Executive Dashboard
-
-**Question answered by screenshot:** What requires attention first?
 
 ## Opening an Investigation
 
@@ -147,13 +140,6 @@ Mission Brief is intentionally placed before detailed evidence.
 
 The analyst should understand the purpose of the investigation before reviewing supporting information.
 
-### Screenshot
-
-<!-- Add final repository screenshot path before RC1 freeze. -->
-
-**Screenshot target:** Mission Brief
-
-**Question answered by screenshot:** Why does this investigation matter?
 
 ## Decision Intelligence
 
@@ -185,13 +171,6 @@ Before recording a decision:
 - compare the recommendation with relevant Organizational Experience;
 - consider whether the condition represents a new material change.
 
-### Screenshot
-
-<!-- Add final repository screenshot path before RC1 freeze. -->
-
-**Screenshot target:** Decision Intelligence
-
-**Question answered by screenshot:** Why is USOP recommending this action?
 
 ## Operational Context
 
@@ -274,13 +253,6 @@ The organization may learn from history.
 
 History does not replace current judgment.
 
-### Screenshot
-
-<!-- Add final repository screenshot path before RC1 freeze. -->
-
-**Screenshot target:** Organizational Experience
-
-**Question answered by screenshot:** What has the organization learned that may help this decision?
 
 ## Recommendations
 
@@ -314,7 +286,7 @@ Depending on the supported workflow, a decision may represent:
 - deferred review;
 - another governed disposition.
 
-The exact available actions in RC1 must match the frozen application interface.
+The available analyst actions documented here reflect the frozen 0.14.0-dp2-final application interface.
 
 ### Decision Quality
 
@@ -365,13 +337,6 @@ Operational Pulse may communicate:
 - synchronization details;
 - failures requiring attention.
 
-### Screenshot
-
-<!-- Add final repository screenshot path before RC1 freeze. -->
-
-**Screenshot target:** Operational Pulse
-
-**Question answered by screenshot:** Is the investigation operating on a trustworthy current state?
 
 ## Progressive Disclosure
 
@@ -543,28 +508,17 @@ Before considering the first investigation complete:
 - [ ] I verified Operational Pulse.
 - [ ] I understand what happens next.
 
-## Screenshot Freeze Requirements
+## Visual Documentation Scope
 
-Before RC1 is distributed, replace all screenshot placeholders in this guide with images from the exact frozen customer release.
+Screenshots are intentionally not embedded in the 0.14.0-dp2-final Design Partner User Guide.
 
-Required screenshots:
+The live frozen USOP interface is the authoritative visual reference for this release.
 
-- Executive Dashboard;
-- Mission Brief;
-- Decision Intelligence;
-- Organizational Experience;
-- Operational Pulse.
+This avoids distributing screenshots that may become stale, expose demonstration identifiers, or diverge from the exact customer deployment.
 
-Screenshots must:
+The guide instead describes the purpose of each page, the questions it should answer, and the analyst workflow.
 
-- contain no real customer secrets;
-- contain no sensitive customer identifiers unless explicitly approved;
-- match the frozen RC1 interface;
-- use customer-facing terminology;
-- show realistic but controlled demonstration data where appropriate;
-- remain readable in rendered Markdown.
-
-Do not use screenshots from an outdated development build.
+Future release documentation may include screenshots when they can be generated directly from the corresponding frozen artifact and maintained as release-controlled evidence.
 
 ## Relationship to Other Customer Documents
 

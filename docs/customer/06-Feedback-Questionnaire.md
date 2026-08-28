@@ -1,8 +1,8 @@
 # USOP Core v1.0 - Feedback Questionnaire
 
-**Document:** 06-Feedback-Questionnaire  
-**Release Track:** USOP Core v1.0 Release Candidate  
-**Status:** Release Candidate Draft  
+**Document:** 06-Feedback-Questionnaire
+**Release:** 0.14.0-dp2-final
+**Status:** Frozen Design Partner Documentation
 **Audience:** Design Partners, Security Analysts, Security Leaders, IAM Teams, Platform Teams
 
 ## Purpose

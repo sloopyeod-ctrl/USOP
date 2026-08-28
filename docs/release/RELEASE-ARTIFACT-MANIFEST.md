@@ -12,7 +12,7 @@ Do not treat validation-build identifiers as final release identifiers.
 Product: USOP Core
 Release Version: 0.14.0-dp2-final
 Release Stage: Design Partner Release Candidate
-Release Date: 2026-08-27
+Release Date: 2026-08-28
 Source Commit: 7c74f7e3e44b91cfe5f20a77b9b4ca5aed40810f
 Build Identifier: 0.14.0-dp2-final-7c74f7e
 ```
@@ -94,7 +94,7 @@ Microsoft Entra Validation: PASS - live two-pass synchronization; 5 identities /
 Secret Redaction Review: PASS - secret non-disclosure contract passed
 Backup / Restore: PASS - logical backup restored in isolated PostgreSQL environment with schema and recovery canary verified
 Upgrade / Rollback: PASS - downgrade one revision and re-upgrade to head with data preserved
-Clean-Room Installation: PENDING
+Clean-Room Installation: PASS - fresh installation from shipped image archives and customer deployment package; migrations completed; PostgreSQL, API, and Web healthy; /health and /ready HTTP 200; restart persistence verified
 ```
 
 ## Customer Documentation
@@ -115,11 +115,11 @@ Required RC1 customer documents:
 ## Freeze Confirmation
 
 ```text
-Manifest Reviewed By: PENDING
-Security Review: PENDING
-Release Engineering Review: PENDING
-Documentation Review: PENDING
-Clean-Room Review: PENDING
+Manifest Reviewed By: USOP Release Review
+Security Review: PASS
+Release Engineering Review: PASS
+Documentation Review: PASS
+Clean-Room Review: PASS
 Freeze Date: PENDING
 Final Decision: PENDING
 ```

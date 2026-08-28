@@ -1,8 +1,8 @@
 # USOP Core v1.0 - Known Limitations
 
 **Document:** 08-Known-Limitations
-**Release Track:** USOP Core v1.0 Release Candidate
-**Status:** Release Candidate Draft
+**Release:** 0.14.0-dp2-final
+**Status:** Frozen Design Partner Documentation
 **Audience:** Design Partners, Security Leaders, Security Analysts, IAM Teams, Platform Teams, Deployment Teams
 
 ## Purpose
@@ -31,7 +31,7 @@ RC1 is centered on identity-focused operational intelligence.
 
 The initial supported provider focus is Microsoft Entra ID.
 
-The exact supported connector behaviors, Graph permissions, secret-provider modes, deployment requirements, and runtime assumptions must be frozen against the exact RC artifact before customer distribution.
+The supported connector behaviors, Microsoft Graph permissions, secret-provider mode, deployment requirements, and runtime assumptions documented here are reconciled against the frozen 0.14.0-dp2-final Design Partner artifact.
 
 ## Supported Provider Scope
 
@@ -75,7 +75,7 @@ Core should not imply operational ingestion or analysis of those external public
 
 ## Deployment Limitations
 
-The final RC package must define the exact supported deployment model.
+The supported 0.14.0-dp2-final deployment model is the frozen customer package using docker-compose.yml, the supplied Docker image archives, .env.release configuration, and no customer-side source build contexts.
 
 Until deployment validation is complete, do not assume support for:
 
@@ -152,35 +152,35 @@ Until a stable, paginated, least-privilege collection strategy is validated, abs
 
 ## Secret Provider Limitations
 
-USOP uses a provider-neutral secret model.
+USOP Core 0.14.0-dp2-final operationally supports only environment-managed secret configuration through:
 
-RC1 may not support every secrets manager.
+USOP_SECRET_PROVIDER=env
 
-Potential future or customer-relevant providers may include:
+External secret-provider retrieval is not supported in this Design Partner release.
+
+Potential future providers include:
 
 - Keeper;
 - Azure Key Vault;
 - AWS Secrets Manager;
 - HashiCorp Vault;
-- other supported customer-owned providers.
+- other customer-owned secret providers.
 
-The frozen release documentation must state exactly which providers are operational.
-
-A UUID or secret reference alone does not identify the provider.
+Their presence in architecture or future-product planning does not imply current operational support.
 
 ## Environment Secret Mode
 
-Where environment-managed secrets are supported, the customer-owned `.env` file remains sensitive.
+The customer-owned .env.release file is the validated runtime configuration mechanism for this release.
 
-USOP does not make an insecure `.env` file secure merely by consuming it.
-
-The customer remains responsible for filesystem permissions, local administrative access, host security, and secret lifecycle.
+Customers are responsible for protecting that file, restricting access, excluding it from source control, and rotating secrets according to local policy.
 
 ## Credential Rotation
 
-Final credential reload or restart behavior must be validated during deployment testing.
+A normal Docker Compose restart was validated during clean-room acceptance and preserved database schema, service health, and readiness.
 
-Do not assume that every rotated credential can be applied without container or service restart.
+This does not mean every credential can be hot-reloaded without recreating or restarting the affected service.
+
+For rotated credentials, update the authoritative customer credential, update .env.release, recreate or restart the affected USOP service, and verify health and provider connectivity.
 
 ## Authentication and User Access
 
@@ -197,6 +197,18 @@ Organizational Experience supports analyst judgment.
 Historical decisions must not silently suppress new material security changes.
 
 A new material authorization delta must create a new analyst decision opportunity.
+
+## PIM and Eligible Role Assignment Limitation
+
+USOP Core governance requires material privilege changes to create a new analyst decision opportunity even when an assignment is eligible, temporary, or activated through Microsoft Entra Privileged Identity Management.
+
+DP2 live validation proved material role-assignment collection, authorization-event generation, and pending analyst work-item generation for the authorization states available in the validation tenant.
+
+PIM-specific eligible assignment collection, activation-state collection, and temporary activation lifecycle behavior were not independently live-validated for 0.14.0-dp2-final.
+
+Customers should therefore not interpret this Design Partner release as proof of complete Microsoft Entra PIM lifecycle coverage.
+
+When PIM or equivalent authorization state becomes available to USOP, prior decisions, exceptions, or scheduled reviews must not silently suppress a new material privilege change.
 
 ## Review Scheduling Boundaries
 
@@ -233,33 +245,41 @@ If external archival is not operational in RC1, it must be documented as unavail
 
 ## Backup and Restore
 
-The exact backup and restore process must be frozen during deployment validation.
+A logical PostgreSQL backup and restore procedure was validated for 0.14.0-dp2-final.
+
+Release validation restored the logical backup into an isolated PostgreSQL environment and verified the expected schema and recovery canary.
+
+This validation establishes the supported logical PostgreSQL recovery path for the frozen Design Partner artifact.
+
+It does not establish support for every customer-specific backup platform, storage product, filesystem snapshot mechanism, volume snapshot implementation, disaster-recovery topology, or enterprise retention workflow.
 
 Do not assume that copying container files alone produces a valid backup.
 
-The release must document the persistent database/configuration boundary and any required post-restore validation.
+The persistent PostgreSQL data and customer-owned deployment configuration remain part of the customer recovery boundary.
+
+Customers integrating USOP into an enterprise backup or disaster-recovery platform should validate that integration against their own recovery objectives.
 
 ## Upgrade Limitations
 
-RC1 upgrade support must be explicitly defined.
+Release validation for 0.14.0-dp2-final proved a controlled database migration compatibility scenario.
 
-If upgrading from arbitrary development builds is unsupported, state that clearly.
+The validated procedure downgraded the PostgreSQL schema by one Alembic revision and then re-upgraded to the frozen head revision with validation data preserved.
 
-The final release should define:
+This proves the tested one-revision migration path. It does not establish support for upgrades from arbitrary development builds, arbitrary historical USOP releases, or unknown future schema versions.
 
-- supported source version;
-- backup requirements;
-- migration behavior;
-- configuration changes;
-- rollback behavior.
+Customers should use only upgrade procedures explicitly documented for the source and target release involved.
 
 ## Rollback Limitations
 
+The validated rollback evidence is limited to the tested one-revision Alembic downgrade and re-upgrade sequence with data preservation.
+
 Rollback may involve more than replacing an application image.
 
-Database migrations, configuration-contract changes, and persistent application state may affect rollback compatibility.
+Database migrations, configuration-contract changes, persistent application state, and release-specific image compatibility may affect rollback behavior.
 
-Only the rollback path validated for RC1 should be documented as supported.
+The 0.14.0-dp2-final validation does not establish arbitrary cross-version application or database rollback support.
+
+Only rollback or restoration behavior explicitly validated for the applicable frozen release should be treated as supported.
 
 ## UI Limitations
 
@@ -273,15 +293,21 @@ If an expected capability is not visible, first confirm whether it exists behind
 
 ## Screenshot and Documentation Drift
 
-Screenshots in the User Guide and README must match the frozen RC1 interface.
+Screenshots are intentionally not embedded in the 0.14.0-dp2-final Design Partner User Guide.
 
-Until screenshot freeze is complete, placeholder images or development screenshots should not be treated as final customer documentation.
+The live frozen USOP interface is the authoritative visual reference for this release.
+
+This avoids distributing screenshots that may become stale, expose demonstration identifiers, or diverge from the exact customer deployment.
+
+Future screenshots must be generated from the corresponding frozen release artifact and maintained as release-controlled documentation.
+
+A screenshot from a development build, older release, or unrelated validation environment must not be presented as authoritative customer documentation.
 
 ## Performance Expectations
 
 Final performance expectations must be based on validation, not intuition.
 
-RC1 should be tested for:
+Performance characteristics for 0.14.0-dp2-final remain Design Partner evaluation targets, including:
 
 - dashboard responsiveness;
 - investigation load time;
@@ -417,9 +443,9 @@ The customer remains responsible for:
 
 USOP should not require weakening these controls.
 
-## RC1 Freeze Review
+## Design Partner Release Review
 
-Before this document is considered final, reconcile it against the exact frozen artifact.
+This document has been reconciled against the frozen 0.14.0-dp2-final Design Partner artifact and the completed clean-room validation evidence.
 
 Remove any limitation that no longer applies.
 

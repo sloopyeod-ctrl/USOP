@@ -1,8 +1,8 @@
 # USOP Core v1.0 - Security Deployment Guide
 
-**Document:** 03-Security-Deployment-Guide  
-**Release Track:** USOP Core v1.0 Release Candidate  
-**Status:** Release Candidate Draft  
+**Document:** 03-Security-Deployment-Guide
+**Release:** 0.14.0-dp2-final
+**Status:** Frozen Design Partner Documentation
 **Audience:** Security Engineers, Network Engineers, IAM Engineers, Platform Engineers, Security Architects, Design Partners
 
 ## Purpose
@@ -306,7 +306,7 @@ Core rules:
 - secrets remain customer-owned;
 - secrets are not committed to source control;
 - secrets are not embedded in images;
-- `.env.template` contains no working credentials;
+- `.env.release.example` contains no working credentials;
 - external secret-provider selection is explicit;
 - secret provider and secret reference are separate configuration values;
 - logs must not intentionally expose secret values.
@@ -403,7 +403,7 @@ The current development baseline uses:
 GET /health
 ```
 
-The final customer access path must be validated against the frozen RC deployment.
+The validated customer access path publishes only the USOP web ingress from the customer Compose deployment. API TCP 8000 and PostgreSQL TCP 5432 remain internal by default. Network-accessible deployments should place customer-controlled TLS termination ahead of the USOP web service.
 
 ## Updates and Patch Management
 
@@ -413,7 +413,7 @@ Before customer release:
 - frontend dependencies must be reviewed and patched as appropriate;
 - container base images must be reviewed and patched as appropriate;
 - the application must pass the full regression suite after patching;
-- the exact passing artifacts must be frozen.
+- for 0.14.0-dp2-final, the exact passing artifacts are recorded by immutable image identity, release tag, checksum, and release manifest.
 
 After freeze, any dependency or container-image change reopens validation.
 
@@ -588,7 +588,7 @@ This guide defines the security approval and deployment boundary.
 
 ## Release Freeze Requirements
 
-Before RC1 is distributed, replace every unresolved deployment placeholder with validated release data.
+For 0.14.0-dp2-final, the deployment security contract has been reconciled against the frozen Design Partner package and clean-room installation evidence.
 
 At minimum freeze:
 

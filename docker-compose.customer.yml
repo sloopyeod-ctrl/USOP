@@ -1,0 +1,128 @@
+name: usop
+
+services:
+  postgres:
+    image: usop-core-postgres:0.14.0-dp2-final
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - usop_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - usop-internal
+
+  migrate:
+    image: usop-core-api:0.14.0-dp2-final
+    restart: "no"
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["alembic", "upgrade", "head"]
+    networks:
+      - usop-internal
+
+  api:
+    image: usop-core-api:0.14.0-dp2-final
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,mode=1777
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+
+      USOP_SECRET_PROVIDER: ${USOP_SECRET_PROVIDER:-env}
+
+      MS_GRAPH_TENANT_ID: ${MS_GRAPH_TENANT_ID:?MS_GRAPH_TENANT_ID is required}
+      MS_GRAPH_CLIENT_ID: ${MS_GRAPH_CLIENT_ID:?MS_GRAPH_CLIENT_ID is required}
+      MS_GRAPH_CLIENT_SECRET: ${MS_GRAPH_CLIENT_SECRET:?MS_GRAPH_CLIENT_SECRET is required}
+
+      # Inbound caller authentication.
+      # Deliberately separate from Microsoft Graph connector credentials.
+      USOP_AUTH_ENTRA_TENANT_ID: ${USOP_AUTH_ENTRA_TENANT_ID:?USOP_AUTH_ENTRA_TENANT_ID is required}
+      USOP_AUTH_ENTRA_AUDIENCE: ${USOP_AUTH_ENTRA_AUDIENCE:?USOP_AUTH_ENTRA_AUDIENCE is required}
+      USOP_AUTH_ENTRA_REQUIRED_SCOPE: ${USOP_AUTH_ENTRA_REQUIRED_SCOPE:?USOP_AUTH_ENTRA_REQUIRED_SCOPE is required}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - usop-internal
+
+  web:
+    image: usop-core-web:0.14.0-dp2-final
+    restart: unless-stopped
+    read_only: true
+    user: nginx
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /run:rw,uid=101,gid=101,mode=755
+      - /var/cache/nginx:rw,uid=101,gid=101,mode=755
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${USOP_WEB_PORT:-8080}:8080"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://127.0.0.1:8080/health"
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - usop-internal
+
+volumes:
+  usop_postgres_data:
+
+networks:
+  usop-internal:
+    driver: bridge
+    internal: false

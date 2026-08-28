@@ -99,13 +99,24 @@ def test_gate_artifact_identity_placeholders_are_eliminated():
         assert value not in text
 
 
-def test_gate_unfinished_release_reviews_remain_pending():
+def test_gate_completed_release_reviews_are_recorded():
     text = _text()
 
-    required_pending = (
-        "Clean-Room Installation: PENDING",
-        "Final Decision: PENDING",
+    required_completed = (
+        "Clean-Room Installation: PASS",
+        "Manifest Reviewed By: USOP Release Review",
+        "Security Review: PASS",
+        "Release Engineering Review: PASS",
+        "Documentation Review: PASS",
+        "Clean-Room Review: PASS",
+    )
 
+    for value in required_completed:
+        assert value in text
+
+    required_pending = (
+        "Freeze Date: PENDING",
+        "Final Decision: PENDING",
     )
 
     for value in required_pending:

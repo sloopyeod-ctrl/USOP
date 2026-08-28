@@ -1,8 +1,8 @@
 # USOP Core v1.0 - Design Partner Guide
 
-**Document:** 05-Design-Partner-Guide  
-**Release Track:** USOP Core v1.0 Release Candidate  
-**Status:** Release Candidate Draft  
+**Document:** 05-Design-Partner-Guide
+**Release:** 0.14.0-dp2-final
+**Status:** Frozen Design Partner Documentation
 **Audience:** Design Partners, Security Leaders, Security Analysts, IAM Teams, Platform Teams
 
 ## Welcome

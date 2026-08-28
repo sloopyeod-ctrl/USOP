@@ -1,28 +1,28 @@
-# USOP Core v1.0 - Secrets Configuration Guide
+# USOP Core - Secrets Configuration Guide
 
-**Document:** 02-Secrets-Configuration-Guide  
-**Release Track:** USOP Core v1.0 Release Candidate  
-**Status:** Release Candidate Draft  
+**Document:** 02-Secrets-Configuration-Guide
+**Release:** 0.14.0-dp2-final
+**Release Stage:** Design Partner Release Candidate
+**Status:** Frozen Design Partner Documentation
 **Audience:** Security Engineers, Platform Engineers, Identity Engineers, System Administrators, Design Partners
 
 ## Purpose
 
-This guide defines how customer-owned secrets and identity-provider credentials must be supplied to USOP Core v1.0.
+This guide defines the validated customer-owned secret and Microsoft Entra configuration contract for USOP Core 0.14.0-dp2-final.
 
-The goal is to support secure, repeatable deployment without embedding credentials in source code, container images, documentation, screenshots, or release artifacts.
+USOP secrets must remain customer-owned configuration and must not be embedded in source code, container images, documentation, screenshots, or distributed release artifacts.
 
-USOP must treat secrets as customer-owned configuration.
+## Supported Secret Provider
 
-## Security Objective
+The only operationally supported secret provider in this Design Partner release is USOP_SECRET_PROVIDER=env.
 
-USOP Core should support at least two deployment patterns:
+Customer secret values are supplied through the runtime environment file used by Docker Compose.
 
-1. Environment-managed secrets for smaller or controlled deployments.
-2. External secret-provider references for organizations that use an enterprise secrets manager.
+USOP preserves a provider-neutral secret-provider architecture for future releases.
 
-The selected secret source must be explicit.
+Keeper, Azure Key Vault, AWS Secrets Manager, HashiCorp Vault, and other external secret managers are not operationally supported by 0.14.0-dp2-final.
 
-A secret reference, UUID, record identifier, path, or key name must never implicitly identify the secret provider.
+Do not configure an unsupported provider merely because its name appears in architecture, source abstractions, or future-product documentation.
 
 ## Never Place Secrets In
 
@@ -41,210 +41,151 @@ Do not place credentials, tokens, private keys, or secret values in:
 - sample configuration;
 - release archives.
 
-The distributed `.env.template` must contain names and examples only, never working credentials.
+The distributed `.env.release.example` must contain configuration names and placeholders only, never working credentials.
 
 ## Customer-Owned Configuration
 
-USOP configuration should distinguish non-secret identity information from secret material.
+The Design Partner package contains .env.release.example.
 
-Typical non-secret values include:
+Create the customer-owned runtime configuration by copying it to .env.release.
 
-- organization identifier;
-- identity provider selection;
-- Microsoft Entra tenant identifier;
-- Microsoft Entra application/client identifier;
-- secret-source mode;
-- external secret-provider name;
-- external secret reference.
+Do not place working credentials into .env.release.example.
 
-Secret values include:
+## Frozen Environment Contract
 
-- client secrets;
-- access credentials for a secret provider;
-- private keys;
-- bearer tokens;
-- certificates containing private key material.
+The customer deployment requires the following configuration values:
 
-## Supported Secret Modes
+POSTGRES_DB=<customer-database-name>
+POSTGRES_USER=<customer-database-user>
+POSTGRES_PASSWORD=<customer-generated-high-entropy-password>
 
-### Mode 1 - Environment Secret
+USOP_SECRET_PROVIDER=env
 
-This mode is appropriate when the customer intentionally chooses to provide the Entra application secret through the runtime environment.
+MS_GRAPH_TENANT_ID=<customer-entra-tenant-id>
+MS_GRAPH_CLIENT_ID=<graph-application-client-id>
+MS_GRAPH_CLIENT_SECRET=<graph-application-client-secret>
 
-Conceptual example:
+USOP_AUTH_ENTRA_TENANT_ID=<entra-tenant-id-for-usop-callers>
+USOP_AUTH_ENTRA_AUDIENCE=<usop-api-audience>
+USOP_AUTH_ENTRA_REQUIRED_SCOPE=access_as_user
 
-```dotenv
-USOP_IDENTITY_PROVIDER=entra
-ENTRA_TENANT_ID=<customer-tenant-id>
-ENTRA_CLIENT_ID=<customer-application-id>
+USOP_WEB_PORT=8080
 
-USOP_SECRET_SOURCE=environment
-ENTRA_CLIENT_SECRET=<customer-secret>
-```
+Values shown inside angle brackets are descriptive placeholders and must be replaced with customer-owned configuration.
 
-The exact variable names used by the frozen USOP Core v1.0 configuration contract must be validated against the application before RC1 release.
+## Secret Classification
 
-Do not copy this conceptual block into production until the final `.env.template` is generated from the validated configuration contract.
+POSTGRES_PASSWORD and MS_GRAPH_CLIENT_SECRET are secret values and must be protected accordingly.
 
-### Mode 2 - External Secret Provider
+Tenant identifiers, application identifiers, API audience values, scope names, database names, database usernames, and port numbers are configuration values but should still be handled according to customer deployment policy.
 
-This mode is appropriate when the customer stores credentials in an approved secrets platform.
+## Supported Secret Mode
 
-Conceptual example:
+USOP Core 0.14.0-dp2-final supports environment-managed secrets through USOP_SECRET_PROVIDER=env.
 
-```dotenv
-USOP_IDENTITY_PROVIDER=entra
-ENTRA_TENANT_ID=<customer-tenant-id>
-ENTRA_CLIENT_ID=<customer-application-id>
+External secret-provider retrieval is not operationally supported in this release.
 
-USOP_SECRET_SOURCE=provider
-USOP_SECRET_PROVIDER=keeper
-ENTRA_SECRET_REFERENCE=<customer-owned-reference>
-```
+The provider-neutral secret architecture remains a future compatibility boundary and does not imply current support for Keeper or another external secret manager.
 
-The important design rule is:
+## Microsoft Entra Trust Boundaries
 
-```text
-Provider != Reference
-```
+USOP Core uses Microsoft Entra for two distinct security relationships.
 
-The provider tells USOP how to retrieve the secret.
+These configuration groups must remain explicit even when they use the same Microsoft Entra tenant.
 
-The reference tells that provider which secret to retrieve.
+## Outbound Microsoft Graph Authentication
 
-A UUID alone must never mean "Keeper."
+USOP authenticates to Microsoft Graph using:
 
-## Secret Provider Neutrality
+MS_GRAPH_TENANT_ID
+MS_GRAPH_CLIENT_ID
+MS_GRAPH_CLIENT_SECRET
 
-USOP Core should preserve a provider-neutral secret abstraction.
-
-Customer environments may use platforms such as:
-
-- Keeper;
-- Azure Key Vault;
-- AWS Secrets Manager;
-- HashiCorp Vault;
-- another supported customer-owned provider.
-
-Not every provider must be available in the first customer release.
-
-The release documentation must state exactly which providers are supported by the frozen RC artifact.
-
-Unsupported providers must not be implied as operational.
-
-## Microsoft Entra Credential Model
-
-USOP Core uses customer-owned Microsoft Entra application credentials to access the Microsoft Graph permissions required by the release.
+These values identify the customer-owned application credential used for supported Microsoft Graph collection.
 
 The customer is responsible for:
 
-- creating or approving the application registration;
-- assigning only the documented Microsoft Graph permissions;
+- creating or approving the Microsoft Graph application registration;
+- granting only the permissions documented for this release;
 - granting administrator consent where required;
-- creating or providing the supported credential type;
-- rotating credentials according to customer policy;
-- revoking credentials when USOP is decommissioned.
+- generating and protecting the client secret;
+- rotating or revoking the credential according to customer policy.
 
-USOP must not create broad Microsoft Graph permissions merely to simplify deployment.
+USOP must not request broader Microsoft Graph permissions merely to simplify deployment.
 
-The final required permissions will be documented in:
+Required Graph permissions are documented in 03-Security-Deployment-Guide.md.
 
-```text
-03-Security-Deployment-Guide.md
-```
+## Inbound USOP API Authentication
 
-after the RC security validation pass confirms the minimum working permission set.
+Protected USOP API operations validate delegated Microsoft Entra access tokens using:
 
-## .env File Handling
+USOP_AUTH_ENTRA_TENANT_ID
+USOP_AUTH_ENTRA_AUDIENCE
+USOP_AUTH_ENTRA_REQUIRED_SCOPE
 
-If the environment-secret deployment mode is used, the customer-owned `.env` file must be treated as sensitive.
+The validated required delegated scope for this release is:
 
-Recommended handling:
+access_as_user
 
-- create it from the distributed `.env.template`;
-- restrict filesystem access to the deployment administrators and runtime account as appropriate;
-- do not commit it to Git;
+The inbound authentication configuration defines which tenant may issue tokens, which audience the token must target, and which delegated scope must be present.
+
+Do not automatically substitute MS_GRAPH_CLIENT_ID for USOP_AUTH_ENTRA_AUDIENCE.
+
+Do not automatically alias MS_GRAPH_TENANT_ID to USOP_AUTH_ENTRA_TENANT_ID in configuration.
+
+A deployment may intentionally use the same Entra tenant for both trust boundaries, but the configuration fields and security purposes remain separate.
+
+Missing or invalid inbound authentication configuration causes protected API access to fail closed.
+
+## .env.release File Handling
+
+The customer-owned .env.release file contains deployment-sensitive configuration and secret values.
+
+Required handling:
+
+- create it from the distributed .env.release.example;
+- restrict filesystem access to authorized deployment administrators;
+- do not commit it to Git or another source repository;
 - do not include it in support bundles;
-- do not copy it into documentation;
-- do not transmit it through email or chat;
+- do not copy it into documentation or screenshots;
+- do not transmit it through ordinary email or chat;
 - remove it securely when the deployment is decommissioned.
 
-The release package should include a `.gitignore` or equivalent protection that prevents accidental source-control inclusion where applicable.
+The distributed .env.release.example must never contain working credentials.
 
-## External Secret Reference Handling
+## External Secret Providers
 
-A secret reference is not automatically a secret value, but it should still be treated as deployment-sensitive configuration.
+External secret-provider retrieval is not supported by 0.14.0-dp2-final.
 
-References may reveal:
+Keeper, Azure Key Vault, AWS Secrets Manager, HashiCorp Vault, and similar providers remain future architecture targets only.
 
-- record structure;
-- internal naming;
-- environment segmentation;
-- provider usage;
-- application relationships.
-
-Do not publish customer-specific references in examples or public issue reports.
-
-## Keeper-Oriented Deployments
-
-Where the frozen USOP release supports Keeper, the customer should supply:
-
-- the explicit provider value identifying Keeper;
-- the customer-owned Keeper record or secret reference required by the integration;
-- any Keeper access configuration required by the supported USOP secret-provider implementation.
-
-Do not assume that any arbitrary UUID is a valid Keeper reference.
-
-Do not place Keeper credentials inside the USOP application image.
-
-The final Keeper-specific configuration fields must be generated from and validated against the actual USOP secret-provider implementation before RC1 freeze.
-
-## Other Secret Managers
-
-If additional providers are supported in RC1, each provider must have a documented configuration section containing:
-
-- provider identifier;
-- reference format;
-- authentication mechanism;
-- required network access;
-- least-privilege expectations;
-- validation procedure;
-- rotation behavior;
-- failure behavior.
-
-If a provider is not validated in RC1, document it as unsupported or planned rather than leaving ambiguous placeholders.
+Do not configure an external secret reference or provider identifier in this release.
 
 ## Secret Rotation
 
-Secret rotation must not require a code change.
+Secret rotation does not require an application source-code change.
 
-The desired operational model is:
+For this release, the validated operational sequence is:
 
-1. customer rotates the credential in the authoritative location;
-2. customer updates the environment secret or provider-held secret as required;
-3. USOP reloads or restarts according to the documented release behavior;
-4. provider connectivity is revalidated;
-5. no application source modification occurs.
+1. rotate the credential in the authoritative customer system;
+2. update the corresponding value in .env.release;
+3. recreate or restart the affected USOP service using the customer Compose deployment;
+4. verify platform health and provider connectivity;
+5. confirm that no secret value appears in logs.
 
-The exact reload/restart behavior must be frozen during deployment validation.
+A normal Docker Compose restart was validated during clean-room acceptance and preserved database schema, service health, and readiness.
 
 ## Startup Validation
 
-Before synchronization begins, USOP should fail safely when required secret configuration is incomplete.
+Before startup, validate the customer configuration with:
 
-Configuration validation should distinguish between:
+docker compose -f docker-compose.yml --env-file .env.release config
 
-- missing tenant identifier;
-- missing application/client identifier;
-- invalid secret-source mode;
-- missing environment secret;
-- missing external provider selection;
-- missing secret reference;
-- unsupported secret provider;
-- secret retrieval failure;
-- authentication failure.
+The command must succeed before installation continues.
 
-Customer-facing errors must not echo secret values.
+Required values must not be left blank or replaced with fake placeholder values merely to satisfy Compose.
+
+Customer-facing errors and logs must not echo secret values.
 
 ## Logging Requirements
 
@@ -254,101 +195,69 @@ USOP logs must never intentionally emit:
 - access tokens;
 - refresh tokens;
 - private keys;
-- full secret-provider credentials;
-- complete `.env` contents.
+- database passwords;
+- complete .env.release contents.
 
-Where identifiers are operationally useful, logs should expose only the minimum non-secret context required for troubleshooting.
+Identifiers should be exposed only when they are non-secret and operationally necessary.
 
 ## Troubleshooting Rules
 
-When secret configuration fails:
+When credential or authentication configuration fails:
 
-1. Confirm the selected secret-source mode.
-2. Confirm required non-secret identifiers.
-3. Confirm the secret value or reference exists.
-4. Confirm external provider selection when applicable.
-5. Confirm USOP can reach the external secret provider if required.
-6. Confirm the secret-provider identity has only the required access.
-7. Confirm the Entra credential is valid and not expired.
-8. Confirm Microsoft Graph permissions and admin consent.
-9. Review sanitized logs.
-10. Re-run provider validation.
+1. confirm that .env.release was created from the supplied template;
+2. confirm all required values are populated without printing their values;
+3. confirm USOP_SECRET_PROVIDER=env;
+4. distinguish outbound MS_GRAPH_* configuration from inbound USOP_AUTH_ENTRA_* configuration;
+5. confirm Microsoft Graph permissions and administrator consent;
+6. confirm the Graph client secret is valid and not expired;
+7. confirm the inbound API audience and delegated access_as_user scope;
+8. verify required network and DNS access;
+9. review sanitized logs only;
+10. re-run health and connectivity validation.
 
-Do not paste the secret into a terminal command merely to test whether it works if that command will expose it in shell history.
-
-## Example .env.template Design
-
-The final `.env.template` should be generated only after the actual runtime configuration contract is inspected and frozen.
-
-Its structure should resemble:
-
-```dotenv
-# -----------------------------------------------------------------------------
-# USOP Core v1.0 - Customer Configuration
-# -----------------------------------------------------------------------------
-
-# Organization
-USOP_ORGANIZATION_ID=
-
-# Identity provider
-USOP_IDENTITY_PROVIDER=entra
-
-# Microsoft Entra
-ENTRA_TENANT_ID=
-ENTRA_CLIENT_ID=
-
-# Secret source: environment | provider
-USOP_SECRET_SOURCE=environment
-
-# Environment mode only
-ENTRA_CLIENT_SECRET=
-
-# External provider mode only
-# USOP_SECRET_PROVIDER=
-# ENTRA_SECRET_REFERENCE=
-```
-
-This block is a design target, not confirmation of the final variable names.
-
-Before customer release, RC deployment validation must reconcile this template with the actual application settings and remove any variable that is unused or incorrectly named.
+Do not paste secret values directly into terminal commands when doing so would expose them in shell history.
 
 ## Customer Validation Checklist
 
-Before first synchronization:
+Before first operational synchronization, confirm:
 
-- [ ] `.env.template` contains no real secret.
-- [ ] Customer `.env` is excluded from source control.
-- [ ] Tenant identifier belongs to the intended customer tenant.
-- [ ] Client/application identifier belongs to the intended Entra application.
-- [ ] Secret-source mode is explicit.
-- [ ] Only one active secret path is used for the Entra credential.
-- [ ] External provider is explicit when provider mode is selected.
-- [ ] Secret reference is customer-owned.
-- [ ] Required Graph permissions match the Security Deployment Guide.
-- [ ] Admin consent is complete where required.
-- [ ] Secret values are absent from logs.
-- [ ] Provider authentication succeeds.
-- [ ] Initial synchronization succeeds.
+- [ ] .env.release was created from the supplied .env.release.example.
+- [ ] .env.release contains no CHANGE_ME placeholders.
+- [ ] .env.release is excluded from source control.
+- [ ] POSTGRES_DB is customer controlled.
+- [ ] POSTGRES_USER is customer controlled.
+- [ ] POSTGRES_PASSWORD is unique and high entropy.
+- [ ] USOP_SECRET_PROVIDER=env.
+- [ ] MS_GRAPH_TENANT_ID belongs to the intended customer tenant.
+- [ ] MS_GRAPH_CLIENT_ID identifies the approved Graph application.
+- [ ] MS_GRAPH_CLIENT_SECRET is valid and protected.
+- [ ] Required Microsoft Graph permissions match the Security Deployment Guide.
+- [ ] Microsoft Graph administrator consent is complete where required.
+- [ ] USOP_AUTH_ENTRA_TENANT_ID identifies the intended inbound-authentication tenant.
+- [ ] USOP_AUTH_ENTRA_AUDIENCE identifies the USOP API audience.
+- [ ] USOP_AUTH_ENTRA_REQUIRED_SCOPE=access_as_user.
+- [ ] Outbound Graph configuration and inbound USOP API authentication remain explicit trust boundaries.
+- [ ] docker compose configuration validation succeeds.
+- [ ] No secret values appear in logs.
+- [ ] /health returns HTTP 200 after deployment.
+- [ ] /ready returns HTTP 200 after deployment.
 
-## Release Freeze Requirements
+## Validated Release Behavior
 
-Before RC1 is distributed, the final secrets contract must be validated against the exact frozen application artifact.
+The frozen 0.14.0-dp2-final package was clean-room installed using customer-style configuration and the shipped Docker image archives.
 
-The release team must confirm:
+The validation confirmed:
 
-- exact environment variable names;
-- which values are required;
-- which values are optional;
-- supported secret-source modes;
-- supported external secret providers;
-- supported reference formats;
-- credential reload/restart behavior;
-- secret redaction in logs;
-- configuration validation behavior;
-- final `.env.template`;
-- final security/network dependencies.
+- required environment values were enforced by Docker Compose;
+- environment-managed secret configuration was accepted;
+- PostgreSQL initialized successfully;
+- migrations completed successfully;
+- API and Web became healthy;
+- /health returned HTTP 200;
+- /ready returned HTTP 200;
+- a normal Docker Compose restart preserved schema and service readiness.
 
-No secret configuration field should be documented based on assumption.
+No real customer or developer secret values are included in this document.
 
 ## Relationship to Other Customer Documents
 
