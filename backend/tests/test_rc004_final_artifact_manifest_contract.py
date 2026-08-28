@@ -6,19 +6,19 @@ ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "docs" / "release" / "RELEASE-ARTIFACT-MANIFEST.md"
 
 SOURCE_COMMIT = (
-    "e8621626a0bbe7cdc0d32e4b2d9665099000f507"
+    "7c74f7e3e44b91cfe5f20a77b9b4ca5aed40810f"
 )
 
 API_DIGEST = (
-    "sha256:f611af0d0ee5e7e403008aa00d173475cb8bd8c39cca16ed6c290a428a548583"
+    "sha256:39d6a4c4f8617f5be37bfcaccedbd2851b4fa335ea5b4ccb6981b98ec96e796a"
 )
 
 WEB_DIGEST = (
-    "sha256:0f04ba73554d3c9f882f017537dfd1a3f5e2a543db576d01033b15bad69b5ea4"
+    "sha256:7ce6a57ded6a6f95da35594b2ee8d8a7aa11b1355a858a18c0891c49c5e4a3b5"
 )
 
 POSTGRES_DIGEST = (
-    "sha256:f547ca61b8cf527287cfa87ed8f8f4bdffbe73ee34b03518eb21ed3b6e82b533"
+    "sha256:a939c8d864fddfb03e36e16a9188c73e0cf052ed3a17ba290bd4a8f09b8135cd"
 )
 
 
@@ -29,9 +29,9 @@ def _text() -> str:
 def test_gate_manifest_freezes_dp2_release_version():
     text = _text()
 
-    assert "Release Version: 0.14.0-dp2" in text
+    assert "Release Version: 0.14.0-dp2-final" in text
     assert "Release Stage: Design Partner Release Candidate" in text
-    assert "Build Identifier: 0.14.0-dp2-e8621626" in text
+    assert "Build Identifier: 0.14.0-dp2-final-7c74f7e" in text
 
 
 def test_gate_manifest_freezes_exact_source_commit():
@@ -44,7 +44,7 @@ def test_gate_manifest_freezes_exact_api_artifact():
     text = _text()
 
     assert "Repository: usop-core-api" in text
-    assert "Tag: 0.14.0-dp2" in text
+    assert "Tag: 0.14.0-dp2-final" in text
     assert f"Digest: {API_DIGEST}" in text
 
 
@@ -82,7 +82,7 @@ def test_gate_manifest_preserves_postgres_inherited_finding_boundary():
 def test_gate_manifest_records_authoritative_backend_regression():
     text = _text()
 
-    assert "Backend Regression: PASS - 965 tests" in text
+    assert "Backend Regression: PASS - 987 tests" in text
 
 
 def test_gate_artifact_identity_placeholders_are_eliminated():
@@ -103,15 +103,9 @@ def test_gate_unfinished_release_reviews_remain_pending():
     text = _text()
 
     required_pending = (
-        "Frontend Full Audit: PENDING",
-        "Frontend Production Audit: PENDING",
-        "Frontend Lint: PENDING",
-        "Microsoft Entra Validation: PENDING",
-        "Secret Redaction Review: PENDING",
-        "Backup / Restore: PENDING",
-        "Upgrade / Rollback: PENDING",
         "Clean-Room Installation: PENDING",
-        "Final Decision:",
+        "Final Decision: PENDING",
+
     )
 
     for value in required_pending:
