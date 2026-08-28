@@ -5,6 +5,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 BACKEND = ROOT / "backend" / "Dockerfile.release"
 FRONTEND = ROOT / "frontend" / "Dockerfile.release"
+POSTGRES = ROOT / "postgres" / "Dockerfile.release"
 COMPOSE = ROOT / "docker-compose.release.yml"
 
 PYTHON_DIGEST = (
@@ -53,10 +54,10 @@ def test_gate_frontend_runtime_uses_frozen_nginx_base():
     assert expected in text
 
 
-def test_gate_postgres_uses_frozen_official_image():
-    text = _text(COMPOSE)
+def test_gate_postgres_wrapper_uses_frozen_official_base():
+    text = _text(POSTGRES)
 
-    expected = f"image: postgres:17-alpine@{POSTGRES_DIGEST}"
+    expected = f"FROM postgres:17-alpine@{POSTGRES_DIGEST}"
     assert expected in text
 
 
@@ -64,6 +65,7 @@ def test_gate_every_release_from_instruction_is_digest_pinned():
     lines = (
         _text(BACKEND).splitlines()
         + _text(FRONTEND).splitlines()
+        + _text(POSTGRES).splitlines()
     )
 
     release_from_lines = [
@@ -78,11 +80,15 @@ def test_gate_every_release_from_instruction_is_digest_pinned():
         assert "@sha256:" in line
 
 
-def test_gate_postgres_release_reference_is_not_tag_only():
+def test_gate_compose_builds_postgres_wrapper():
     text = _text(COMPOSE)
 
-    assert "image: postgres:17-alpine@" in text
-    assert (
-        "image: postgres:17-alpine\n"
-        not in text
-    )
+    assert "  postgres:" in text
+    assert "      context: ./postgres" in text
+    assert "      dockerfile: Dockerfile.release" in text
+
+
+def test_gate_compose_does_not_bypass_postgres_wrapper():
+    text = _text(COMPOSE)
+
+    assert "image: postgres:17-alpine" not in text
