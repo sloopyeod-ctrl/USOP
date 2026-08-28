@@ -114,10 +114,10 @@ def test_gate_completed_release_reviews_are_recorded():
     for value in required_completed:
         assert value in text
 
-    required_pending = (
-        "Freeze Date: PENDING",
-        "Final Decision: PENDING",
+    required_final = (
+        "Freeze Date: 2026-08-28",
+        "Final Decision: APPROVED FOR DESIGN PARTNER DISTRIBUTION",
     )
 
-    for value in required_pending:
+    for value in required_final:
         assert value in text

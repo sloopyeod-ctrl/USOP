@@ -120,8 +120,8 @@ Security Review: PASS
 Release Engineering Review: PASS
 Documentation Review: PASS
 Clean-Room Review: PASS
-Freeze Date: PENDING
-Final Decision: PENDING
+Freeze Date: 2026-08-28
+Final Decision: APPROVED FOR DESIGN PARTNER DISTRIBUTION
 ```
 
 ## Integrity Principle
