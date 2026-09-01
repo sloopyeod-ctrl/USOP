@@ -140,7 +140,7 @@ The validated network contract is:
 - publish only the USOP web ingress using USOP_WEB_PORT, default TCP 8080;
 - do not publish API TCP 8000;
 - do not publish PostgreSQL TCP 5432;
-- permit required API egress to Microsoft identity and Graph endpoints over TCP 443;
+- permit required API egress over TCP 443 to login.microsoftonline.com for Microsoft identity/token operations and graph.microsoft.com for Microsoft Graph operations;
 - provide DNS resolution for required Microsoft endpoints;
 - use customer-controlled TLS termination for network-accessible deployments;
 - do not open additional ports merely to simplify installation.

@@ -13,6 +13,15 @@ from app.schemas.license import (
     LicenseInstallRequest,
     LicenseInstallResult,
 )
+from app.security.license_signature_verifier import (
+    LicenseSignatureVerifier,
+)
+from app.security.license_signing_keys import (
+    TrustedLicenseSigningKeyRegistry,
+)
+from app.services.license_cryptographic_validator import (
+    LicenseCryptographicValidator,
+)
 from app.services.license_service import (
     LicenseDeploymentBindingError,
     LicenseInstallationError,
@@ -21,6 +30,28 @@ from app.services.license_service import (
     LicenseService,
 )
 
+
+def get_license_cryptographic_validator(
+) -> LicenseCryptographicValidator:
+    """
+    Return the product-controlled License verification authority.
+
+    No customer-controlled signing material is accepted here. Until the
+    vendor signing authority is provisioned, the default trusted registry is
+    intentionally empty so License installation fails closed.
+
+    Tests may override this dependency with ephemeral trusted public material.
+    """
+
+    registry = TrustedLicenseSigningKeyRegistry()
+
+    verifier = LicenseSignatureVerifier(
+        registry
+    )
+
+    return LicenseCryptographicValidator(
+        verifier
+    )
 
 router = APIRouter(
     prefix="/api/v1/licenses",
@@ -37,6 +68,9 @@ def install_license(
     data: LicenseInstallRequest,
     response: Response,
     db: Session = Depends(get_db),
+    cryptographic_validator: LicenseCryptographicValidator = Depends(
+        get_license_cryptographic_validator
+    ),
 ) -> LicenseInstallResult:
     """
     Structurally install an immutable signed License envelope.
@@ -44,12 +78,17 @@ def install_license(
     Actor attribution, lifecycle status, supersession, audit metadata, and
     transaction ownership are controlled by the backend.
 
-    Installation does not assert cryptographic validity or effective
-    Subscription State.
+    Cryptographic validity is required before persistence. Effective
+    Subscription State remains derived elsewhere.
     """
 
     try:
-        result = LicenseService(db).install(data)
+        result = LicenseService(
+            db,
+            cryptographic_validator=(
+                cryptographic_validator
+            ),
+        ).install(data)
 
     except LicenseOrganizationNotFoundError as error:
         raise HTTPException(

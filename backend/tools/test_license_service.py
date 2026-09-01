@@ -4,6 +4,13 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.serialization import (
+    Encoding,
+    PublicFormat,
+)
+import base64
 
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
@@ -25,13 +32,29 @@ from app.schemas.license import (
     LicenseInstallDisposition,
     LicenseInstallRequest,
 )
+from app.security.license_signature_verifier import (
+    LicenseSignatureVerifier,
+)
+from app.security.license_signing_keys import (
+    TrustedLicenseSigningKey,
+    TrustedLicenseSigningKeyRegistry,
+)
+from app.services.license_canonicalization import (
+    canonicalize_license_payload,
+    hash_canonical_license_payload,
+)
+from app.services.license_cryptographic_validator import (
+    LicenseCryptographicValidator,
+)
 from app.services.license_service import (
+    LicenseInstallationError,
     LicenseOrganizationNotFoundError,
     LicenseService,
 )
 
 
 ACTOR = "USOP License Service Regression"
+TEST_SIGNING_KEY_IDENTIFIER = "license-service-regression-key"
 
 
 def build_request(
@@ -41,6 +64,7 @@ def build_request(
     issued_at: datetime,
     seat_limit: int,
     deployment_identifier: str,
+    signing_private_key: ec.EllipticCurvePrivateKey,
 ) -> LicenseInstallRequest:
     payload = {
         "organization_id": organization_id,
@@ -55,6 +79,17 @@ def build_request(
         "issued_at": issued_at.isoformat(),
         "seat_limit": seat_limit,
     }
+
+    canonical_payload = canonicalize_license_payload(
+        payload
+    )
+
+    signature = signing_private_key.sign(
+        canonical_payload,
+        ec.ECDSA(
+            hashes.SHA256()
+        ),
+    )
 
     return LicenseInstallRequest(
         organization_id=organization_id,
@@ -78,10 +113,16 @@ def build_request(
             "IdentityDecisionPlatform",
         ],
         canonical_payload=payload,
-        canonical_payload_hash="a" * 64,
-        signature=f"signature-{identifier}",
+        canonical_payload_hash=(
+            hash_canonical_license_payload(
+                payload
+            )
+        ),
+        signature=base64.b64encode(
+            signature
+        ).decode("ascii"),
         signing_key_identifier=(
-            "license-service-regression-key"
+            TEST_SIGNING_KEY_IDENTIFIER
         ),
     )
 
@@ -120,7 +161,49 @@ def main() -> int:
         db.refresh(organization)
 
         organization_id = organization.id
-        service = LicenseService(db)
+
+        signing_private_key = ec.generate_private_key(
+            ec.SECP256R1()
+        )
+
+        public_key_pem = (
+            signing_private_key
+            .public_key()
+            .public_bytes(
+                encoding=Encoding.PEM,
+                format=PublicFormat.SubjectPublicKeyInfo,
+            )
+        )
+
+        signing_key_registry = (
+            TrustedLicenseSigningKeyRegistry(
+                [
+                    TrustedLicenseSigningKey(
+                        key_identifier=(
+                            TEST_SIGNING_KEY_IDENTIFIER
+                        ),
+                        public_key_pem=public_key_pem,
+                    )
+                ]
+            )
+        )
+
+        signature_verifier = LicenseSignatureVerifier(
+            signing_key_registry
+        )
+
+        cryptographic_validator = (
+            LicenseCryptographicValidator(
+                signature_verifier
+            )
+        )
+
+        service = LicenseService(
+            db,
+            cryptographic_validator=(
+                cryptographic_validator
+            ),
+        )
 
         first_request = build_request(
             organization_id=organization.id,
@@ -130,6 +213,7 @@ def main() -> int:
             deployment_identifier=(
                 deployment_identifier
             ),
+                    signing_private_key=signing_private_key,
         )
 
         first_result = service.install(
@@ -201,6 +285,7 @@ def main() -> int:
             deployment_identifier=(
                 deployment_identifier
             ),
+                    signing_private_key=signing_private_key,
         )
 
         second_result = service.install(
@@ -267,6 +352,144 @@ def main() -> int:
                 "Replacement License did not create exactly one audit event."
             )
 
+        forged_request = build_request(
+            organization_id=organization.id,
+            identifier=f"forged-{suffix}",
+            issued_at=now + timedelta(
+                minutes=1,
+                seconds=30,
+            ),
+            seat_limit=999,
+            deployment_identifier=(
+                deployment_identifier
+            ),
+            signing_private_key=signing_private_key,
+        )
+
+        forged_identifier = (
+            forged_request.license_identifier
+        )
+
+        forged_request = forged_request.model_copy(
+            update={
+                "signature": base64.b64encode(
+                    b"forged-license-signature"
+                ).decode("ascii")
+            }
+        )
+
+        licenses_before_forgery = (
+            db.query(License)
+            .filter(
+                License.organization_id
+                == organization.id
+            )
+            .count()
+        )
+
+        audits_before_forgery = (
+            db.query(AuditEvent)
+            .filter(
+                AuditEvent.entity_type == "License",
+                AuditEvent.event_type
+                == "LicenseInstalled",
+            )
+            .count()
+        )
+
+        forged_rejected = False
+
+        try:
+            service.install(
+                forged_request,
+                actor=ACTOR,
+            )
+        except LicenseInstallationError:
+            forged_rejected = True
+
+        db.expire_all()
+
+        forged_license = (
+            db.query(License)
+            .filter(
+                License.license_identifier
+                == forged_identifier
+            )
+            .one_or_none()
+        )
+
+        second_license_after_forgery = (
+            db.query(License)
+            .filter(
+                License.id
+                == second_license.id
+            )
+            .one()
+        )
+
+        licenses_after_forgery = (
+            db.query(License)
+            .filter(
+                License.organization_id
+                == organization.id
+            )
+            .count()
+        )
+
+        audits_after_forgery = (
+            db.query(AuditEvent)
+            .filter(
+                AuditEvent.entity_type == "License",
+                AuditEvent.event_type
+                == "LicenseInstalled",
+            )
+            .count()
+        )
+
+        forged_zero_side_effect = (
+            forged_rejected
+            and forged_license is None
+            and licenses_after_forgery
+            == licenses_before_forgery
+            and audits_after_forgery
+            == audits_before_forgery
+            and second_license_after_forgery.status
+            == LicenseStatus.ISSUED.value
+        )
+
+        if not forged_rejected:
+            errors.append(
+                "Forged License was not rejected."
+            )
+
+        if forged_license is not None:
+            errors.append(
+                "Forged License reached persistence."
+            )
+
+        if (
+            licenses_after_forgery
+            != licenses_before_forgery
+        ):
+            errors.append(
+                "Forged License changed License persistence state."
+            )
+
+        if (
+            audits_after_forgery
+            != audits_before_forgery
+        ):
+            errors.append(
+                "Forged License created an installation audit event."
+            )
+
+        if (
+            second_license_after_forgery.status
+            != LicenseStatus.ISSUED.value
+        ):
+            errors.append(
+                "Forged License altered the current issued License."
+            )
         unknown_rejected = False
 
         try:
@@ -279,7 +502,8 @@ def main() -> int:
                     deployment_identifier=(
                         deployment_identifier
                     ),
-                ),
+                            signing_private_key=signing_private_key,
+        ),
                 actor=ACTOR,
             )
         except LicenseOrganizationNotFoundError:
@@ -298,6 +522,7 @@ def main() -> int:
             deployment_identifier=(
                 deployment_identifier
             ),
+                    signing_private_key=signing_private_key,
         )
 
         original_record_pending = (
@@ -434,7 +659,27 @@ def main() -> int:
             "Browser-controlled actor accepted: False"
         )
         print(
-            "Cryptographic validity asserted: False"
+            "Cryptographic validation enforced before persistence: True"
+        )
+        print(
+            "Forged License rejected: "
+            f"{forged_rejected}"
+        )
+        print(
+            "Forged License persisted: "
+            f"{forged_license is not None}"
+        )
+        print(
+            "Prior issued License preserved: "
+            f"{second_license_after_forgery.status == LicenseStatus.ISSUED.value}"
+        )
+        print(
+            "Forged License audit event created: "
+            f"{audits_after_forgery != audits_before_forgery}"
+        )
+        print(
+            "Forged License zero-side-effect gate: "
+            f"{forged_zero_side_effect}"
         )
 
         print()

@@ -15,6 +15,10 @@ from app.schemas.license import (
     LicenseInstallResult,
 )
 from app.services.audit_service import AuditService
+from app.services.license_cryptographic_validator import (
+    LicenseCryptographicValidationError,
+    LicenseCryptographicValidator,
+)
 
 
 SYSTEM_LICENSE_INSTALLER = "USOP System Bootstrap"
@@ -46,23 +50,40 @@ class LicenseService:
     """
     Backend authority for immutable License installation.
 
-    This service performs structural installation only. It does not verify
-    signatures or derive effective Subscription State.
+    This service requires cryptographic validation before structural
+    installation. Effective Subscription State remains derived elsewhere.
     """
 
-    def __init__(self, db: Session):
+    def __init__(
+        self,
+        db: Session,
+        *,
+        cryptographic_validator: LicenseCryptographicValidator,
+    ):
         self.db = db
         self.repository = LicenseRepository(db)
         self.organization_repository = OrganizationRepository(
             db
         )
         self.audit_service = AuditService(db)
+        self.cryptographic_validator = cryptographic_validator
 
     def install(
         self,
         data: LicenseInstallRequest,
         actor: str = SYSTEM_LICENSE_INSTALLER,
     ) -> LicenseInstallResult:
+        try:
+            cryptographic_validation = (
+                self.cryptographic_validator.validate(
+                    data
+                )
+            )
+        except LicenseCryptographicValidationError as error:
+            raise LicenseInstallationError(
+                "License cryptographic validation failed."
+            ) from error
+
         organization = (
             self.organization_repository.get_by_id(
                 data.organization_id
@@ -217,7 +238,18 @@ class LicenseService:
                             .deployment_identifier
                         ),
                         "cryptographic_validation": (
-                            "NotYetPerformed"
+                            "Verified"
+                        ),
+                        "signature_algorithm": (
+                            cryptographic_validation.algorithm
+                        ),
+                        "signing_key_identifier": (
+                            cryptographic_validation
+                            .signing_key_identifier
+                        ),
+                        "canonical_payload_hash": (
+                            cryptographic_validation
+                            .canonical_payload_hash
                         ),
                         "actor_trust": (
                             "ServerAssignedSystemActor"

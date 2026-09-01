@@ -5,6 +5,13 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.serialization import (
+    Encoding,
+    PublicFormat,
+)
+import base64
 
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
@@ -28,7 +35,24 @@ from fastapi.testclient import TestClient
 from app.database.session import SessionLocal
 from app.domain.commercial_edition import CommercialEdition
 from app.domain.commercial_purpose import CommercialPurpose
+from app.api.v1.licenses import (
+    get_license_cryptographic_validator,
+)
 from app.main import app
+from app.security.license_signature_verifier import (
+    LicenseSignatureVerifier,
+)
+from app.security.license_signing_keys import (
+    TrustedLicenseSigningKey,
+    TrustedLicenseSigningKeyRegistry,
+)
+from app.services.license_canonicalization import (
+    canonicalize_license_payload,
+    hash_canonical_license_payload,
+)
+from app.services.license_cryptographic_validator import (
+    LicenseCryptographicValidator,
+)
 from app.models.audit_event import AuditEvent
 from app.models.license import License
 from app.models.organization import Organization
@@ -37,6 +61,10 @@ from app.models.organization import Organization
 EXPECTED_OPERATION = (
     "/api/v1/licenses/install",
     "post",
+)
+
+TEST_SIGNING_KEY_IDENTIFIER = (
+    "license-api-regression-key"
 )
 
 
@@ -71,6 +99,7 @@ def build_payload(
     license_identifier: str,
     deployment_identifier: str,
     issued_at: datetime,
+    signing_private_key: ec.EllipticCurvePrivateKey,
 ) -> dict:
     canonical_payload = {
         "organization_id": organization_id,
@@ -85,6 +114,17 @@ def build_payload(
         "issued_at": issued_at.isoformat(),
         "seat_limit": 20,
     }
+
+    canonical_bytes = canonicalize_license_payload(
+        canonical_payload
+    )
+
+    signature = signing_private_key.sign(
+        canonical_bytes,
+        ec.ECDSA(
+            hashes.SHA256()
+        ),
+    )
 
     return {
         "organization_id": organization_id,
@@ -112,12 +152,16 @@ def build_payload(
             "IdentityDecisionPlatform",
         ],
         "canonical_payload": canonical_payload,
-        "canonical_payload_hash": "a" * 64,
-        "signature": (
-            f"signature-{license_identifier}"
+        "canonical_payload_hash": (
+            hash_canonical_license_payload(
+                canonical_payload
+            )
         ),
+        "signature": base64.b64encode(
+            signature
+        ).decode("ascii"),
         "signing_key_identifier": (
-            "license-api-regression-key"
+            TEST_SIGNING_KEY_IDENTIFIER
         ),
     }
 
@@ -134,6 +178,47 @@ def main() -> int:
 
     suffix = uuid.uuid4().hex
     now = datetime.now(timezone.utc)
+
+    signing_private_key = ec.generate_private_key(
+        ec.SECP256R1()
+    )
+
+    public_key_pem = (
+        signing_private_key
+        .public_key()
+        .public_bytes(
+            encoding=Encoding.PEM,
+            format=PublicFormat.SubjectPublicKeyInfo,
+        )
+    )
+
+    registry = TrustedLicenseSigningKeyRegistry(
+        [
+            TrustedLicenseSigningKey(
+                key_identifier=(
+                    TEST_SIGNING_KEY_IDENTIFIER
+                ),
+                public_key_pem=public_key_pem,
+            )
+        ]
+    )
+
+    signature_verifier = LicenseSignatureVerifier(
+        registry
+    )
+
+    cryptographic_validator = (
+        LicenseCryptographicValidator(
+            signature_verifier
+        )
+    )
+
+    def override_license_validator():
+        return cryptographic_validator
+
+    app.dependency_overrides[
+        get_license_cryptographic_validator
+    ] = override_license_validator
 
     deployment_identifier = (
         f"deployment-{suffix}"
@@ -192,6 +277,7 @@ def main() -> int:
                 deployment_identifier
             ),
             issued_at=now,
+                    signing_private_key=signing_private_key,
         )
 
         install_response = client.post(
@@ -277,6 +363,7 @@ def main() -> int:
                 deployment_identifier
             ),
             issued_at=now,
+                    signing_private_key=signing_private_key,
         )
 
         unknown_response = client.post(
@@ -309,6 +396,7 @@ def main() -> int:
                 f"wrong-deployment-{suffix}"
             ),
             issued_at=now,
+                    signing_private_key=signing_private_key,
         )
 
         mismatch_response = client.post(
@@ -334,6 +422,117 @@ def main() -> int:
                 "the expected domain error."
             )
 
+        forged_payload = build_payload(
+            organization_id=organization_id,
+            license_identifier=f"forged-{suffix}",
+            deployment_identifier=(
+                deployment_identifier
+            ),
+            issued_at=now + timedelta(
+                minutes=1
+            ),
+            signing_private_key=signing_private_key,
+        )
+
+        forged_identifier = (
+            forged_payload["license_identifier"]
+        )
+
+        forged_payload["signature"] = (
+            base64.b64encode(
+                b"forged-api-license-signature"
+            ).decode("ascii")
+        )
+
+        licenses_before_forgery = (
+            db.query(License)
+            .filter(
+                License.organization_id
+                == organization_id
+            )
+            .count()
+        )
+
+        audits_before_forgery = (
+            db.query(AuditEvent)
+            .filter(
+                AuditEvent.entity_type == "License",
+                AuditEvent.event_type
+                == "LicenseInstalled",
+            )
+            .count()
+        )
+
+        forged_response = client.post(
+            "/api/v1/licenses/install",
+            json=forged_payload,
+        )
+
+        if forged_response.status_code != 400:
+            errors.append(
+                "Forged License returned HTTP "
+                f"{forged_response.status_code}; expected 400."
+            )
+
+        db.expire_all()
+
+        forged_license = (
+            db.query(License)
+            .filter(
+                License.license_identifier
+                == forged_identifier
+            )
+            .one_or_none()
+        )
+
+        licenses_after_forgery = (
+            db.query(License)
+            .filter(
+                License.organization_id
+                == organization_id
+            )
+            .count()
+        )
+
+        audits_after_forgery = (
+            db.query(AuditEvent)
+            .filter(
+                AuditEvent.entity_type == "License",
+                AuditEvent.event_type
+                == "LicenseInstalled",
+            )
+            .count()
+        )
+
+        forged_zero_side_effect = (
+            forged_response.status_code == 400
+            and forged_license is None
+            and licenses_after_forgery
+            == licenses_before_forgery
+            and audits_after_forgery
+            == audits_before_forgery
+        )
+
+        if forged_license is not None:
+            errors.append(
+                "Forged HTTP License reached persistence."
+            )
+
+        if (
+            licenses_after_forgery
+            != licenses_before_forgery
+        ):
+            errors.append(
+                "Forged HTTP License changed License persistence state."
+            )
+
+        if (
+            audits_after_forgery
+            != audits_before_forgery
+        ):
+            errors.append(
+                "Forged HTTP License created an installation audit event."
+            )
         malformed_payload = dict(payload)
         malformed_payload["canonical_payload_hash"] = (
             "not-a-valid-hash"
@@ -425,7 +624,23 @@ def main() -> int:
             "- Browser-controlled actor field accepted -> False"
         )
         print(
-            "- Cryptographic validity asserted -> False"
+            "- Cryptographic validation enforced -> True"
+        )
+        print(
+            "- Forged signed License -> "
+            f"{forged_response.status_code}"
+        )
+        print(
+            "- Forged License persisted -> "
+            f"{forged_license is not None}"
+        )
+        print(
+            "- Forged License audit event created -> "
+            f"{audits_after_forgery != audits_before_forgery}"
+        )
+        print(
+            "- HTTP cryptographic zero-side-effect gate -> "
+            f"{forged_zero_side_effect}"
         )
 
         print()
@@ -440,6 +655,11 @@ def main() -> int:
         return 0
 
     finally:
+        app.dependency_overrides.pop(
+            get_license_cryptographic_validator,
+            None,
+        )
+
         db.rollback()
 
         if organization_id:
