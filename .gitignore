@@ -48,3 +48,6 @@ build/
 *.swp
 # Local database
 backend/usop_dev.db
+
+# USOP operator-only secret material
+.operator-secrets/
