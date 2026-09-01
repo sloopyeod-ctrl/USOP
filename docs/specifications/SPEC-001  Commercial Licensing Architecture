@@ -987,3 +987,324 @@ USOP authorizes operations.
 Commercial licensing validates entitlement.
 
 These responsibilities remain independent to preserve customer ownership, support offline operation, and eliminate unnecessary trust in vendor-operated infrastructure.
+
+========================================================
+Section 11
+License Issuance Authority Implementation Contract
+========================================================
+
+11.1 Purpose
+
+This section defines the first implementation contract for the USOP License
+Issuance Authority.
+
+The License Issuance Authority is vendor/operator-side commercial tooling.
+
+It is not customer runtime functionality.
+
+The License Issuance Authority must never be exposed as a customer-accessible
+license issuance API.
+
+The USOP customer runtime verifies licenses.
+
+The USOP License Authority issues licenses.
+
+These responsibilities remain separate.
+
+
+11.2 License Artifact Contract
+
+The canonical USOP License artifact is a UTF-8 JSON document whose top-level
+object conforms exactly to the LicenseInstallRequest contract accepted by the
+USOP runtime.
+
+The artifact must contain the complete signed License envelope required for
+local validation.
+
+The initial implementation must not introduce an additional proprietary binary
+wrapper, JWT representation, encrypted container, or second canonical License
+format.
+
+Distribution filenames are operational metadata and are not cryptographic
+truth.
+
+A recommended human-readable filename convention is:
+
+<license-identifier>.license.json
+
+
+11.3 License Format Version
+
+The initial canonical License artifact format version is:
+
+1.0
+
+License format version describes the License artifact contract.
+
+It is independent of:
+
+- USOP product version;
+- this specification's document version;
+- commercial edition;
+- commercial purpose;
+- signing-key version.
+
+
+11.4 Cryptographic Signing Contract
+
+The License Authority must use the same canonicalization contract enforced by
+the USOP runtime.
+
+The authoritative signing input is the deterministic UTF-8 JSON representation
+of canonical_payload produced by the canonical License payload serializer.
+
+The License Authority must:
+
+1. canonicalize canonical_payload;
+2. calculate the lowercase SHA-256 digest of those canonical bytes;
+3. place that digest in canonical_payload_hash;
+4. sign the exact canonical bytes using ECDSA P-256 with SHA-256;
+5. encode the ASN.1 DER ECDSA signature using Base64;
+6. identify the signing key using signing_key_identifier.
+
+The License Authority must reuse the canonical USOP License canonicalization
+implementation rather than creating an independent serialization algorithm.
+
+The corresponding customer runtime must validate the artifact using trusted
+vendor-controlled public verification material.
+
+
+11.5 License Identifier
+
+License identifiers are assigned exclusively by the License Authority.
+
+The initial identifier contract is an opaque vendor-generated identifier with
+the form:
+
+USOP-LIC-<UUID>
+
+The UUID establishes uniqueness.
+
+Commercial meaning must not be encoded into the License identifier.
+
+The identifier must not encode:
+
+- customer name;
+- organization name;
+- commercial edition;
+- commercial purpose;
+- seat limit;
+- expiration;
+- deployment;
+- commercial modules;
+- feature entitlements.
+
+Commercial changes result in a new immutable License rather than reinterpretation
+of an existing License identifier.
+
+
+11.6 Organization Binding
+
+Every issued License must bind to exactly one canonical USOP Organization.
+
+organization_id is therefore mandatory commercial identity within the signed
+License contract.
+
+Organization binding is independent of external provider tenancy such as
+Microsoft Entra tenants, AWS accounts, GitHub organizations, or other provider
+environments.
+
+
+11.7 Deployment Binding
+
+Deployment binding remains optional.
+
+A License may contain:
+
+deployment_identifier = null
+
+when commercial entitlement is intentionally Organization-bound rather than
+Deployment-bound.
+
+The first Design Partner License may use Organization-only binding.
+
+The License Authority must not invent, derive, or synthesize a Deployment
+Identifier from:
+
+- hostname;
+- container identifier;
+- MAC address;
+- CPU identifier;
+- virtual machine identifier;
+- Kubernetes pod identifier;
+- other transient infrastructure identity.
+
+Architecture reconciliation note:
+
+Section 8.2 defines Deployment Identifiers as stable identifiers generated and
+preserved by USOP.
+
+The current Organization creation implementation permits a deployment_identifier
+to be supplied by the Organization creation caller and does not yet demonstrate
+the canonical USOP-generated Deployment Identifier lifecycle described by
+Section 8.2.
+
+This discrepancy must be reconciled in a separate focused increment.
+
+It must not be silently resolved inside License issuance logic.
+
+Until that lifecycle is explicitly implemented and validated, Organization-only
+License binding is the preferred first Design Partner contract.
+
+
+11.8 Commercial Edition and Purpose
+
+Commercial Edition and Commercial Purpose remain independent dimensions.
+
+Edition describes commercial packaging.
+
+Purpose describes why the License was issued.
+
+The License Authority must not infer runtime capability solely from Commercial
+Edition.
+
+Commercial modules and feature entitlements remain explicit signed fields.
+
+A Design Partner may therefore receive, for example:
+
+commercial_edition = Enterprise
+commercial_purpose = Beta
+
+without creating special-case Beta authorization logic.
+
+
+11.9 Effective and Expiration Dates
+
+License effective and expiration dates are issuance inputs.
+
+The core License issuance service must not hard-code a permanent Beta,
+Evaluation, Partner, or Production duration.
+
+Operator tooling may provide convenience defaults.
+
+The initial Design Partner operational process may use a 90-day Beta License,
+but 90 days is not an immutable architectural property of Beta licensing.
+
+
+11.10 Seat Limit
+
+Seat limit is explicit signed commercial data.
+
+The License Authority must not infer seat count from Commercial Edition or
+Commercial Purpose.
+
+A finite seat limit may be used for the first Design Partner License.
+
+The initial operational recommendation is 10 seats unless the Design Partner
+requires a different explicitly approved value.
+
+
+11.11 Commercial Modules and Feature Entitlements
+
+Commercial modules and feature entitlements must represent concrete licensed
+capabilities.
+
+The License Authority must not populate future or unimplemented commercial
+modules merely because they appear in product strategy or architecture
+documentation.
+
+USOP Core remains the required platform foundation.
+
+Optional paid extensions remain explicitly licensed.
+
+Null and empty collection representations must not be assigned inconsistent
+commercial meaning.
+
+The canonical representation used by the License Authority must be established
+and regression-tested before the first production License artifact is issued.
+
+
+11.12 Private Signing-Key Boundary
+
+Private License signing material belongs exclusively to the vendor/operator
+License Authority.
+
+Private signing material must never:
+
+- be committed to source control;
+- be included in a customer Docker image;
+- be included in a Design Partner distribution package;
+- be accepted from a customer License installation request;
+- be stored in the customer runtime database;
+- be written to application logs;
+- be exposed through a customer-accessible API;
+- be represented in the runtime trusted public-key registry.
+
+Issuer development and regression testing must use ephemeral test signing keys
+until the real vendor signing authority is intentionally provisioned.
+
+
+11.13 Runtime Trust Boundary
+
+Customer runtime trust must remain vendor-controlled.
+
+License installation must not allow the License artifact, browser, API caller,
+customer configuration request, or other untrusted installation input to define
+its own trust root.
+
+The runtime trusted signing-key registry contains public verification material
+only.
+
+Unknown signing-key identifiers fail closed.
+
+The real vendor public verification key must be provisioned through an explicit
+release-controlled trust mechanism before a real Design Partner License can be
+installed.
+
+
+11.14 Initial Issuance Development Sequence
+
+The initial License Authority should be developed incrementally:
+
+1. private signing-key loading and validation contract;
+2. License issuance service;
+3. operator issuance CLI/tooling;
+4. issuer/runtime interoperability and adversarial validation;
+5. vendor public verification-key provisioning;
+6. real vendor signing-authority bootstrap;
+7. first Design Partner License issuance.
+
+Real vendor private signing material should not be generated merely to support
+development tests.
+
+Ephemeral cryptographic keys should be used until the complete issuance and
+verification path has passed regression and adversarial validation.
+
+
+11.15 First Design Partner Operational Profile
+
+The recommended initial Design Partner License profile is:
+
+- License Format Version: 1.0
+- Commercial Edition: Enterprise
+- Commercial Purpose: Beta
+- Organization Binding: required
+- Deployment Binding: none initially
+- Duration: approximately 90 days
+- Seat Limit: 10 unless explicitly adjusted
+- Commercial Modules: implemented licensed modules only
+- Feature Entitlements: implemented licensed entitlements only
+
+These values describe the initial Design Partner operating decision.
+
+Except for License Format Version 1.0 and the architectural trust boundaries
+defined above, they are not permanent commercial rules.
+
+Future License issuance must remain capable of supporting Evaluation,
+Production, Partner, renewal, replacement, additional commercial modules,
+additional entitlements, and future provider/MSP commercial models without
+redesigning the License trust chain.
+
+========================================================
+End Section 11
+========================================================
