@@ -16,8 +16,8 @@ from app.schemas.license import (
 from app.security.license_signature_verifier import (
     LicenseSignatureVerifier,
 )
-from app.security.license_signing_keys import (
-    TrustedLicenseSigningKeyRegistry,
+from app.security.license_vendor_trust import (
+    build_vendor_license_signing_key_registry,
 )
 from app.services.license_cryptographic_validator import (
     LicenseCryptographicValidator,
@@ -43,7 +43,7 @@ def get_license_cryptographic_validator(
     Tests may override this dependency with ephemeral trusted public material.
     """
 
-    registry = TrustedLicenseSigningKeyRegistry()
+    registry = build_vendor_license_signing_key_registry()
 
     verifier = LicenseSignatureVerifier(
         registry
