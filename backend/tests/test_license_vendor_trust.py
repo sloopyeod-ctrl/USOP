@@ -7,11 +7,18 @@ from app.security.license_vendor_trust import (
 
 
 def test_vendor_trust_is_intentionally_empty_before_provisioning():
-    assert VENDOR_TRUSTED_LICENSE_SIGNING_KEYS == ()
+    assert len(VENDOR_TRUSTED_LICENSE_SIGNING_KEYS) == 1
+    assert (
+        VENDOR_TRUSTED_LICENSE_SIGNING_KEYS[0]
+        .key_identifier
+        == "usop-license-root-2026-01"
+    )
 
     registry = build_vendor_license_signing_key_registry()
 
-    assert registry.identifiers() == ()
+    assert registry.identifiers() == (
+        "usop-license-root-2026-01",
+    )
 
 
 def test_each_vendor_registry_is_independently_built():
@@ -20,8 +27,12 @@ def test_each_vendor_registry_is_independently_built():
 
     assert first is not second
 
-    assert first.identifiers() == ()
-    assert second.identifiers() == ()
+    assert first.identifiers() == (
+        "usop-license-root-2026-01",
+    )
+    assert second.identifiers() == (
+        "usop-license-root-2026-01",
+    )
 
 
 def test_environment_variable_cannot_inject_vendor_trust(
@@ -44,7 +55,9 @@ def test_environment_variable_cannot_inject_vendor_trust(
 
     registry = build_vendor_license_signing_key_registry()
 
-    assert registry.identifiers() == ()
+    assert registry.identifiers() == (
+        "usop-license-root-2026-01",
+    )
 
 
 def test_vendor_trust_provider_does_not_depend_on_environment():
@@ -55,7 +68,9 @@ def test_vendor_trust_provider_does_not_depend_on_environment():
     after = dict(os.environ)
 
     assert before == after
-    assert registry.identifiers() == ()
+    assert registry.identifiers() == (
+        "usop-license-root-2026-01",
+    )
 
 
 def test_returned_registry_exposes_no_trust_mutation_api():
@@ -80,7 +95,9 @@ def test_license_api_composition_uses_vendor_trust_provider():
         .registry
     )
 
-    assert registry.identifiers() == ()
+    assert registry.identifiers() == (
+        "usop-license-root-2026-01",
+    )
 
 def test_default_runtime_rejects_arbitrary_valid_vendor_signature():
     from datetime import UTC, datetime, timedelta
@@ -168,7 +185,9 @@ def test_default_runtime_rejects_arbitrary_valid_vendor_signature():
         .signature_verifier
         .registry
         .identifiers()
-    ) == ()
+    ) == (
+        "usop-license-root-2026-01",
+    )
 
     with pytest.raises(
         LicensePayloadSignatureError
@@ -176,3 +195,33 @@ def test_default_runtime_rejects_arbitrary_valid_vendor_signature():
         validator.validate(
             issued
         )
+
+def test_production_vendor_public_key_fingerprint_is_pinned():
+    import hashlib
+
+    from cryptography.hazmat.primitives.serialization import (
+        Encoding,
+        PublicFormat,
+        load_pem_public_key,
+    )
+
+    from app.security.license_vendor_trust import (
+        USOP_LICENSE_ROOT_2026_01_PUBLIC_KEY_PEM,
+    )
+
+    public_key = load_pem_public_key(
+        USOP_LICENSE_ROOT_2026_01_PUBLIC_KEY_PEM
+    )
+
+    der = public_key.public_bytes(
+        encoding=Encoding.DER,
+        format=PublicFormat.SubjectPublicKeyInfo,
+    )
+
+    fingerprint = hashlib.sha256(
+        der
+    ).hexdigest()
+
+    assert fingerprint == (
+        "dbfd22405ac8ecf101ef7291143c86046f7405e5cf41e656362bc27168997d66"
+    )
