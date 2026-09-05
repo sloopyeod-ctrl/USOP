@@ -142,3 +142,43 @@ class LicenseInstallResult(BaseModel):
     disposition: LicenseInstallDisposition
     superseded_license_id: str | None
     audit_event_id: str | None
+
+class LicenseLatestIssuedRead(BaseModel):
+    """
+    Read-only representation of the newest persisted Issued License
+    for one Organization.
+
+    This contract reports structural License state only. It does not
+    claim that the License is currently commercially effective and
+    must not be interpreted as effective Subscription State.
+
+    Signed payload internals and signature material are intentionally
+    excluded from this administrative read surface.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+        from_attributes=True,
+    )
+
+    id: str
+    organization_id: str
+    license_identifier: str
+
+    status: str
+    commercial_edition: CommercialEdition
+    commercial_purpose: CommercialPurpose
+    license_format_version: str
+
+    issued_at: datetime
+    effective_at: datetime
+    expires_at: datetime | None
+
+    deployment_identifier: str | None
+    seat_limit: int | None
+
+    commercial_modules_json: list[str] | None
+    feature_entitlements_json: list[str] | None
+
+    signing_key_identifier: str
+    supersedes_license_id: str | None

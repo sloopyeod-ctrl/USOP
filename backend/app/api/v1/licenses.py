@@ -11,10 +11,14 @@ from app.api.dependencies.runtime_permission import (
     require_platform_permission,
 )
 from app.database.session import get_db
+from app.repositories.license_repository import (
+    LicenseRepository,
+)
 from app.schemas.license import (
     LicenseInstallDisposition,
     LicenseInstallRequest,
     LicenseInstallResult,
+    LicenseLatestIssuedRead,
 )
 from app.security.license_signature_verifier import (
     LicenseSignatureVerifier,
@@ -144,3 +148,47 @@ def install_license(
         response.status_code = status.HTTP_201_CREATED
 
     return result
+
+@router.get(
+    "/latest-issued",
+    response_model=LicenseLatestIssuedRead,
+)
+def get_latest_issued_license(
+    organization_id: str,
+    caller: TrustedPlatformCaller = Depends(
+        require_platform_permission(
+            "platform-administration.manage"
+        )
+    ),
+    db: Session = Depends(get_db),
+) -> LicenseLatestIssuedRead:
+    """
+    Return the newest persisted Issued License for one Organization.
+
+    This endpoint reports structural License state only. It does not
+    establish effective Subscription State or claim that the returned
+    License is currently commercially effective.
+    """
+
+    if caller.organization_id != organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="License not found.",
+        )
+
+    license_record = (
+        LicenseRepository(db)
+        .get_latest_issued_for_organization(
+            organization_id
+        )
+    )
+
+    if license_record is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="License not found.",
+        )
+
+    return LicenseLatestIssuedRead.model_validate(
+        license_record
+    )
