@@ -7,6 +7,9 @@ from fastapi import (
 )
 from sqlalchemy.orm import Session
 
+from app.api.dependencies.runtime_permission import (
+    require_platform_permission,
+)
 from app.database.session import get_db
 from app.schemas.license import (
     LicenseInstallDisposition,
@@ -29,6 +32,9 @@ from app.services.license_service import (
     LicenseOrganizationNotFoundError,
     LicenseService,
 )
+from app.services.trusted_platform_caller import (
+    TrustedPlatformCaller,
+)
 
 
 def get_license_cryptographic_validator(
@@ -36,9 +42,9 @@ def get_license_cryptographic_validator(
     """
     Return the product-controlled License verification authority.
 
-    No customer-controlled signing material is accepted here. Until the
-    vendor signing authority is provisioned, the default trusted registry is
-    intentionally empty so License installation fails closed.
+    No customer-controlled signing material is accepted here. The default
+    registry contains only release-controlled USOP vendor verification
+    material.
 
     Tests may override this dependency with ephemeral trusted public material.
     """
@@ -54,7 +60,10 @@ def get_license_cryptographic_validator(
     )
 
 router = APIRouter(
-    prefix="/api/v1/licenses",
+    prefix=(
+        "/api/v1/organizations/"
+        "{organization_id}/licenses"
+    ),
     tags=["Licenses"],
 )
 
@@ -65,8 +74,14 @@ router = APIRouter(
     status_code=status.HTTP_201_CREATED,
 )
 def install_license(
+    organization_id: str,
     data: LicenseInstallRequest,
     response: Response,
+    caller: TrustedPlatformCaller = Depends(
+        require_platform_permission(
+            "platform-administration.manage"
+        )
+    ),
     db: Session = Depends(get_db),
     cryptographic_validator: LicenseCryptographicValidator = Depends(
         get_license_cryptographic_validator
@@ -81,6 +96,15 @@ def install_license(
     Cryptographic validity is required before persistence. Effective
     Subscription State remains derived elsewhere.
     """
+
+    if (
+        caller.organization_id != organization_id
+        or data.organization_id != organization_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Requested License installation target was not found.",
+        )
 
     try:
         result = LicenseService(

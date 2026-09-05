@@ -32,6 +32,9 @@ warnings.filterwarnings(
 
 from fastapi.testclient import TestClient
 
+from app.api.dependencies import authenticated_caller
+from app.api.dependencies import runtime_permission
+
 from app.database.session import SessionLocal
 from app.domain.commercial_edition import CommercialEdition
 from app.domain.commercial_purpose import CommercialPurpose
@@ -56,10 +59,19 @@ from app.services.license_cryptographic_validator import (
 from app.models.audit_event import AuditEvent
 from app.models.license import License
 from app.models.organization import Organization
+from app.services.trusted_external_principal import (
+    TrustedExternalPrincipal,
+)
+from app.services.trusted_platform_caller import (
+    TrustedPlatformCaller,
+)
 
 
 EXPECTED_OPERATION = (
-    "/api/v1/licenses/install",
+    (
+        "/api/v1/organizations/"
+        "{organization_id}/licenses/install"
+    ),
     "post",
 )
 
@@ -166,6 +178,56 @@ def build_payload(
     }
 
 
+def build_trusted_caller(
+    organization_id: str,
+) -> TrustedPlatformCaller:
+    return TrustedPlatformCaller(
+        organization_id=organization_id,
+        platform_user_id="license-api-regression-admin",
+        principal=TrustedExternalPrincipal(
+            identity_provider="microsoft-entra",
+            external_tenant_id="license-api-regression-tenant",
+            external_subject_id="license-api-regression-admin",
+        ),
+    )
+
+
+def install_runtime_authorization_allow():
+    class AuthorizationResult:
+        allowed = True
+
+        def __init__(
+            self,
+            *,
+            organization_id,
+            platform_user_id,
+            permission_key,
+        ):
+            self.organization_id = organization_id
+            self.platform_user_id = platform_user_id
+            self.permission_key = permission_key
+
+    class RuntimeAuthorization:
+        def __init__(self, db):
+            self.db = db
+
+        def evaluate(
+            self,
+            *,
+            organization_id,
+            platform_user_id,
+            permission_key,
+        ):
+            return AuthorizationResult(
+                organization_id=organization_id,
+                platform_user_id=platform_user_id,
+                permission_key=permission_key,
+            )
+
+    runtime_permission.PlatformRuntimeAuthorizationService = (
+        RuntimeAuthorization
+    )
+
 def main() -> int:
     print("USOP License Installation API Contract Regression")
     print("-----------------------------------------------")
@@ -235,15 +297,13 @@ def main() -> int:
         if EXPECTED_OPERATION not in actual_operations:
             errors.append(
                 "Missing OpenAPI operation: "
-                "POST /api/v1/licenses/install"
+                "POST /api/v1/organizations/{organization_id}/licenses/install"
             )
 
         license_operations = sorted(
             operation
             for operation in actual_operations
-            if operation[0].startswith(
-                "/api/v1/licenses"
-            )
+            if "/licenses" in operation[0]
         )
 
         print("OpenAPI License operations:")
@@ -270,6 +330,19 @@ def main() -> int:
 
         organization_id = organization.id
 
+        install_runtime_authorization_allow()
+
+        app.dependency_overrides[
+            authenticated_caller.get_authenticated_platform_caller
+        ] = lambda: build_trusted_caller(
+            organization.id
+        )
+
+        install_path = (
+            f"/api/v1/organizations/"
+            f"{organization.id}/licenses/install"
+        )
+
         payload = build_payload(
             organization_id=organization.id,
             license_identifier=f"license-{suffix}",
@@ -281,7 +354,7 @@ def main() -> int:
         )
 
         install_response = client.post(
-            "/api/v1/licenses/install",
+            install_path,
             json=payload,
         )
 
@@ -316,7 +389,7 @@ def main() -> int:
             )
 
         duplicate_response = client.post(
-            "/api/v1/licenses/install",
+            install_path,
             json=payload,
         )
 
@@ -366,9 +439,27 @@ def main() -> int:
                     signing_private_key=signing_private_key,
         )
 
+        unknown_install_path = (
+            f"/api/v1/organizations/"
+            f"{unknown_payload['organization_id']}"
+            f"/licenses/install"
+        )
+
+        app.dependency_overrides[
+            authenticated_caller.get_authenticated_platform_caller
+        ] = lambda: build_trusted_caller(
+            unknown_payload["organization_id"]
+        )
+
         unknown_response = client.post(
-            "/api/v1/licenses/install",
+            unknown_install_path,
             json=unknown_payload,
+        )
+
+        app.dependency_overrides[
+            authenticated_caller.get_authenticated_platform_caller
+        ] = lambda: build_trusted_caller(
+            organization.id
         )
 
         if unknown_response.status_code != 404:
@@ -400,7 +491,7 @@ def main() -> int:
         )
 
         mismatch_response = client.post(
-            "/api/v1/licenses/install",
+            install_path,
             json=mismatch_payload,
         )
 
@@ -464,7 +555,7 @@ def main() -> int:
         )
 
         forged_response = client.post(
-            "/api/v1/licenses/install",
+            install_path,
             json=forged_payload,
         )
 
@@ -539,7 +630,7 @@ def main() -> int:
         )
 
         malformed_response = client.post(
-            "/api/v1/licenses/install",
+            install_path,
             json=malformed_payload,
         )
 
@@ -657,6 +748,10 @@ def main() -> int:
     finally:
         app.dependency_overrides.pop(
             get_license_cryptographic_validator,
+            None,
+        )
+        app.dependency_overrides.pop(
+            authenticated_caller.get_authenticated_platform_caller,
             None,
         )
 
